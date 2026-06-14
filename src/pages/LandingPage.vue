@@ -94,10 +94,9 @@
             color="accent"
             icon="android"
             label="Download APK"
-            href="https://github.com/YOUR_USERNAME/YOUR_REPO/releases/download/latest/app-debug.apk"
+            href="https://github.com/raymark325/csi-frontend/releases/download/latest/app-debug.apk"
             target="_blank"
             class="hero-btn"
-            title="Update YOUR_USERNAME/YOUR_REPO in code to make this work"
           />
         </div>
       </div>
