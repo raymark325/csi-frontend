@@ -49,13 +49,22 @@
 
           <!-- Submit Button -->
           <button
-            class="btn-primary full-width justify-center"
+            class="btn-primary full-width justify-center q-mb-lg"
             type="submit"
             :disabled="isLoading"
           >
             <span v-if="isLoading">Signing in...</span>
             <span v-else>Sign In</span>
           </button>
+
+          <div class="text-center">
+            <p class="text-caption" style="margin: 0; color: var(--text-secondary);">
+              Don't have an account? 
+              <router-link to="/register" style="color: var(--sms-blue); font-weight: 600; text-decoration: none;">
+                Sign up as a Student
+              </router-link>
+            </p>
+          </div>
         </form>
       </div>
     </div>

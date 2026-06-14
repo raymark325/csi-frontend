@@ -52,6 +52,10 @@ const routes = [
     component: () => import('@/pages/Auth/LoginPage.vue'),
   },
   {
+    path: '/register',
+    component: () => import('@/pages/Auth/RegisterPage.vue'),
+  },
+  {
     path: '/:catchAll(.*)*',
     component: () => import('@/pages/ErrorNotFound.vue'),
   }

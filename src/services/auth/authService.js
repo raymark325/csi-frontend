@@ -5,6 +5,10 @@ export const authService = {
     return API.post('/auth/login', { email, password });
   },
 
+  register(userData) {
+    return API.post('/auth/register', userData);
+  },
+
   logout() {
     return API.post('/auth/logout');
   },
