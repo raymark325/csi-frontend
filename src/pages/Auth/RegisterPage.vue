@@ -149,8 +149,8 @@ onMounted(async () => {
   isLoadingSections.value = true;
   try {
     const response = await api.get('/public/sections');
-    if (response.data.success) {
-      sections.value = response.data.data;
+    if (response.success) {
+      sections.value = response.data;
     }
   } catch (error) {
     console.error('Failed to load sections', error);
