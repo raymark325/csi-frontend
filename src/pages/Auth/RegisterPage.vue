@@ -65,9 +65,19 @@
             </div>
           </div>
 
-          <div class="q-mb-lg">
+          <div class="q-mb-md">
             <p class="text-label q-mb-xs">Home Address</p>
             <textarea v-model="formData.address" class="input-glass" rows="2" placeholder="123 Main St..."></textarea>
+          </div>
+
+          <div class="q-mb-lg">
+            <p class="text-label q-mb-xs">Section</p>
+            <select v-model="formData.section_id" class="input-glass" :disabled="isLoadingSections">
+              <option value="" disabled selected>Select a section</option>
+              <option v-for="section in sections" :key="section.id" :value="section.id">
+                {{ section.name }}
+              </option>
+            </select>
           </div>
 
           <hr style="border: 0; border-top: 1px solid rgba(0,0,0,0.05); margin: 24px 0;" />
@@ -110,9 +120,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
+import api from '../../services/api';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -127,7 +138,25 @@ const formData = ref({
   address: '',
   email: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
+  section_id: ''
+});
+
+const sections = ref([]);
+const isLoadingSections = ref(false);
+
+onMounted(async () => {
+  isLoadingSections.value = true;
+  try {
+    const response = await api.get('/public/sections');
+    if (response.data.success) {
+      sections.value = response.data.data;
+    }
+  } catch (error) {
+    console.error('Failed to load sections', error);
+  } finally {
+    isLoadingSections.value = false;
+  }
 });
 
 const isLoading = ref(false);
@@ -153,6 +182,7 @@ const handleRegister = async () => {
       age: formData.value.age ? parseInt(formData.value.age) : null,
       contact_number: formData.value.contactNumber,
       address: formData.value.address,
+      section_id: formData.value.section_id || null,
       email: formData.value.email,
       password: formData.value.password,
     });
