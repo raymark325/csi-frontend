@@ -19,7 +19,7 @@ export default async function authGuard(to, from, next) {
 
   if (to.meta.requiresAuth && !isAuth) {
     next('/login');
-  } else if (to.path === '/login' && isAuth) {
+  } else if (['/login', '/register', '/'].includes(to.path) && isAuth) {
     next('/dashboard');
   } else {
     next();
