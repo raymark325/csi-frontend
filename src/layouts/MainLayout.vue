@@ -1,102 +1,408 @@
 <template>
-  <q-layout view="lHh Lpr lFf">
-    <q-header elevated>
-      <q-toolbar>
+  <q-layout view="hHh Lpr lFf">
+
+    <!-- ── Top Navigation Bar ──────────────────── -->
+    <q-header class="glass-navbar" style="color: var(--text-primary);">
+      <q-toolbar style="min-height: 60px; padding: 0 24px;">
         <q-btn
-          flat
-          dense
-          round
+          flat round dense
           icon="menu"
           aria-label="Menu"
+          style="color: var(--text-secondary);"
           @click="toggleLeftDrawer"
         />
 
-        <q-toolbar-title>
-          Quasar App
+        <q-toolbar-title class="row items-center q-gutter-xs" style="flex: none; margin: 0 16px 0 8px;">
+          <div style="width:30px; height:30px; border-radius:8px; background: linear-gradient(135deg, var(--sms-blue), var(--sms-blue-light)); display:flex; align-items:center; justify-content:center;">
+            <q-icon name="school" size="16px" style="color:#fff"/>
+          </div>
+          <span style="font-weight:800; font-size:15px; color: var(--text-primary);">SMS</span>
+          <span style="font-weight:400; font-size:13px; color: var(--text-muted);">School System</span>
         </q-toolbar-title>
 
-        <div>Quasar v{{ $q.version }}</div>
+        <nav class="row items-center q-gutter-xs gt-sm">
+          <router-link to="/dashboard" class="nav-link" active-class="nav-link--active">Dashboard</router-link>
+          <router-link to="/components" class="nav-link" active-class="nav-link--active">Components</router-link>
+        </nav>
+
+        <q-space/>
+
+        <!-- Notification Bell (student only) -->
+        <div v-if="authStore.userRole === 'student'" style="position: relative; margin-right: 8px;" @click.stop>
+          <q-btn
+            flat round dense size="sm"
+            icon="notifications"
+            style="color: var(--text-secondary);"
+            @click.stop="notifPanelOpen = !notifPanelOpen"
+          >
+            <q-badge
+              v-if="studentBellCount > 0"
+              color="red"
+              floating
+              rounded
+              :label="studentBellCount > 99 ? '99+' : studentBellCount"
+            />
+            <q-tooltip>Assignment Notifications</q-tooltip>
+          </q-btn>
+
+          <!-- Notification dropdown panel -->
+          <div v-if="notifPanelOpen" class="notif-panel" @click.stop>
+            <div class="notif-panel-header">
+              <span>New Assignments</span>
+              <q-btn flat dense round icon="close" size="xs" @click="notifPanelOpen = false" style="color: var(--text-secondary);" />
+            </div>
+            <div v-if="notifStore.unreadAssignmentCount === 0" class="notif-empty">
+              <q-icon name="check_circle" size="28px" color="positive" />
+              <p>You're all caught up!</p>
+            </div>
+            <div v-else>
+              <div
+                v-for="aId in notifStore.newAssignmentIds"
+                :key="aId"
+                class="notif-item"
+                @click="goToAssignments"
+              >
+                <div class="notif-dot" />
+                <div>
+                  <p class="notif-title">{{ getAssignmentTitle(aId) }}</p>
+                  <p class="notif-sub">New assignment posted — tap to view</p>
+                </div>
+                <q-icon name="chevron_right" size="16px" style="color: var(--text-muted); margin-left: auto;" />
+              </div>
+            </div>
+            <div v-if="notifStore.unreadAssignmentCount > 0" class="notif-footer">
+              <q-btn flat dense label="Mark all as read" size="sm" color="primary" @click="markAllRead" />
+            </div>
+          </div>
+        </div>
+
+        <q-btn
+          :icon="$q.dark.isActive ? 'light_mode' : 'dark_mode'"
+          round flat size="sm"
+          style="color: var(--text-secondary);"
+          @click="$q.dark.toggle()"
+        >
+          <q-tooltip>Toggle Dark Mode</q-tooltip>
+        </q-btn>
+
+        <q-btn flat round dense size="md" style="margin-left: 12px;">
+          <q-avatar size="36px">
+            <div style="width:100%; height:100%; border-radius:50%; background: linear-gradient(135deg, var(--sms-blue), var(--sms-red)); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff;">
+              {{ userInitials }}
+            </div>
+          </q-avatar>
+          <q-menu fit anchor="bottom right" self="top right">
+            <q-list style="min-width: 150px;">
+              <q-item clickable v-close-popup @click="handleLogout">
+                <q-item-section avatar>
+                  <q-icon name="logout" color="negative" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label class="text-negative">Sign Out</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
       </q-toolbar>
     </q-header>
 
+    <!-- ── Sidebar ─────────────────────────────── -->
     <q-drawer
       v-model="leftDrawerOpen"
       show-if-above
-      bordered
+      :width="240"
+      class="glass-sidebar"
     >
-      <q-list>
-        <q-item-label
-          header
-        >
-          Essential Links
-        </q-item-label>
+      <div style="padding: 20px 16px;">
+        <!-- Logo -->
+        <div class="row items-center q-gutter-sm q-mb-xl" style="padding: 4px 0;">
+          <div style="width:38px; height:38px; border-radius:10px; background: linear-gradient(135deg, var(--sms-blue), var(--sms-blue-light)); display:flex; align-items:center; justify-content:center;">
+            <q-icon name="school" size="20px" style="color:#fff"/>
+          </div>
+          <div>
+            <p style="font-weight:800; font-size:16px; color: var(--text-primary); margin:0; line-height:1.1;">SMS</p>
+            <p style="font-size:11px; color: var(--text-muted); margin:0;">School System</p>
+          </div>
+        </div>
 
-        <EssentialLink
-          v-for="link in linksList"
-          :key="link.title"
-          v-bind="link"
-        />
-      </q-list>
+        <!-- Navigation Items -->
+        <p class="text-label q-mb-sm">NAVIGATION</p>
+        <q-list dense>
+          <SidebarItem
+            v-for="item in navItems"
+            :key="item.label"
+            v-bind="item"
+          />
+        </q-list>
+
+        <template v-if="authStore.userRole === 'admin' || authStore.userRole === 'registrar'">
+          <hr class="section-divider" style="margin: 20px 0;"/>
+          <p class="text-label q-mb-sm">ADMINISTRATION</p>
+          <q-list dense>
+            <SidebarItem icon="manage_accounts" label="Manage Users" to="/admin/users" />
+            <SidebarItem icon="subject" label="Manage Courses" to="/admin/courses" />
+            <SidebarItem icon="class" label="Manage Sections" to="/admin/sections" />
+          </q-list>
+        </template>
+
+        <hr class="section-divider" style="margin: 20px 0;"/>
+        <p class="text-label q-mb-sm">DEVELOPER</p>
+        <q-list dense>
+          <SidebarItem icon="widgets" label="Components" to="/components" />
+        </q-list>
+      </div>
     </q-drawer>
 
+    <!-- ── Page Content ─────────────────────────── -->
     <q-page-container>
       <router-view />
     </q-page-container>
+
   </q-layout>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import EssentialLink from '@/components/EssentialLink.vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
+import { useAuthStore } from '../stores/auth'
+import { useNotificationStore } from '../stores/notificationStore'
+import SidebarItem from '@/components/ui/SidebarItem.vue'
 
-const linksList = [
-  {
-    label: 'Docs',
-    caption: 'quasar.dev',
-    icon: 'school',
-    link: 'https://quasar.dev'
-  },
-  {
-    label: 'Github',
-    caption: 'github.com/quasarframework',
-    icon: 'code',
-    link: 'https://github.com/quasarframework'
-  },
-  {
-    label: 'Discord Chat Channel',
-    caption: 'chat.quasar.dev',
-    icon: 'chat',
-    link: 'https://chat.quasar.dev'
-  },
-  {
-    label: 'Forum',
-    caption: 'forum.quasar.dev',
-    icon: 'record_voice_over',
-    link: 'https://forum.quasar.dev'
-  },
-  {
-    label: 'Twitter',
-    caption: '@quasarframework',
-    icon: 'rss_feed',
-    link: 'https://twitter.quasar.dev'
-  },
-  {
-    label: 'Facebook',
-    caption: '@QuasarFramework',
-    icon: 'public',
-    link: 'https://facebook.quasar.dev'
-  },
-  {
-    label: 'Quasar Awesome',
-    caption: 'Community Quasar projects',
-    icon: 'favorite',
-    link: 'https://awesome.quasar.dev'
-  }
-]
+const router = useRouter()
+const authStore = useAuthStore()
+const notifStore = useNotificationStore()
+const $q = useQuasar()
 
 const leftDrawerOpen = ref(false)
+const notifPanelOpen = ref(false)
 
-function toggleLeftDrawer () {
-  leftDrawerOpen.value = !leftDrawerOpen.value
-}
+function toggleLeftDrawer() { leftDrawerOpen.value = !leftDrawerOpen.value }
+
+const userInitials = computed(() => {
+  if (!authStore.user?.name) return 'AD';
+  return authStore.user.name
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase();
+});
+
+const getAssignmentTitle = (id) => {
+  const found = notifStore.latestAssignments.find(a => a.id === id);
+  return found?.title || `Assignment #${id}`;
+};
+
+const goToAssignments = () => {
+  notifPanelOpen.value = false;
+  router.push('/assignments');
+};
+
+const markAllRead = () => {
+  notifStore.markAssignmentsRead(notifStore.newAssignmentIds);
+  notifPanelOpen.value = false;
+};
+
+const handleLogout = async () => {
+  notifStore.stopPolling();
+  notifStore.clearSeenStorage();
+  try {
+    await authStore.logout();
+    router.push('/login');
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+// Notification handler: fires only when NEW assignments appear after initial load
+const handleNewAssignments = (newOnes) => {
+  const count = newOnes.length;
+  const firstTitle = newOnes[0]?.title || 'New assignment';
+
+  $q.notify({
+    group: 'new-assignment',
+    color: 'primary',
+    icon: 'assignment',
+    message: count === 1
+      ? `📋 New assignment: "${firstTitle}"`
+      : `📋 ${count} new assignments posted!`,
+    caption: 'Click to view your assignments',
+    position: 'top-right',
+    timeout: 6000,
+    actions: [
+      {
+        label: 'View',
+        color: 'white',
+        handler: () => router.push('/assignments'),
+      },
+    ],
+  });
+};
+
+// Badge counts
+const studentBellCount = computed(() =>
+  notifStore.unreadAssignmentCount + notifStore.pendingSubmissionCount
+);
+
+// Nav items — pass correct badge count per role
+const navItems = computed(() => {
+  const role = authStore.userRole;
+
+  if (role === 'student') {
+    return [
+      { icon: 'dashboard',  label: 'Dashboard',     to: '/dashboard',            badge: 0 },
+      { icon: 'campaign',   label: 'Announcements', to: '/announcements',badge: 0 },
+      { icon: 'menu_book',  label: 'My Modules',    to: '/lms',         badge: 0 },
+      { icon: 'assignment', label: 'My Assignments', to: '/assignments', badge: notifStore.pendingSubmissionCount },
+      { icon: 'code',       label: 'Coding Lab',    to: '/lms/lab',     badge: 0 },
+      { icon: 'how_to_reg', label: 'Attendance',    to: '/attendance',  badge: 0 },
+      { icon: 'grade',      label: 'My Grades',     to: '/grading',     badge: 0 },
+      { icon: 'bar_chart',  label: 'Report Card',   to: '/reports',     badge: 0 },
+    ];
+  }
+
+  if (role === 'teacher' || role === 'admin') {
+    return [
+      { icon: 'dashboard',  label: 'Dashboard',      to: '/dashboard',            badge: 0 },
+      { icon: 'campaign',   label: 'Announcements',  to: '/announcements',badge: 0 },
+      { icon: 'menu_book',  label: 'LMS Modules',    to: '/lms',         badge: 0 },
+      { icon: 'assignment', label: 'Assignments',    to: '/assignments',  badge: notifStore.pendingGradingCount },
+      { icon: 'how_to_reg', label: 'Mark Attendance',to: '/attendance',  badge: 0 },
+      { icon: 'grade',      label: 'Gradebook',      to: '/grading',     badge: 0 },
+      { icon: 'bar_chart',  label: 'Report Cards',   to: '/reports',     badge: 0 },
+    ];
+  }
+
+  return [
+    { icon: 'dashboard',  label: 'Dashboard',      to: '/dashboard' },
+    { icon: 'campaign',   label: 'Announcements',  to: '/announcements' },
+    { icon: 'menu_book',  label: 'LMS Modules',    to: '/lms' },
+    { icon: 'assignment', label: 'Assignments',    to: '/assignments' },
+    { icon: 'how_to_reg', label: 'Mark Attendance',to: '/attendance' },
+    { icon: 'grade',      label: 'Gradebook',      to: '/grading' },
+    { icon: 'bar_chart',  label: 'Report Cards',   to: '/reports' },
+  ];
+});
+
+import { watch } from 'vue'
+
+watch(() => authStore.userRole, (newRole) => {
+  if (newRole === 'student' || newRole === 'teacher' || newRole === 'admin') {
+    notifStore.startPolling(newRole === 'student' ? handleNewAssignments : null, 30000);
+  }
+}, { immediate: true });
+
+onMounted(() => {
+  // Close notification panel on outside click
+  document.addEventListener('click', () => { notifPanelOpen.value = false; });
+});
+
+onUnmounted(() => {
+  notifStore.stopPolling();
+  document.removeEventListener('click', () => { notifPanelOpen.value = false; });
+});
 </script>
+
+<style scoped>
+.nav-link {
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all var(--transition-base);
+}
+.nav-link:hover { color: var(--sms-blue); background: rgba(0,122,255,0.08); }
+.nav-link--active { color: var(--sms-blue); background: rgba(0,122,255,0.10); font-weight: 600; }
+
+/* Notification panel */
+.notif-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 320px;
+  background: var(--glass-bg, rgba(20,20,30,0.97));
+  border: 1px solid var(--border-color, rgba(255,255,255,0.12));
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  z-index: 9999;
+  overflow: hidden;
+  animation: panel-slide-in 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes panel-slide-in {
+  from { opacity: 0; transform: translateY(-10px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.notif-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.08));
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.notif-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 16px;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.notif-empty p { margin: 0; }
+
+.notif-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  transition: background 0.15s;
+}
+.notif-item:hover { background: rgba(255,255,255,0.05); }
+.notif-item:last-child { border-bottom: none; }
+
+.notif-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3b82f6;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(59,130,246,0.6);
+}
+
+.notif-title {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.notif-sub {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.notif-footer {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-color, rgba(255,255,255,0.08));
+  text-align: center;
+}
+</style>

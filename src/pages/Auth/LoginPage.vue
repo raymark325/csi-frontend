@@ -1,0 +1,107 @@
+<template>
+  <div class="row justify-center items-center bg-gradient-mesh" style="min-height: 100vh; padding: 24px;">
+    <div class="col-12 col-sm-8 col-md-6 col-lg-4">
+      <div class="glass-card q-pa-xl">
+        <!-- Logo Header -->
+        <div class="column items-center q-mb-xl">
+          <div class="logo-box q-mb-md">
+            <q-icon name="school" size="32px" style="color: #fff;"/>
+          </div>
+          <h2 class="text-title text-center q-mt-none q-mb-xs" style="font-size: 26px; font-weight: 800;">
+            Welcome back to <span class="text-gradient-blue">SMS</span>
+          </h2>
+          <p class="text-caption text-center" style="font-size:14px; margin:0;">
+            Sign in to access your modules, grades & labs.
+          </p>
+        </div>
+
+        <!-- Error Alert -->
+        <div v-if="errorMsg" class="alert alert--danger q-mb-lg">
+          <q-icon name="warning" size="20px" style="color: var(--sms-red); flex-shrink: 0; margin-top:1px"/>
+          <div>
+            <p style="font-weight:600; margin:0; color: var(--sms-red)">{{ errorMsg }}</p>
+          </div>
+        </div>
+
+        <!-- Form Fields -->
+        <form @submit.prevent="handleLogin">
+          <div class="q-mb-md">
+            <p class="text-label q-mb-xs">Email Address</p>
+            <input
+              v-model="email"
+              class="input-glass"
+              type="email"
+              placeholder="e.g. john@sms.edu"
+              required
+            />
+          </div>
+
+          <div class="q-mb-xl">
+            <p class="text-label q-mb-xs">Password</p>
+            <input
+              v-model="password"
+              class="input-glass"
+              type="password"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+
+          <!-- Submit Button -->
+          <button
+            class="btn-primary full-width justify-center"
+            type="submit"
+            :disabled="isLoading"
+          >
+            <span v-if="isLoading">Signing in...</span>
+            <span v-else>Sign In</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '../../stores/auth';
+
+const router = useRouter();
+const authStore = useAuthStore();
+
+const email = ref('');
+const password = ref('');
+const isLoading = ref(false);
+const errorMsg = ref('');
+
+const handleLogin = async () => {
+  isLoading.value = true;
+  errorMsg.value = '';
+  try {
+    await authStore.login(email.value, password.value);
+    router.push('/');
+  } catch (err) {
+    errorMsg.value = err.message || 'Invalid email or password';
+  } finally {
+    isLoading.value = false;
+  }
+};
+</script>
+
+<style scoped>
+.logo-box {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--sms-blue), var(--sms-blue-light));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(0, 122, 255, 0.3);
+}
+
+.full-width {
+  width: 100%;
+}
+</style>

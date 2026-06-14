@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Maharlika</string>
+    <string name="title_activity_main">Maharlika</string>
+    <string name="package_name">com.csi.maharlika</string>
+    <string name="custom_url_scheme">com.csi.maharlika</string>
+</resources>

@@ -83,11 +83,12 @@ export default defineConfig((/* ctx */) => {
       // directives: [],
 
       // Quasar plugins
-      plugins: []
+      plugins: ['LoadingBar', 'Loading', 'Dialog']
     },
 
     // animations: 'all', // --- includes all animations
     // https://v2.quasar.dev/options/animations
+    // animations: [],
     animations: [],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#sourcefiles
@@ -129,7 +130,7 @@ export default defineConfig((/* ctx */) => {
 
     // https://v2.quasar.dev/quasar-cli-vite/developing-pwa/configuring-pwa
     pwa: {
-      workboxMode: 'GenerateSW' // 'GenerateSW' or 'InjectManifest'
+      workboxMode: 'InjectManifest' // 'GenerateSW' or 'InjectManifest'
       // swFilename: 'sw.js',
       // manifestFilename: 'manifest.json',
       // extendPWAManifestJson (json) {},

@@ -1,19 +1,60 @@
 const routes = [
   {
     path: '/',
+    component: () => import('@/pages/LandingPage.vue'),
+    meta: { public: true }
+  },
+  {
+    path: '/',
     component: () => import('@/layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
     children: [
-      { path: '', component: () => import('@/pages/IndexPage.vue') },
-      { path: 'second', component: () => import('@/pages/SecondPage.vue') }
+      { path: 'dashboard', component: () => import('@/pages/IndexPage.vue') },
+      { path: 'components', component: () => import('@/pages/ComponentsPage.vue') },
+      { path: 'lms', component: () => import('@/pages/LMS/LMSCoursesPage.vue') },
+      { path: 'lms/course/:id', component: () => import('@/pages/LMS/ModulesPage.vue') },
+      { path: 'lms/modules/:id', component: () => import('@/pages/LMS/ModuleDetailPage.vue') },
+      { path: 'lms/lab', component: () => import('@/pages/LMS/CodingLabPage.vue') },
+      { path: 'assignments', component: () => import('@/pages/LMS/AssignmentsPage.vue') },
+      { 
+        path: 'lms/submissions', 
+        component: () => import('@/pages/LMS/SubmissionsPage.vue'),
+        meta: { roles: ['teacher', 'admin'] }
+      },
+      { path: 'grading', component: () => import('@/pages/GradingSystem/GradingCoordinatorPage.vue') },
+      { 
+        path: 'grading/weights', 
+        component: () => import('@/pages/GradingSystem/CategoryManagementPage.vue'),
+        meta: { roles: ['teacher', 'admin'] }
+      },
+      { path: 'attendance', component: () => import('@/pages/Attendance/AttendanceCoordinatorPage.vue') },
+      { path: 'reports', component: () => import('@/pages/Reports/GradeReportPage.vue') },
+      { path: 'announcements', component: () => import('@/pages/Announcements/AnnouncementsPage.vue') },
+      { 
+        path: 'admin/users', 
+        component: () => import('@/pages/Admin/UserManagementPage.vue'),
+        meta: { roles: ['admin', 'registrar'] }
+      },
+      { 
+        path: 'admin/courses', 
+        component: () => import('@/pages/Admin/CourseManagementPage.vue'),
+        meta: { roles: ['admin', 'registrar'] }
+      },
+      { 
+        path: 'admin/sections', 
+        component: () => import('@/pages/Admin/SectionManagementPage.vue'),
+        meta: { roles: ['admin', 'registrar'] }
+      },
     ],
   },
-
-  // Always leave this as last one,
-  // but you can also remove it
+  {
+    path: '/login',
+    component: () => import('@/pages/Auth/LoginPage.vue'),
+  },
   {
     path: '/:catchAll(.*)*',
     component: () => import('@/pages/ErrorNotFound.vue'),
   }
-]
+];
 
-export default routes
+export default routes;
