@@ -16,7 +16,7 @@
           <div style="width:30px; height:30px; border-radius:8px; background: linear-gradient(135deg, var(--sms-blue), var(--sms-blue-light)); display:flex; align-items:center; justify-content:center;">
             <q-icon name="school" size="16px" style="color:#fff"/>
           </div>
-          <span style="font-weight:800; font-size:15px; color: var(--text-primary);">SMS</span>
+          <span style="font-weight:800; font-size:15px; color: var(--text-primary);">CSI</span>
           <span style="font-weight:400; font-size:13px; color: var(--text-muted);">School System</span>
         </q-toolbar-title>
 
@@ -116,13 +116,13 @@
     >
       <div style="padding: 20px 16px;">
         <!-- Logo -->
-        <div class="row items-center q-gutter-sm q-mb-xl" style="padding: 4px 0;">
+        <div class="row items-center q-px-md q-pt-md q-pb-md">
           <div style="width:38px; height:38px; border-radius:10px; background: linear-gradient(135deg, var(--sms-blue), var(--sms-blue-light)); display:flex; align-items:center; justify-content:center;">
             <q-icon name="school" size="20px" style="color:#fff"/>
           </div>
-          <div>
-            <p style="font-weight:800; font-size:16px; color: var(--text-primary); margin:0; line-height:1.1;">SMS</p>
-            <p style="font-size:11px; color: var(--text-muted); margin:0;">School System</p>
+          <div class="q-ml-sm">
+            <p style="font-weight:800; font-size:16px; color: var(--text-primary); margin:0; line-height:1.1;">CSI</p>
+            <p style="font-weight:400; font-size:12px; color: var(--text-muted); margin:0;">Unified Student Services</p>
           </div>
         </div>
 

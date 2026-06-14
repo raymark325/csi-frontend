@@ -8,8 +8,8 @@
             <q-icon name="school" size="24px" style="color:#fff"/>
           </div>
           <div>
-            <h1 style="font-weight:800; font-size:20px; color: var(--text-primary); margin:0; line-height:1.1;">SMS</h1>
-            <p style="font-size:12px; color: var(--text-muted); margin:0;">School System</p>
+            <h1 style="font-weight:800; font-size:20px; color: var(--text-primary); margin:0; line-height:1.1;">CSI</h1>
+            <p style="font-size:12px; color: var(--text-muted); margin:0;">Unified Student Services and Academic platform</p>
           </div>
         </div>
 
@@ -139,6 +139,12 @@
         </div>
       </div>
     </section>
+
+    <footer class="q-py-lg text-center" style="border-top: 1px solid rgba(255,255,255,0.05); margin-top: 40px;">
+      <p style="color: rgba(255,255,255,0.5); font-size: 14px; margin: 0;">
+        &copy; 2026 CSI Unified Student Services and Academic platform. Developed by Maharlika Technology.
+      </p>
+    </footer>
   </div>
 </template>
 

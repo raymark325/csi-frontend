@@ -8,10 +8,10 @@
             <q-icon name="school" size="32px" style="color: #fff;"/>
           </div>
           <h2 class="text-title text-center q-mt-none q-mb-xs" style="font-size: 26px; font-weight: 800;">
-            Welcome back to <span class="text-gradient-blue">SMS</span>
+            Welcome to <span class="text-gradient-blue">CSI</span>
           </h2>
           <p class="text-caption text-center" style="font-size:14px; margin:0;">
-            Sign in to access your modules, grades & labs.
+            Unified Student Services and Academic platform.
           </p>
         </div>
 

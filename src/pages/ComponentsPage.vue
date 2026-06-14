@@ -10,7 +10,7 @@
     >
       <div class="row items-center justify-between q-mb-md">
         <div>
-          <p class="text-label q-mb-xs" style="color: var(--sms-blue);">SCHOOL MANAGEMENT SYSTEM</p>
+          <p class="text-label q-mb-xs" style="color: var(--sms-blue);">CSI UNIFIED STUDENT SERVICES AND ACADEMIC PLATFORM</p>
           <h1 class="text-display q-mb-sm" style="margin: 0;">
             <span class="text-gradient-blue">Design</span>
             <span style="color: var(--text-primary);"> System</span>

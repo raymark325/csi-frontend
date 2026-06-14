@@ -55,7 +55,7 @@ export const reportService = {
           </thead>
           <tbody>${rows}</tbody>
         </table>
-        <div class="footer">SMS School Management System &mdash; Official Report</div>
+        <div class="footer">CSI Unified Student Services and Academic platform &mdash; Official Report</div>
         <script>window.onload = function(){ window.print(); }<\/script>
       </body>
       </html>
