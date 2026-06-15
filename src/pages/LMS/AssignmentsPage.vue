@@ -98,8 +98,8 @@
           <div v-if="authStore.user?.role === 'student'">
             <q-btn
               color="primary"
-              label="Go to Lab"
-              icon="code"
+              :label="assign.type === 'coding' ? 'Go to Lab' : 'Open Assignment'"
+              :icon="assign.type === 'coding' ? 'code' : 'assignment'"
               rounded
               unelevated
               :to="`/lms/lab?assignment_id=${assign.id}&max_score=${assign.max_score}`"

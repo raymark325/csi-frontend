@@ -32,6 +32,29 @@
 
         <hr class="section-divider" />
 
+        <!-- Attachment Section -->
+        <div v-if="lmsStore.activeModule.file_path" class="q-mb-xl p-md" style="background: rgba(0, 122, 255, 0.05); border-radius: 8px; padding: 16px; border: 1px solid rgba(0, 122, 255, 0.1);">
+          <div class="row items-center justify-between">
+            <div class="row items-center q-gutter-sm">
+              <q-icon name="attach_file" size="24px" color="primary" />
+              <div>
+                <p class="text-body text-weight-bold q-my-none" style="color: var(--text-primary);">Attached File</p>
+                <p class="text-caption q-my-none text-muted">{{ lmsStore.activeModule.file_name || 'Download Attachment' }}</p>
+              </div>
+            </div>
+            <q-btn
+              color="primary"
+              label="Download / View"
+              icon="file_download"
+              rounded
+              outline
+              type="a"
+              target="_blank"
+              :href="`http://localhost:8000/storage/${lmsStore.activeModule.file_path}`"
+            />
+          </div>
+        </div>
+
         <!-- HTML Content body -->
         <div class="module-rich-content text-body" v-html="lmsStore.activeModule.content"></div>
       </div>

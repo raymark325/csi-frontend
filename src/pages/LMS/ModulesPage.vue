@@ -98,6 +98,11 @@
             <p class="text-label q-mb-xs">Content (HTML Support)</p>
             <textarea v-model="newModule.content" class="input-glass" rows="5" placeholder="<h3>Title</h3><p>Content...</p>"></textarea>
           </div>
+
+          <div class="q-mb-md">
+            <p class="text-label q-mb-xs">Attach File (PPT, PDF, Word, Image)</p>
+            <input type="file" @change="handleFileUpload" class="input-glass q-pa-sm" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.gif" />
+          </div>
         </q-card-section>
 
         <q-card-actions align="right" class="q-pb-md q-pr-md">
@@ -130,6 +135,7 @@ const newModule = ref({
   category: 'Lecture',
   description: '',
   content: '',
+  file: null,
 });
 
 const filteredModules = computed(() => {
@@ -151,6 +157,13 @@ const formatDate = (dateStr) => {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
+const handleFileUpload = (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    newModule.value.file = file;
+  }
+};
+
 const handleCreateModule = async () => {
   if (!newModule.value.title) return;
   newModule.value.section_id = currentSectionId.value; // ensure it's locked
@@ -158,7 +171,7 @@ const handleCreateModule = async () => {
   try {
     await lmsStore.createModule(newModule.value);
     showCreateDialog.value = false;
-    newModule.value = { section_id: currentSectionId.value, title: '', category: 'Lecture', description: '', content: '' };
+    newModule.value = { section_id: currentSectionId.value, title: '', category: 'Lecture', description: '', content: '', file: null };
   } catch (err) {
     console.error(err);
   } finally {

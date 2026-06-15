@@ -3,11 +3,15 @@
     <!-- Header -->
     <div class="row justify-between items-center q-mb-xl">
       <div>
-        <p class="text-label q-mb-xs" style="color: var(--sms-blue);">INTERACTIVE LAB</p>
-        <h1 class="text-display q-my-none">Coding Lab</h1>
+        <p class="text-label q-mb-xs" style="color: var(--sms-blue);">
+          {{ assignmentType === 'coding' ? 'INTERACTIVE LAB' : 'WRITTEN ASSIGNMENT' }}
+        </p>
+        <h1 class="text-display q-my-none">
+          {{ assignmentType === 'coding' ? 'Coding Lab' : 'Assignment Submission' }}
+        </h1>
         <div class="row items-center q-gutter-sm q-mt-xs">
           <p class="text-body q-my-none" style="color: var(--text-secondary);">
-            Solve assignments and write code. Copy-paste is disabled.
+            {{ assignmentType === 'coding' ? 'Solve assignments and write code. Copy-paste is disabled.' : 'Complete your written assignment below. Progress is autosaved.' }}
           </p>
           <span class="text-caption text-weight-bold" :style="{ color: (saveStatus.includes('Offline') || saveStatus.includes('Error')) ? 'var(--color-warning)' : 'var(--color-success)' }">
             • {{ saveStatus }}
@@ -72,6 +76,9 @@
             placeholder="Type your written quiz answers or essay response here..."
             style="height: 400px; font-family: sans-serif; resize: vertical;"
             :readonly="isReadOnly"
+            @copy.prevent="preventAction"
+            @paste.prevent="preventAction"
+            @cut.prevent="preventAction"
           ></textarea>
         </div>
       </div>
@@ -127,6 +134,15 @@ const isReadOnly = computed(() => {
 const javaEditorRef = ref(null);
 const sqlEditorRef = ref(null);
 const htmlEditorRef = ref(null);
+
+const preventAction = (e) => {
+  $q.notify({
+    type: 'negative',
+    message: 'Copying/Pasting is disabled for this assignment.',
+    position: 'top',
+    timeout: 2000
+  });
+};
 
 const assignment = computed(() => {
   return lmsStore.assignments.find(a => a.id === assignmentId.value);

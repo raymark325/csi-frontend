@@ -124,15 +124,22 @@ const runCode = () => {
     // 2. Strict Semicolon Check
     const lines = rawCode.split('\n');
     for (let l = 0; l < lines.length; l++) {
-      const line = lines[l].trim();
+      let line = lines[l].trim();
       // Skip empty, comment, class headers, block openings, block closings
       if (!line || line.startsWith('//') || line.startsWith('/*') || line.startsWith('*')) continue;
+      
+      // Remove inline comments for semicolon validation
+      const commentIdx = line.indexOf('//');
+      if (commentIdx !== -1) {
+        line = line.substring(0, commentIdx).trim();
+      }
+
       if (line.startsWith('public class') || line.startsWith('class') || line.startsWith('public static void main')) continue;
       if (line.endsWith('{') || line.endsWith('}') || line.endsWith(';')) continue;
       
       // If it looks like a statement (variable decl, print, assignments, imports, etc.)
       if (line.includes('System.out') || line.includes('int ') || line.includes('String ') || line.includes('double ') || line.includes('boolean ') || line.includes('=') || line.includes('return') || line.includes('import ')) {
-        output.value = `Compilation Error: ';' expected at line ${l + 1}\n    ${line}`;
+        output.value = `Compilation Error: ';' expected at line ${l + 1}\n    ${lines[l].trim()}`;
         isRunning.value = false;
         return;
       }

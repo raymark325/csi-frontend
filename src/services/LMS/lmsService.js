@@ -10,6 +10,17 @@ export const lmsService = {
   },
 
   createModule(data) {
+    if (data.file) {
+      const formData = new FormData();
+      Object.keys(data).forEach(key => {
+        if (data[key] !== null && data[key] !== undefined) {
+          formData.append(key, data[key]);
+        }
+      });
+      return API.post('/lms/modules', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+    }
     return API.post('/lms/modules', data);
   },
 
