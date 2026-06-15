@@ -1,3 +1,4 @@
+import axios from 'axios';
 import API from '../api';
 
 export const authService = {
@@ -6,6 +7,16 @@ export const authService = {
   },
 
   register(userData) {
+    if (userData.profile_picture) {
+      const formData = new FormData();
+      Object.keys(userData).forEach(key => {
+        if (userData[key] !== null && userData[key] !== undefined) {
+          formData.append(key, userData[key]);
+        }
+      });
+      const baseURL = API.defaults.baseURL;
+      return axios.post(`${baseURL}/auth/register`, formData).then(res => res.data);
+    }
     return API.post('/auth/register', userData);
   },
 

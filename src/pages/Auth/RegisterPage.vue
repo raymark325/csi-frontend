@@ -80,6 +80,33 @@
             </select>
           </div>
 
+          <div class="q-mb-md">
+            <p class="text-label q-mb-xs">Profile Picture (Optional)</p>
+            <div class="row q-gutter-sm items-center">
+              <input type="file" ref="fileInput" @change="handleProfilePic" accept="image/*" style="display: none;" />
+              <q-btn outline color="primary" icon="upload_file" label="Upload Image" @click="$refs.fileInput.click()" class="col" />
+              <q-btn icon="camera_alt" color="primary" rounded outline label="Take Photo" @click="startCamera" />
+            </div>
+
+            <!-- Camera View -->
+            <div v-if="cameraActive" class="q-mt-sm glass-card q-pa-sm text-center">
+              <video ref="videoElement" autoplay playsinline style="width: 100%; max-height: 250px; border-radius: 8px; background: #000; object-fit: cover;"></video>
+              <div class="row q-gutter-sm q-mt-sm justify-center">
+                <q-btn color="primary" icon="camera" label="Capture" @click="capturePhoto" rounded unelevated />
+                <q-btn color="negative" flat label="Cancel" @click="stopCamera" rounded />
+              </div>
+            </div>
+
+            <!-- Preview -->
+            <div v-if="photoPreview && !cameraActive" class="q-mt-sm row items-center q-gutter-md glass-card q-pa-sm">
+              <img :src="photoPreview" style="width: 60px; height: 60px; object-fit: cover; border-radius: 50%; border: 2px solid var(--sms-blue);" />
+              <div>
+                <p class="text-body2 q-my-none text-weight-bold" style="color: var(--text-primary);">Photo ready</p>
+                <q-btn flat color="negative" label="Remove" size="sm" class="q-px-none" @click="removePhoto" />
+              </div>
+            </div>
+          </div>
+
           <hr style="border: 0; border-top: 1px solid rgba(0,0,0,0.05); margin: 24px 0;" />
           <div class="text-subtitle2 q-mb-sm text-left" style="font-weight: 700; color: var(--sms-blue);">Account Credentials</div>
 
@@ -162,6 +189,70 @@ onMounted(async () => {
 const isLoading = ref(false);
 const errorMsg = ref('');
 const successMsg = ref('');
+let selectedProfilePic = null;
+const photoPreview = ref(null);
+const cameraActive = ref(false);
+const videoElement = ref(null);
+let mediaStream = null;
+
+const startCamera = async () => {
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+    cameraActive.value = true;
+    setTimeout(() => {
+      if (videoElement.value) {
+        videoElement.value.srcObject = mediaStream;
+      }
+    }, 100);
+  } catch (err) {
+    alert('Could not access camera: ' + err.message);
+  }
+};
+
+const stopCamera = () => {
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(track => track.stop());
+    mediaStream = null;
+  }
+  cameraActive.value = false;
+};
+
+const capturePhoto = () => {
+  if (!videoElement.value) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = videoElement.value.videoWidth || 640;
+  canvas.height = videoElement.value.videoHeight || 480;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(videoElement.value, 0, 0, canvas.width, canvas.height);
+  
+  photoPreview.value = canvas.toDataURL('image/jpeg');
+  
+  canvas.toBlob((blob) => {
+    if (blob) {
+      const file = new File([blob], "profile_photo.jpg", { type: "image/jpeg" });
+      selectedProfilePic = file;
+    }
+    stopCamera();
+  }, 'image/jpeg', 0.9);
+};
+
+const removePhoto = () => {
+  photoPreview.value = null;
+  selectedProfilePic = null;
+};
+
+const fileInput = ref(null);
+
+const handleProfilePic = (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    selectedProfilePic = file;
+    photoPreview.value = URL.createObjectURL(file);
+    stopCamera();
+  } else {
+    removePhoto();
+  }
+};
 
 const handleRegister = async () => {
   errorMsg.value = '';
@@ -174,7 +265,7 @@ const handleRegister = async () => {
 
   isLoading.value = true;
   try {
-    await authStore.register({
+    const payload = {
       first_name: formData.value.firstName,
       middle_name: formData.value.middleName,
       last_name: formData.value.lastName,
@@ -185,7 +276,13 @@ const handleRegister = async () => {
       section_id: formData.value.section_id || null,
       email: formData.value.email,
       password: formData.value.password,
-    });
+    };
+    
+    if (selectedProfilePic) {
+      payload.profile_picture = selectedProfilePic;
+    }
+
+    await authStore.register(payload);
 
     successMsg.value = 'Registration successful! Redirecting to login...';
     setTimeout(() => {
