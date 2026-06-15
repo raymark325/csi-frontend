@@ -135,8 +135,9 @@ const newModule = ref({
   category: 'Lecture',
   description: '',
   content: '',
-  file: null,
 });
+
+let selectedFile = null;
 
 const filteredModules = computed(() => {
   return lmsStore.modules.filter(m => m.section_id === currentSectionId.value);
@@ -160,18 +161,28 @@ const formatDate = (dateStr) => {
 const handleFileUpload = (event) => {
   const file = event.target.files[0];
   if (file) {
-    newModule.value.file = file;
+    selectedFile = file;
+  } else {
+    selectedFile = null;
   }
 };
 
 const handleCreateModule = async () => {
   if (!newModule.value.title) return;
-  newModule.value.section_id = currentSectionId.value; // ensure it's locked
+  
+  const payload = { ...newModule.value };
+  if (selectedFile) {
+    payload.file = selectedFile;
+  }
+  
+  payload.section_id = currentSectionId.value; // ensure it's locked
   isSubmitting.value = true;
+  console.log("handleCreateModule payload:", payload);
   try {
-    await lmsStore.createModule(newModule.value);
+    await lmsStore.createModule(payload);
     showCreateDialog.value = false;
-    newModule.value = { section_id: currentSectionId.value, title: '', category: 'Lecture', description: '', content: '', file: null };
+    newModule.value = { section_id: currentSectionId.value, title: '', category: 'Lecture', description: '', content: '' };
+    selectedFile = null;
   } catch (err) {
     console.error(err);
   } finally {

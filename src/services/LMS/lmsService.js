@@ -1,3 +1,4 @@
+import axios from 'axios';
 import API from '../api';
 
 export const lmsService = {
@@ -10,16 +11,24 @@ export const lmsService = {
   },
 
   createModule(data) {
+    console.log("lmsService.createModule data:", data);
     if (data.file) {
+      console.log("lmsService: Found file, using FormData");
       const formData = new FormData();
       Object.keys(data).forEach(key => {
         if (data[key] !== null && data[key] !== undefined) {
           formData.append(key, data[key]);
         }
       });
-      return API.post('/lms/modules', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      
+      const token = localStorage.getItem('auth_token');
+      const baseURL = API.defaults.baseURL;
+      
+      return axios.post(`${baseURL}/lms/modules`, formData, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      }).then(res => res.data);
     }
     return API.post('/lms/modules', data);
   },
