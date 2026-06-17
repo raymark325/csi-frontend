@@ -5,7 +5,7 @@
         <span class="badge badge-blue">Java Sandbox</span>
         <span class="text-caption text-red text-weight-bold">⚠️ Copy-Paste Disabled</span>
       </div>
-      <q-btn color="primary" icon="play_arrow" label="Run Code" rounded unelevated :loading="isRunning" @click="runCode"/>
+      <q-btn color="primary" icon="play_arrow" label="Run Code" rounded unelevated :loading="isRunning" @click="runCode(false)"/>
     </div>
 
     <!-- Code Editor Box -->
@@ -23,10 +23,26 @@
       ></textarea>
     </div>
 
-    <!-- Console Output -->
-    <div v-if="output !== null" class="output-console q-mt-md">
-      <p class="text-label text-white q-mb-xs">CONSOLE OUTPUT</p>
-      <pre class="console-text">{{ output }}</pre>
+    <!-- Unified Console Box -->
+    <div class="output-console q-mt-md">
+      <div class="row justify-between items-center q-mb-xs">
+        <p class="text-label text-white q-mb-none">CONSOLE</p>
+        <span v-if="isRunning && !isWaitingForInput" class="text-caption text-grey-4">Running...</span>
+        <span v-else-if="isWaitingForInput" class="text-caption text-amber text-weight-bold" style="font-size: 11px;">⚠️ (Program waiting for input. Click console below to type)</span>
+        <span v-else class="text-caption text-grey-5" style="font-size: 11px;">(Console output)</span>
+      </div>
+      
+      <!-- Console Content -->
+      <div class="console-content" @click="focusConsole">
+        <pre
+          ref="consoleRef"
+          class="console-text"
+          tabindex="0"
+          @keydown="handleConsoleKeydown"
+          @focus="consoleFocused = true"
+          @blur="consoleFocused = false"
+        ><span>{{ output || 'Console ready. Click Run Code to execute.' }}</span><span class="user-typed-input">{{ currentInput }}</span><span v-if="consoleFocused && isWaitingForInput" class="console-cursor">_</span></pre>
+      </div>
     </div>
   </div>
 </template>
@@ -59,6 +75,43 @@ const code = ref(props.initialCode || defaultCode);
 
 const isRunning = ref(false);
 const output = ref(null);
+const stdin = ref('');
+const currentInput = ref('');
+const consoleFocused = ref(false);
+const consoleRef = ref(null);
+const isWaitingForInput = ref(false);
+
+const focusConsole = () => {
+  if (isWaitingForInput.value && consoleRef.value) {
+    consoleRef.value.focus();
+  }
+};
+
+// Global input resolver callback
+let resolveInputPromise = null;
+
+const handleConsoleKeydown = (e) => {
+  if (props.disabled || !isRunning.value || !isWaitingForInput.value) return;
+
+  // Prevent browser scroll or back actions
+  if (e.key === ' ' || e.key === 'Backspace' || e.key === 'Enter') {
+    e.preventDefault();
+  }
+
+  if (e.key === 'Enter') {
+    const val = currentInput.value;
+    currentInput.value = '';
+    if (resolveInputPromise) {
+      resolveInputPromise(val);
+    }
+  } else if (e.key === 'Backspace') {
+    currentInput.value = currentInput.value.slice(0, -1);
+  } else if (e.key === ' ') {
+    currentInput.value += ' ';
+  } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    currentInput.value += e.key;
+  }
+};
 
 const insertTab = (e) => {
   const start = e.target.selectionStart;
@@ -79,97 +132,125 @@ const preventAction = (e) => {
   });
 };
 
-const runCode = () => {
+const runCode = async () => {
   isRunning.value = true;
   output.value = 'Compiling Java...\n';
-  setTimeout(() => {
+  currentInput.value = '';
+  isWaitingForInput.value = false;
+  resolveInputPromise = null;
+
+  setTimeout(async () => {
     const rawCode = code.value;
-    
-    // 1. Bracket Matching Check
-    const stack = [];
-    const brackets = { '{': '}', '(': ')', '[': ']' };
-    const opening = Object.keys(brackets);
-    const closing = Object.values(brackets);
-    
-    let lineNum = 1;
-    let bracketError = null;
-    
-    for (let i = 0; i < rawCode.length; i++) {
-      const char = rawCode[i];
-      if (char === '\n') {
-        lineNum++;
-      }
-      if (opening.includes(char)) {
-        stack.push({ char, line: lineNum });
-      } else if (closing.includes(char)) {
-        const last = stack.pop();
-        if (!last || brackets[last.char] !== char) {
-          bracketError = `Compilation Error: mismatched bracket '${char}' at line ${lineNum}`;
+
+    // 1. Parse main method body
+    const mainStart = rawCode.indexOf('public static void main');
+    if (mainStart === -1) {
+      output.value = "Compilation Error: main method not found. Ensure class contains:\npublic static void main(String[] args)";
+      isRunning.value = false;
+      return;
+    }
+    const bodyStart = rawCode.indexOf('{', mainStart);
+    if (bodyStart === -1) {
+      output.value = "Compilation Error: main method opening brace '{' not found";
+      isRunning.value = false;
+      return;
+    }
+    let braceCount = 1;
+    let bodyEnd = -1;
+    for (let i = bodyStart + 1; i < rawCode.length; i++) {
+      if (rawCode[i] === '{') braceCount++;
+      else if (rawCode[i] === '}') {
+        braceCount--;
+        if (braceCount === 0) {
+          bodyEnd = i;
           break;
         }
       }
     }
-    
-    if (!bracketError && stack.length > 0) {
-      const last = stack.pop();
-      bracketError = `Compilation Error: unclosed bracket '${last.char}' opened at line ${last.line}`;
-    }
-    
-    if (bracketError) {
-      output.value = bracketError;
+    if (bodyEnd === -1) {
+      output.value = "Compilation Error: main method mismatched braces";
       isRunning.value = false;
       return;
     }
-    
-    // 2. Strict Semicolon Check
-    const lines = rawCode.split('\n');
-    for (let l = 0; l < lines.length; l++) {
-      let line = lines[l].trim();
-      // Skip empty, comment, class headers, block openings, block closings
-      if (!line || line.startsWith('//') || line.startsWith('/*') || line.startsWith('*')) continue;
-      
-      // Remove inline comments for semicolon validation
-      const commentIdx = line.indexOf('//');
-      if (commentIdx !== -1) {
-        line = line.substring(0, commentIdx).trim();
-      }
+    const mainBody = rawCode.substring(bodyStart + 1, bodyEnd);
 
-      if (line.startsWith('public class') || line.startsWith('class') || line.startsWith('public static void main')) continue;
-      if (line.endsWith('{') || line.endsWith('}') || line.endsWith(';')) continue;
-      
-      // If it looks like a statement (variable decl, print, assignments, imports, etc.)
-      if (line.includes('System.out') || line.includes('int ') || line.includes('String ') || line.includes('double ') || line.includes('boolean ') || line.includes('=') || line.includes('return') || line.includes('import ')) {
-        output.value = `Compilation Error: ';' expected at line ${l + 1}\n    ${lines[l].trim()}`;
-        isRunning.value = false;
-        return;
-      }
-    }
-    
-    // 3. System.out.println print validation
-    const printMatches = rawCode.match(/System\.out\.println/g) || [];
-    const validPrintPattern = /System\.out\.println\s*\((.*?)\)\s*;/g;
-    const validPrintMatches = [...rawCode.matchAll(validPrintPattern)];
-    
-    if (printMatches.length !== validPrintMatches.length) {
-      output.value = `Compilation Error: invalid syntax for System.out.println. Check parentheses and semicolon.`;
+    // 2. Translate Java code inside main to JavaScript
+    let jsCode = mainBody;
+
+    // Strip imports (Java syntax imports interfere with JS module structure)
+    jsCode = jsCode.replace(/import\s+[\w\.]+;/g, '');
+
+    // Translate declarations
+    jsCode = jsCode.replace(/\b(int|double|float|String|boolean|char)\b/g, 'let');
+
+    // Remove Scanner instantiations
+    jsCode = jsCode.replace(/\bScanner\s+[a-zA-Z0-9_]+\s*=\s*new\s+Scanner\s*\(.*?\)\s*;/g, '');
+
+    // System.out.println & System.out.print translations
+    jsCode = jsCode.replace(/System\.out\.println\s*\(([\s\S]*?)\)\s*;/g, 'print($1);\n');
+    jsCode = jsCode.replace(/System\.out\.print\s*\(([\s\S]*?)\)\s*;/g, 'printNoNewline($1);\n');
+    jsCode = jsCode.replace(/System\.out\.printf\s*\(([\s\S]*?)\)\s*;/g, 'printNoNewline($1);\n');
+
+    // Replace Scanner calls with await readInput promises
+    jsCode = jsCode.replace(/[a-zA-Z0-9_]+\.nextInt\s*\(\)/g, "await readInput('int')");
+    jsCode = jsCode.replace(/[a-zA-Z0-9_]+\.nextDouble\s*\(\)/g, "await readInput('double')");
+    jsCode = jsCode.replace(/[a-zA-Z0-9_]+\.next\s*\(\)/g, "await readInput('string')");
+    jsCode = jsCode.replace(/[a-zA-Z0-9_]+\.nextLine\s*\(\)/g, "await readInput('line')");
+
+    // Replace String length methods
+    jsCode = jsCode.replace(/\.length\s*\(\)/g, '.length');
+
+    output.value = ''; // Clear compilation logs
+
+    // 3. Define local runtime helpers
+    const print = (val) => {
+      output.value += (val !== undefined ? val : '') + '\n';
+    };
+
+    const printNoNewline = (val) => {
+      output.value += (val !== undefined ? val : '');
+    };
+
+    const readInput = (type) => {
+      isWaitingForInput.value = true;
+      setTimeout(() => {
+        focusConsole();
+      }, 50);
+
+      return new Promise((resolve) => {
+        resolveInputPromise = (val) => {
+          isWaitingForInput.value = false;
+          // Echo typed input to terminal
+          output.value += val + '\n';
+
+          if (type === 'int') {
+            resolve(parseInt(val) || 0);
+          } else if (type === 'double') {
+            resolve(parseFloat(val) || 0.0);
+          } else {
+            resolve(val);
+          }
+        };
+      });
+    };
+
+    // 4. Execute function
+    try {
+      const execFunction = new Function('print', 'printNoNewline', 'readInput', `
+        return (async () => {
+          ${jsCode}
+        })();
+      `);
+
+      await execFunction(print, printNoNewline, readInput);
+      output.value += '\nProcess finished with exit code 0';
+    } catch (err) {
+      output.value += '\nRuntime Error: ' + err.message;
+    } finally {
       isRunning.value = false;
-      return;
+      isWaitingForInput.value = false;
     }
-    
-    // Extract stdout prints
-    if (validPrintMatches.length > 0) {
-      output.value = validPrintMatches.map(m => {
-        const content = m[1].trim();
-        if (content.startsWith('"') && content.endsWith('"')) {
-          return content.substring(1, content.length - 1);
-        }
-        return content;
-      }).join('\n');
-    } else {
-      output.value = 'Build successful.\nProcess finished with exit code 0';
-    }
-    isRunning.value = false;
-  }, 1000);
+  }, 100);
 };
 
 // Watcher to emit editor changes for real-time autosaving
@@ -178,8 +259,11 @@ watch(code, (newVal) => {
 });
 
 watch(() => props.initialCode, (newVal) => {
-  if (newVal && newVal !== code.value) {
-    code.value = newVal;
+  if (newVal !== undefined && newVal !== null) {
+    const targetVal = newVal || defaultCode;
+    if (targetVal !== code.value) {
+      code.value = targetVal;
+    }
   }
 });
 </script>
@@ -210,6 +294,15 @@ watch(() => props.initialCode, (newVal) => {
   background: #0f141d;
   border-radius: var(--radius-md);
   padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.console-content {
+  min-height: 100px;
+  max-height: 250px;
+  overflow-y: auto;
 }
 
 .console-text {
@@ -217,5 +310,26 @@ watch(() => props.initialCode, (newVal) => {
   color: #5af78e;
   margin: 0;
   white-space: pre-wrap;
+  cursor: text;
+}
+
+.console-text:focus {
+  outline: none;
+}
+
+.user-typed-input {
+  color: #ffaa00;
+  font-weight: bold;
+}
+
+.console-cursor {
+  animation: blink 1s step-end infinite;
+  color: #5af78e;
+  font-weight: bold;
+}
+
+@keyframes blink {
+  from, to { color: transparent }
+  50% { color: #5af78e }
 }
 </style>

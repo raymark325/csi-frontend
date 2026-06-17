@@ -86,13 +86,13 @@
       <!-- Coding Playgrounds -->
       <template v-else>
         <div v-show="activeTab === 'java'">
-          <JavaEditor ref="javaEditorRef" :initial-code="initialCode" :disabled="isReadOnly" @change="handleEditorChange" />
+          <JavaEditor ref="javaEditorRef" :initial-code="initialJavaCode" :disabled="isReadOnly" @change="handleJavaChange" />
         </div>
         <div v-show="activeTab === 'sql'">
           <SqlEditor ref="sqlEditorRef" />
         </div>
         <div v-show="activeTab === 'html'">
-          <HtmlEditor ref="htmlEditorRef" :initial-code="initialCode" :disabled="isReadOnly" @change="handleEditorChange" />
+          <HtmlEditor ref="htmlEditorRef" :initial-code="initialHtmlCode" :disabled="isReadOnly" @change="handleHtmlChange" />
         </div>
       </template>
     </div>
@@ -119,14 +119,17 @@ const activeTab = ref('java');
 const assignmentId = ref(null);
 const maxScore = ref(0);
 const isSubmitting = ref(false);
-const initialCode = ref('');
+
+// Isolated initial code states to prevent tab contamination
+const initialJavaCode = ref('');
+const initialHtmlCode = ref('');
+
 const saveStatus = ref('All changes saved');
 const writtenResponse = ref('');
 const isOnline = ref(navigator.onLine);
 const submissionStatus = ref(null);
 
 const isReadOnly = computed(() => {
-  // Only lock if THIS assignment has been explicitly submitted or graded
   return submissionStatus.value === 'submitted' || submissionStatus.value === 'graded';
 });
 
@@ -168,28 +171,74 @@ const getActiveCode = () => {
   return '';
 };
 
+// Check if content structure looks like HTML or Java
+const isHtml = (content) => {
+  if (!content) return false;
+  const lower = content.toLowerCase();
+  return lower.includes('<html') || lower.includes('<!doctype') || lower.includes('<body>') || lower.includes('<h1>');
+};
+
+const isJava = (content) => {
+  if (!content) return false;
+  return content.includes('class ') || content.includes('System.out') || content.includes('public static void main');
+};
+
+const getStorageKey = (baseKey) => {
+  const userId = authStore.user?.id || 'guest';
+  return `${baseKey}_user_${userId}`;
+};
+
+const getAssignmentLanguage = (codeVal) => {
+  const title = assignment.value?.title || '';
+  const desc = assignment.value?.description || '';
+  if (
+    title.toLowerCase().includes('html') ||
+    title.toLowerCase().includes('css') ||
+    desc.toLowerCase().includes('html') ||
+    desc.toLowerCase().includes('css')
+  ) {
+    return 'html';
+  }
+  if (codeVal && isHtml(codeVal)) {
+    return 'html';
+  }
+  return 'java';
+};
+
+// Save handlers
 let saveTimeout = null;
-const handleEditorChange = (newCode) => {
+
+const handleJavaChange = (newCode) => {
+  if (activeTab.value !== 'java') return;
+  saveCode(newCode, 'java');
+};
+
+const handleHtmlChange = (newCode) => {
+  if (activeTab.value !== 'html') return;
+  saveCode(newCode, 'html');
+};
+
+const saveCode = (newCode, lang) => {
   if (isReadOnly.value) return;
   if (!assignmentId.value) {
     // Free play: save to local storage only
     saveStatus.value = 'Saving to local draft...';
     if (saveTimeout) clearTimeout(saveTimeout);
     saveTimeout = setTimeout(() => {
-      localStorage.setItem(`sms_lab_freeplay_${activeTab.value}`, newCode);
+      localStorage.setItem(getStorageKey(`sms_lab_freeplay_${lang}`), newCode);
       saveStatus.value = 'Local draft saved';
     }, 1000);
     return;
   }
 
-  // Task mode: autosave as DRAFT (not submitted)
+  // Task mode: autosave as DRAFT
   if (saveTimeout) clearTimeout(saveTimeout);
 
   if (!isOnline.value) {
     saveStatus.value = 'Offline - saving changes locally...';
     saveTimeout = setTimeout(() => {
-      localStorage.setItem(`sms_pending_sync_${assignmentId.value}`, newCode);
-      localStorage.setItem(`sms_assignment_cache_${assignmentId.value}`, newCode);
+      localStorage.setItem(getStorageKey(`sms_pending_sync_${assignmentId.value}`), newCode);
+      localStorage.setItem(getStorageKey(`sms_assignment_cache_${assignmentId.value}`), newCode);
       saveStatus.value = 'Offline - saved locally';
     }, 1000);
     return;
@@ -198,17 +247,16 @@ const handleEditorChange = (newCode) => {
   saveStatus.value = 'Saving draft...';
   saveTimeout = setTimeout(async () => {
     try {
-      // Use saveDraft (status: 'draft') — NOT submitAssignment
       await lmsStore.saveDraft({
         assignment_id: assignmentId.value,
         content: newCode,
       });
-      localStorage.removeItem(`sms_pending_sync_${assignmentId.value}`);
-      localStorage.setItem(`sms_assignment_cache_${assignmentId.value}`, newCode);
+      localStorage.removeItem(getStorageKey(`sms_pending_sync_${assignmentId.value}`));
+      localStorage.setItem(getStorageKey(`sms_assignment_cache_${assignmentId.value}`), newCode);
       saveStatus.value = 'All changes saved';
     } catch (err) {
       console.error(err);
-      localStorage.setItem(`sms_pending_sync_${assignmentId.value}`, newCode);
+      localStorage.setItem(getStorageKey(`sms_pending_sync_${assignmentId.value}`), newCode);
       saveStatus.value = 'Offline - saved locally';
     }
   }, 2000);
@@ -216,17 +264,16 @@ const handleEditorChange = (newCode) => {
 
 const syncPendingDrafts = async () => {
   if (!assignmentId.value || !isOnline.value) return;
-  const pendingCode = localStorage.getItem(`sms_pending_sync_${assignmentId.value}`);
+  const pendingCode = localStorage.getItem(getStorageKey(`sms_pending_sync_${assignmentId.value}`));
   if (!pendingCode) return;
 
   saveStatus.value = 'Syncing offline changes...';
   try {
-    // Sync as draft — do not auto-submit
     await lmsStore.saveDraft({
       assignment_id: assignmentId.value,
       content: pendingCode,
     });
-    localStorage.removeItem(`sms_pending_sync_${assignmentId.value}`);
+    localStorage.removeItem(getStorageKey(`sms_pending_sync_${assignmentId.value}`));
     saveStatus.value = 'All changes saved';
     $q.notify({
       type: 'positive',
@@ -260,12 +307,11 @@ const handleSubmitCode = async () => {
 
   isSubmitting.value = true;
   try {
-    // Final submit — explicitly status: 'submitted'
     await lmsStore.submitAssignment({
       assignment_id: assignmentId.value,
       content: content,
     });
-    localStorage.removeItem(`sms_pending_sync_${assignmentId.value}`);
+    localStorage.removeItem(getStorageKey(`sms_pending_sync_${assignmentId.value}`));
     submissionStatus.value = 'submitted';
     $q.notify({
       type: 'positive',
@@ -280,27 +326,43 @@ const handleSubmitCode = async () => {
   }
 };
 
-watch(initialCode, (newVal) => {
-  if (assignmentType.value === 'written') {
-    writtenResponse.value = newVal;
-  }
-});
-
+// Sync written changes if needed
 watch(writtenResponse, (newVal) => {
   if (assignmentType.value === 'written') {
-    handleEditorChange(newVal);
+    saveCode(newVal, 'written');
   }
 });
 
-onMounted(async () => {
-  window.addEventListener('online', updateOnlineStatus);
-  window.addEventListener('offline', updateOnlineStatus);
+// Watch active tab in free play mode to load drafts correctly
+watch(activeTab, (newTab) => {
+  if (!assignmentId.value) {
+    const draft = localStorage.getItem(getStorageKey(`sms_lab_freeplay_${newTab}`));
+    if (newTab === 'java') {
+      initialJavaCode.value = draft || '';
+    } else if (newTab === 'html') {
+      initialHtmlCode.value = draft || '';
+    }
+    // Save active tab preference
+    localStorage.setItem(getStorageKey('sms_lab_active_tab'), newTab);
+  }
+});
 
+const resetState = () => {
+  assignmentId.value = null;
+  maxScore.value = 0;
+  initialJavaCode.value = '';
+  initialHtmlCode.value = '';
+  writtenResponse.value = '';
+  submissionStatus.value = null;
+  saveStatus.value = 'All changes saved';
+  activeTab.value = 'java';
+};
+
+const loadDraftsForCurrentUser = async () => {
   if (route.query.assignment_id) {
     assignmentId.value = parseInt(route.query.assignment_id);
     maxScore.value = route.query.max_score || 100;
 
-    // Fetch assignments list to resolve details (type)
     const studentSecId = authStore.user?.profile?.section_id || 1;
     try {
       await lmsStore.fetchAssignments(studentSecId);
@@ -308,32 +370,58 @@ onMounted(async () => {
       console.error(err);
     }
 
+    const setCodeByLanguage = (codeVal) => {
+      const lang = getAssignmentLanguage(codeVal);
+      if (lang === 'html') {
+        initialHtmlCode.value = codeVal || '';
+        initialJavaCode.value = '';
+        activeTab.value = 'html';
+      } else {
+        initialJavaCode.value = codeVal || '';
+        initialHtmlCode.value = '';
+        activeTab.value = 'java';
+      }
+    };
+
     // 1. Check local cache first
-    const cachedCode = localStorage.getItem(`sms_assignment_cache_${assignmentId.value}`);
-    const pendingCode = localStorage.getItem(`sms_pending_sync_${assignmentId.value}`);
+    const cachedCode = localStorage.getItem(getStorageKey(`sms_assignment_cache_${assignmentId.value}`));
+    const pendingCode = localStorage.getItem(getStorageKey(`sms_pending_sync_${assignmentId.value}`));
     if (pendingCode) {
-      initialCode.value = pendingCode;
+      setCodeByLanguage(pendingCode);
       saveStatus.value = isOnline.value ? 'Syncing offline changes...' : 'Offline - saved locally';
       if (isOnline.value) {
         syncPendingDrafts();
       }
     } else if (cachedCode) {
-      initialCode.value = cachedCode;
+      setCodeByLanguage(cachedCode);
       saveStatus.value = 'Loaded local draft';
+    } else {
+      // Set default tab based on metadata keywords if no cache exists
+      const title = assignment.value?.title || '';
+      const desc = assignment.value?.description || '';
+      if (
+        title.toLowerCase().includes('html') ||
+        title.toLowerCase().includes('css') ||
+        desc.toLowerCase().includes('html') ||
+        desc.toLowerCase().includes('css')
+      ) {
+        activeTab.value = 'html';
+      } else {
+        activeTab.value = 'java';
+      }
     }
 
     // 2. Fetch from database to ensure sync
     if (isOnline.value) {
       try {
         await lmsStore.fetchStudentSubmissions();
-        // Only check the submission for THIS specific assignment
         const existing = lmsStore.submissions.find(s => s.assignment_id === assignmentId.value);
         if (existing) {
-          // Only set status if it's an actual finalized state, not a draft
-          submissionStatus.value = existing.status; // 'draft', 'submitted', or 'graded'
+          submissionStatus.value = existing.status;
           if (!pendingCode) {
-            initialCode.value = existing.content || '';
-            localStorage.setItem(`sms_assignment_cache_${assignmentId.value}`, existing.content || '');
+            const serverCode = existing.content || '';
+            setCodeByLanguage(serverCode);
+            localStorage.setItem(getStorageKey(`sms_assignment_cache_${assignmentId.value}`), serverCode);
             saveStatus.value = existing.status === 'draft' ? 'All changes saved' : 'Submitted';
           }
         }
@@ -342,11 +430,51 @@ onMounted(async () => {
       }
     }
   } else {
-    // Check free play local draft
-    const draft = localStorage.getItem(`sms_lab_freeplay_${activeTab.value}`);
-    if (draft) {
-      initialCode.value = draft;
+    // Restore free play active tab preference if saved
+    const savedTab = localStorage.getItem(getStorageKey('sms_lab_active_tab'));
+    if (savedTab && ['java', 'sql', 'html'].includes(savedTab)) {
+      activeTab.value = savedTab;
     }
+
+    // Check free play local draft
+    const draft = localStorage.getItem(getStorageKey(`sms_lab_freeplay_${activeTab.value}`));
+    if (draft) {
+      if (activeTab.value === 'html') {
+        initialHtmlCode.value = draft;
+        initialJavaCode.value = '';
+      } else {
+        initialJavaCode.value = draft;
+        initialHtmlCode.value = '';
+      }
+    } else {
+      initialHtmlCode.value = '';
+      initialJavaCode.value = '';
+    }
+  }
+};
+
+// Watch for user changes to reset state and load the new user's drafts dynamically
+watch(() => authStore.user, (newUser) => {
+  resetState();
+  if (newUser) {
+    loadDraftsForCurrentUser();
+  }
+}, { immediate: true });
+
+// Watch for assignment ID query parameter changes to prevent cross-contamination between different assignments
+watch(() => route.query.assignment_id, (newId, oldId) => {
+  if (newId !== oldId) {
+    resetState();
+    loadDraftsForCurrentUser();
+  }
+});
+
+onMounted(() => {
+  window.addEventListener('online', updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
+  // Initial load
+  if (authStore.user) {
+    loadDraftsForCurrentUser();
   }
 });
 

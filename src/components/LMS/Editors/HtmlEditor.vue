@@ -29,7 +29,7 @@
       <div class="col-12 col-md-6">
         <p class="text-label q-mb-xs">LIVE PREVIEW</p>
         <div class="preview-container">
-          <iframe :srcdoc="previewSrcDoc" sandbox="allow-scripts" class="preview-iframe"></iframe>
+          <iframe :key="iframeKey" :srcdoc="previewSrcDoc" sandbox="allow-scripts" class="preview-iframe"></iframe>
         </div>
       </div>
     </div>
@@ -78,20 +78,21 @@ const defaultHtml = `<!DOCTYPE html>
 
 const htmlCode = ref(props.initialCode || defaultHtml);
 const previewSrcDoc = ref(htmlCode.value);
+const iframeKey = ref(0);
 
-let debounceTimeout = null;
 watch(htmlCode, (newVal) => {
   emit('change', newVal);
-  if (debounceTimeout) clearTimeout(debounceTimeout);
-  debounceTimeout = setTimeout(() => {
-    previewSrcDoc.value = newVal;
-  }, 400);
+  previewSrcDoc.value = newVal;
 });
 
 watch(() => props.initialCode, (newVal) => {
-  if (newVal && newVal !== htmlCode.value) {
-    htmlCode.value = newVal;
-    previewSrcDoc.value = newVal;
+  if (newVal !== undefined && newVal !== null) {
+    const targetVal = newVal || defaultHtml;
+    if (targetVal !== htmlCode.value) {
+      htmlCode.value = targetVal;
+      previewSrcDoc.value = targetVal;
+      iframeKey.value++;
+    }
   }
 });
 

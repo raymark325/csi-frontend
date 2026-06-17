@@ -100,7 +100,7 @@
               dense
               emit-value
               map-options
-              required
+              clearable
             />
 
             <div class="row q-col-gutter-sm">
