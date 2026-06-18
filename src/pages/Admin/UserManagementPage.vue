@@ -45,8 +45,32 @@
         </q-td>
       </template>
 
+      <template v-slot:body-cell-is_approved="props">
+        <q-td :props="props" class="text-center">
+          <q-chip 
+            :color="props.row.is_approved ? 'positive' : 'warning'" 
+            text-color="white" 
+            dense
+            style="font-weight: 600;"
+          >
+            {{ props.row.is_approved ? 'APPROVED' : 'PENDING' }}
+          </q-chip>
+        </q-td>
+      </template>
+
       <template v-slot:body-cell-actions="props">
         <q-td :props="props" class="text-right">
+          <q-btn 
+            v-if="!props.row.is_approved" 
+            flat 
+            round 
+            color="positive" 
+            icon="check_circle" 
+            size="sm" 
+            @click="approveUser(props.row)"
+          >
+            <q-tooltip>Approve User</q-tooltip>
+          </q-btn>
           <q-btn flat round color="primary" icon="edit" size="sm" @click="openEditDialog(props.row)">
             <q-tooltip>Edit User</q-tooltip>
           </q-btn>
@@ -89,6 +113,11 @@
               emit-value 
               map-options 
               required 
+            />
+            <q-checkbox 
+              v-model="formData.is_approved" 
+              label="Approved (Allowed to log in)" 
+              class="q-mt-sm"
             />
 
             <q-separator class="q-my-md" />
@@ -162,6 +191,7 @@ const formData = ref({
   email: '',
   password: '',
   role: 'student',
+  is_approved: true,
   first_name: '',
   middle_name: '',
   last_name: '',
@@ -191,6 +221,7 @@ const columns = [
   { name: 'email', align: 'left', label: 'Email', field: 'email', sortable: true },
   { name: 'role', align: 'center', label: 'Role', field: 'role', sortable: true },
   { name: 'section', align: 'left', label: 'Section (if student)', field: row => row.profile?.section?.name || '-' },
+  { name: 'is_approved', align: 'center', label: 'Status', field: 'is_approved', sortable: true },
   { name: 'actions', align: 'right', label: 'Actions' }
 ];
 
@@ -210,7 +241,7 @@ const getRoleColor = (role) => {
 const openCreateDialog = () => {
   isEditing.value = false;
   formData.value = {
-    name: '', email: '', password: '', role: 'student',
+    name: '', email: '', password: '', role: 'student', is_approved: true,
     first_name: '', middle_name: '', last_name: '', suffix: '',
     age: null, address: '', contact_number: '', section_id: null
   };
@@ -225,6 +256,7 @@ const openEditDialog = (user) => {
     email: user.email,
     password: '',
     role: user.role,
+    is_approved: !!user.is_approved,
     first_name: user.profile?.first_name || '',
     middle_name: user.profile?.middle_name || '',
     last_name: user.profile?.last_name || '',
@@ -240,11 +272,15 @@ const openEditDialog = (user) => {
 const handleSave = async () => {
   isSubmitting.value = true;
   try {
+    const payload = {
+      ...formData.value,
+      is_approved: !!formData.value.is_approved
+    };
     if (isEditing.value) {
-      await adminStore.updateUser(editId.value, formData.value);
+      await adminStore.updateUser(editId.value, payload);
       $q.notify({ type: 'positive', message: 'User updated successfully' });
     } else {
-      await adminStore.createUser(formData.value);
+      await adminStore.createUser(payload);
       $q.notify({ type: 'positive', message: 'User created successfully' });
     }
     showDialog.value = false;
@@ -252,6 +288,29 @@ const handleSave = async () => {
     $q.notify({ type: 'negative', message: err.message || 'Failed to save user' });
   } finally {
     isSubmitting.value = false;
+  }
+};
+
+const approveUser = async (user) => {
+  try {
+    const payload = {
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      is_approved: true,
+      first_name: user.profile?.first_name || '',
+      middle_name: user.profile?.middle_name || '',
+      last_name: user.profile?.last_name || '',
+      suffix: user.profile?.suffix || '',
+      age: user.profile?.age || null,
+      address: user.profile?.address || '',
+      contact_number: user.profile?.contact_number || '',
+      section_id: user.profile?.section_id || null,
+    };
+    await adminStore.updateUser(user.id, payload);
+    $q.notify({ type: 'positive', message: 'User approved successfully' });
+  } catch (err) {
+    $q.notify({ type: 'negative', message: err.message || 'Failed to approve user' });
   }
 };
 
