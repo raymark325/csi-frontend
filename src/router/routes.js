@@ -46,6 +46,11 @@ const routes = [
         component: () => import('@/pages/Admin/SectionManagementPage.vue'),
         meta: { roles: ['admin', 'registrar'] }
       },
+      { 
+        path: 'admin/settings', 
+        component: () => import('@/pages/Admin/SystemSettingsPage.vue'),
+        meta: { roles: ['admin'] }
+      },
     ],
   },
   {
@@ -55,6 +60,11 @@ const routes = [
   {
     path: '/register',
     component: () => import('@/pages/Auth/RegisterPage.vue'),
+  },
+  {
+    path: '/maintenance',
+    component: () => import('@/pages/MaintenancePage.vue'),
+    meta: { public: true }
   },
   {
     path: '/:catchAll(.*)*',

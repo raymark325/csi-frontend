@@ -28,6 +28,12 @@ API.interceptors.response.use(
         window.location.href = '/#/login';
       }
     }
+    
+    if (error.response?.status === 503 || error.response?.data?.maintenance) {
+      if (!window.location.hash.includes('/maintenance')) {
+        window.location.href = '/#/maintenance';
+      }
+    }
     return Promise.reject(error.response?.data || error);
   }
 );

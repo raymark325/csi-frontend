@@ -169,6 +169,7 @@
             <SidebarItem icon="manage_accounts" label="Manage Users" to="/admin/users" />
             <SidebarItem icon="subject" label="Manage Subjects" to="/admin/courses" />
             <SidebarItem icon="class" label="Manage Sections" to="/admin/sections" />
+            <SidebarItem icon="settings" label="System Settings" to="/admin/settings" />
           </q-list>
         </template>
 

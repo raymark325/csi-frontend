@@ -6,7 +6,7 @@ export const gradeService = {
   },
 
   getSectionGradebook(sectionId) {
-    return API.get(`/grading/grades?section_id=${sectionId}`);
+    return API.get(`/grading/grades/section/${sectionId}`);
   },
 
   inputManualGrade(data) {
