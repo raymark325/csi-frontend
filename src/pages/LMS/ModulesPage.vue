@@ -112,7 +112,6 @@
       </q-card>
     </q-dialog>
 
-    <GroupChat :sectionId="currentSectionId" />
   </div>
 </template>
 
@@ -121,7 +120,6 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
 import { useLmsStore } from '../../stores/LMS/lmsStore';
-import GroupChat from '../../components/LMS/Chat/GroupChat.vue';
 
 const route = useRoute();
 const authStore = useAuthStore();
@@ -130,10 +128,10 @@ const lmsStore = useLmsStore();
 const showCreateDialog = ref(false);
 const isSubmitting = ref(false);
 
-const currentSectionId = computed(() => Number(route.params.id));
+const currentSectionSubjectId = computed(() => Number(route.params.id));
 
 const newModule = ref({
-  section_id: currentSectionId.value,
+  section_subject_id: currentSectionSubjectId.value,
   title: '',
   category: 'Lecture',
   description: '',
@@ -143,14 +141,14 @@ const newModule = ref({
 let selectedFile = null;
 
 const filteredModules = computed(() => {
-  return lmsStore.modules.filter(m => m.section_id === currentSectionId.value);
+  return lmsStore.modules.filter(m => m.section_subject_id === currentSectionSubjectId.value);
 });
 
 const courseName = computed(() => {
   if (filteredModules.value.length > 0) {
     const mod = filteredModules.value[0];
-    const code = mod.section?.course?.course_code || 'General';
-    const title = mod.section?.course?.title || 'Course';
+    const code = mod.sectionSubject?.course?.course_code || 'General';
+    const title = mod.sectionSubject?.course?.title || 'Course';
     return `${code} - ${title}`;
   }
   return 'Course Modules';
@@ -178,13 +176,13 @@ const handleCreateModule = async () => {
     payload.file = selectedFile;
   }
   
-  payload.section_id = currentSectionId.value; // ensure it's locked
+  payload.section_subject_id = currentSectionSubjectId.value; // ensure it's locked
   isSubmitting.value = true;
   console.log("handleCreateModule payload:", payload);
   try {
     await lmsStore.createModule(payload);
     showCreateDialog.value = false;
-    newModule.value = { section_id: currentSectionId.value, title: '', category: 'Lecture', description: '', content: '' };
+    newModule.value = { section_subject_id: currentSectionSubjectId.value, title: '', category: 'Lecture', description: '', content: '' };
     selectedFile = null;
   } catch (err) {
     console.error(err);

@@ -104,7 +104,7 @@
               icon="grading"
               rounded
               dense
-              :to="`/lms/submissions?section_id=${selectedSectionId}&assignment_id=${assign.id}`"
+              :to="`/lms/submissions?section_subject_id=${selectedSectionSubjectId}&assignment_id=${assign.id}`"
             >
               <q-badge
                 v-if="getPendingCount(assign.id) > 0"
@@ -263,7 +263,7 @@ const notifStore = useNotificationStore();
 const dashboardStore = useDashboardStore();
 const $q = useQuasar();
 
-const selectedSectionId = computed(() => Number(route.params.id));
+const selectedSectionSubjectId = computed(() => Number(route.params.id));
 const sections = ref([]);
 const categories = ref([]);
 const showCreateDialog = ref(false);
@@ -299,7 +299,7 @@ const getGradedCount = (assignmentId) =>
   sectionSubmissions.value.filter(s => s.assignment_id === assignmentId && s.status === 'graded').length;
 
 const newAssignment = ref({
-  section_id: '',
+  section_subject_id: '',
   grading_category_id: '',
   title: '',
   description: '',
@@ -322,11 +322,11 @@ const formatDate = (dateStr) => {
 };
 
 const loadSectionAssignments = async () => {
-  if (!selectedSectionId.value) return;
-  await lmsStore.fetchAssignments(selectedSectionId.value);
+  if (!selectedSectionSubjectId.value) return;
+  await lmsStore.fetchAssignments(selectedSectionSubjectId.value);
   // Also load section submissions for per-assignment badge counts
   try {
-    const res = await lmsService.getSectionSubmissions(selectedSectionId.value);
+    const res = await lmsService.getSectionSubmissions(selectedSectionSubjectId.value);
     sectionSubmissions.value = res.data || [];
   } catch (err) {
     console.warn('Could not load section submissions:', err);
@@ -334,15 +334,15 @@ const loadSectionAssignments = async () => {
 };
 
 const openCreateDialog = async () => {
-  if (!selectedSectionId.value) return;
+  if (!selectedSectionSubjectId.value) return;
   // load categories
   try {
-    const res = await gradeService.getCategories(selectedSectionId.value);
+    const res = await gradeService.getCategories(selectedSectionSubjectId.value);
     categories.value = res.data;
     if (categories.value.length > 0) {
       newAssignment.value.grading_category_id = categories.value[0].id;
     }
-    newAssignment.value.section_id = selectedSectionId.value;
+    newAssignment.value.section_subject_id = selectedSectionSubjectId.value;
     showCreateDialog.value = true;
   } catch (err) {
     console.error(err);
@@ -354,7 +354,7 @@ const handleCreateAssignment = async () => {
   try {
     await lmsStore.createAssignment(newAssignment.value);
     showCreateDialog.value = false;
-    newAssignment.value = { section_id: '', grading_category_id: '', title: '', description: '', due_date: '', max_score: 100, type: 'coding' };
+    newAssignment.value = { section_subject_id: '', grading_category_id: '', title: '', description: '', due_date: '', max_score: 100, type: 'coding' };
     loadSectionAssignments();
   } catch (err) {
     console.error(err);
@@ -407,7 +407,7 @@ const confirmDelete = (assign) => {
 
 onMounted(async () => {
   if (authStore.value.user?.role === 'student') {
-    await lmsStore.fetchAssignments(selectedSectionId.value);
+    await lmsStore.fetchAssignments(selectedSectionSubjectId.value);
 
     // Load the student's own submissions for per-card status badges
     try {

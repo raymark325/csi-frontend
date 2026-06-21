@@ -6,7 +6,7 @@
         <p class="text-label q-mb-xs" style="color: var(--sms-blue);">ADMINISTRATION</p>
         <h1 class="text-display q-my-none">Section Management</h1>
         <p class="text-body q-mt-xs q-mb-none" style="color: var(--text-secondary);">
-          Create classes, assign courses and teachers, and manage room schedules.
+          Create Blocks (Sections) and assign their subjects, teachers, and schedules.
         </p>
       </div>
       <q-btn
@@ -37,23 +37,21 @@
         </q-input>
       </template>
 
-      <template v-slot:body-cell-course="props">
+      <template v-slot:body-cell-name="props">
         <q-td :props="props">
-          <span class="text-weight-bold text-primary">{{ props.row.course?.course_code || 'Unknown' }}</span>
-          <div class="text-caption text-muted">{{ props.row.course?.title }}</div>
+          <span class="text-weight-bold text-primary">{{ props.row.name }}</span>
         </q-td>
       </template>
 
-      <template v-slot:body-cell-teacher="props">
+      <template v-slot:body-cell-adviser="props">
         <q-td :props="props">
-          {{ props.row.teacher?.name || 'Unassigned' }}
+          {{ props.row.adviser?.name || 'Unassigned' }}
         </q-td>
       </template>
 
-      <template v-slot:body-cell-schedule="props">
+      <template v-slot:body-cell-subjects_count="props">
         <q-td :props="props">
-          <div><q-icon name="meeting_room" size="14px" class="q-mr-xs"/>{{ props.row.room || 'No Room' }}</div>
-          <div class="text-caption text-muted"><q-icon name="schedule" size="14px" class="q-mr-xs"/>{{ props.row.schedule || 'TBA' }}</div>
+          <q-badge color="primary">{{ props.row.section_subjects?.length || 0 }} Subjects</q-badge>
         </q-td>
       </template>
 
@@ -70,63 +68,111 @@
     </q-table>
 
     <!-- Create/Edit Dialog -->
-    <q-dialog v-model="showDialog" persistent>
-      <q-card style="min-width: 500px; border-radius: 12px;">
-        <q-card-section class="row items-center q-pb-none">
+    <q-dialog v-model="showDialog" persistent maximized transition-show="slide-up" transition-hide="slide-down">
+      <q-card class="column full-height" style="background: #f8fafc;">
+        <q-card-section class="row items-center q-pb-none" style="background: white; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 16px;">
           <div class="text-h6" style="font-weight: 700;">{{ isEditing ? 'Edit Section' : 'New Section' }}</div>
           <q-space />
           <q-btn icon="close" flat round dense v-close-popup />
         </q-card-section>
 
-        <q-card-section>
-          <q-form @submit="handleSave" class="q-gutter-md">
+        <q-card-section class="col scroll q-pa-lg">
+          <q-form @submit="handleSave" class="q-gutter-md" style="max-width: 800px; margin: 0 auto;">
             
-            <q-select
-              v-model="formData.course_id"
-              :options="courseOptions"
-              label="Select Course (Subject)"
-              outlined
-              dense
-              emit-value
-              map-options
-              required
-            />
-
-            <q-select
-              v-model="formData.teacher_id"
-              :options="teacherOptions"
-              label="Assign Teacher"
-              outlined
-              dense
-              emit-value
-              map-options
-              clearable
-            />
-
-            <div class="row q-col-gutter-sm">
-              <div class="col-12 col-md-6">
-                <q-input 
-                  v-model="formData.room" 
-                  label="Room" 
-                  outlined 
-                  dense 
-                  placeholder="e.g. Room 302"
-                />
-              </div>
-              <div class="col-12 col-md-6">
-                <q-input 
-                  v-model="formData.schedule" 
-                  label="Schedule" 
-                  outlined 
-                  dense 
-                  placeholder="e.g. MWF 9:00AM - 10:30AM"
-                />
+            <div class="glass-card q-pa-lg q-mb-md">
+              <div class="text-subtitle1 q-mb-md font-weight-bold" style="color: var(--sms-blue)">Block Information</div>
+              <div class="row q-col-gutter-md">
+                <div class="col-12 col-md-6">
+                  <q-input 
+                    v-model="formData.name" 
+                    label="Section Name (e.g. Grade 11 HUMSS A)" 
+                    outlined 
+                    dense 
+                    required 
+                  />
+                </div>
+                <div class="col-12 col-md-6">
+                  <q-select
+                    v-model="formData.adviser_id"
+                    :options="teacherOptions"
+                    label="Assign Adviser (Optional)"
+                    outlined
+                    dense
+                    emit-value
+                    map-options
+                    clearable
+                  />
+                </div>
               </div>
             </div>
 
-            <div class="row justify-end q-mt-md">
-              <q-btn flat label="Cancel" v-close-popup class="q-mr-sm" />
-              <q-btn type="submit" unelevated color="primary" :label="isEditing ? 'Update Section' : 'Create Section'" :loading="isSubmitting" />
+            <div class="glass-card q-pa-lg">
+              <div class="row justify-between items-center q-mb-md">
+                <div class="text-subtitle1 font-weight-bold" style="color: var(--sms-blue)">Subjects in this Section</div>
+                <q-btn color="primary" outline icon="add" label="Add Subject" size="sm" rounded @click="addSubject" />
+              </div>
+
+              <div v-if="formData.subjects.length === 0" class="text-center q-py-lg text-muted">
+                No subjects added yet. Click "Add Subject" to begin.
+              </div>
+
+              <div v-for="(subject, index) in formData.subjects" :key="index" class="q-mb-lg q-pa-md" style="border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white;">
+                <div class="row justify-between items-center q-mb-sm">
+                  <div class="text-weight-bold">Subject #{{ index + 1 }}</div>
+                  <q-btn flat round dense color="negative" icon="delete" size="sm" @click="removeSubject(index)" />
+                </div>
+                <div class="row q-col-gutter-sm q-mb-sm">
+                  <div class="col-12 col-md-6">
+                    <q-select
+                      v-model="subject.course_id"
+                      :options="courseOptions"
+                      label="Select Course (Subject)"
+                      outlined
+                      dense
+                      emit-value
+                      map-options
+                      required
+                    />
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <q-select
+                      v-model="subject.teacher_id"
+                      :options="teacherOptions"
+                      label="Assign Teacher"
+                      outlined
+                      dense
+                      emit-value
+                      map-options
+                      required
+                    />
+                  </div>
+                </div>
+                <div class="row q-col-gutter-sm">
+                  <div class="col-12 col-md-6">
+                    <q-input 
+                      v-model="subject.room" 
+                      label="Room" 
+                      outlined 
+                      dense 
+                      placeholder="e.g. Room 302"
+                    />
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <q-input 
+                      v-model="subject.schedule" 
+                      label="Schedule" 
+                      outlined 
+                      dense 
+                      placeholder="e.g. MWF 9:00AM - 10:30AM"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="row justify-end q-mt-xl q-mb-md">
+              <q-btn flat label="Cancel" v-close-popup class="q-mr-sm" size="lg" />
+              <q-btn type="submit" unelevated color="primary" :label="isEditing ? 'Save Changes' : 'Create Section'" :loading="isSubmitting" size="lg" rounded />
             </div>
           </q-form>
         </q-card-section>
@@ -150,16 +196,15 @@ const isSubmitting = ref(false);
 const editId = ref(null);
 
 const formData = ref({
-  course_id: null,
-  teacher_id: null,
-  room: '',
-  schedule: '',
+  name: '',
+  adviser_id: null,
+  subjects: [],
 });
 
 const columns = [
-  { name: 'course', align: 'left', label: 'Course', field: row => row.course?.course_code, sortable: true },
-  { name: 'teacher', align: 'left', label: 'Teacher', field: row => row.teacher?.name, sortable: true },
-  { name: 'schedule', align: 'left', label: 'Room & Schedule', field: 'room' },
+  { name: 'name', align: 'left', label: 'Section/Block Name', field: 'name', sortable: true },
+  { name: 'adviser', align: 'left', label: 'Adviser', field: row => row.adviser?.name, sortable: true },
+  { name: 'subjects_count', align: 'left', label: 'Subjects', field: row => row.section_subjects?.length },
   { name: 'actions', align: 'right', label: 'Actions' }
 ];
 
@@ -182,9 +227,22 @@ const teacherOptions = computed(() => {
     }));
 });
 
+const addSubject = () => {
+  formData.value.subjects.push({
+    course_id: null,
+    teacher_id: null,
+    room: '',
+    schedule: '',
+  });
+};
+
+const removeSubject = (index) => {
+  formData.value.subjects.splice(index, 1);
+};
+
 const openCreateDialog = () => {
   isEditing.value = false;
-  formData.value = { course_id: null, teacher_id: null, room: '', schedule: '' };
+  formData.value = { name: '', adviser_id: null, subjects: [] };
   showDialog.value = true;
 };
 
@@ -192,10 +250,14 @@ const openEditDialog = (section) => {
   isEditing.value = true;
   editId.value = section.id;
   formData.value = {
-    course_id: section.course_id,
-    teacher_id: section.teacher_id,
-    room: section.room || '',
-    schedule: section.schedule || '',
+    name: section.name,
+    adviser_id: section.adviser_id,
+    subjects: (section.section_subjects || section.sectionSubjects || []).map(s => ({
+      course_id: s.course_id,
+      teacher_id: s.teacher_id,
+      room: s.room || '',
+      schedule: s.schedule || ''
+    })),
   };
   showDialog.value = true;
 };
@@ -221,7 +283,7 @@ const handleSave = async () => {
 const confirmDelete = (section) => {
   $q.dialog({
     title: 'Confirm Deletion',
-    message: `Are you sure you want to delete this section of ${section.course?.course_code}? This action cannot be undone and will delete all associated modules and assignments.`,
+    message: `Are you sure you want to delete section "${section.name}"? This action cannot be undone and will delete all associated subjects, modules, and assignments.`,
     cancel: true,
     persistent: true,
     color: 'negative'

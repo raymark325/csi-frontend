@@ -30,17 +30,29 @@
       :filter="filter"
     >
       <template v-slot:top-right>
-        <q-input borderless dense debounce="300" v-model="filter" placeholder="Search">
-          <template v-slot:append>
-            <q-icon name="search" />
-          </template>
-        </q-input>
+        <div class="row q-gutter-md items-center">
+          <q-select 
+            v-model="filterStatus" 
+            :options="[{label: 'All Users', value: 'all'}, {label: 'Pending Approval', value: 'pending'}, {label: 'Approved', value: 'approved'}]" 
+            dense 
+            outlined 
+            emit-value 
+            map-options 
+            style="min-width: 150px"
+          />
+          <q-input borderless dense debounce="300" v-model="filter" placeholder="Search">
+            <template v-slot:append>
+              <q-icon name="search" />
+            </template>
+          </q-input>
+        </div>
       </template>
 
       <template v-slot:body-cell-photo="props">
         <q-td :props="props" class="text-center">
-          <q-avatar size="40px" class="shadow-1" v-if="props.row.profile?.profile_picture">
+          <q-avatar size="40px" class="shadow-1 cursor-pointer" v-if="props.row.profile?.profile_picture" @click="viewFullPhoto(props.row)">
             <img :src="`http://localhost:8000/storage/${props.row.profile.profile_picture}`" style="object-fit: cover;" />
+            <q-tooltip>Click to enlarge verification photo</q-tooltip>
           </q-avatar>
           <q-avatar size="40px" color="grey-3" text-color="grey-6" v-else>
             <q-icon name="person" />
@@ -188,6 +200,31 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+
+    <!-- Photo Viewer Dialog -->
+    <q-dialog v-model="showPhotoDialog">
+      <q-card style="min-width: 400px; max-width: 90vw;">
+        <q-card-section class="row items-center justify-between">
+          <div class="text-h6">Verification Photo</div>
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+        <q-card-section class="text-center">
+          <q-img 
+            :src="photoUrl" 
+            style="max-height: 70vh; object-fit: contain; border-radius: 8px;" 
+          />
+          <div class="q-mt-md text-subtitle1" style="font-weight: 700;">
+            {{ photoUser?.name }}
+          </div>
+          <div class="text-caption text-secondary">
+            Role: {{ photoUser?.role.toUpperCase() }} | Status: {{ photoUser?.is_approved ? 'APPROVED' : 'PENDING' }}
+          </div>
+        </q-card-section>
+        <q-card-actions align="center" class="q-pb-md" v-if="photoUser && !photoUser.is_approved">
+          <q-btn color="positive" icon="check_circle" label="Approve this User" @click="approveUserFromPhoto" unelevated rounded />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -202,10 +239,30 @@ const dashboardStore = useDashboardStore();
 const $q = useQuasar();
 
 const filter = ref('');
+const filterStatus = ref('all'); // 'all', 'pending', 'approved'
 const showDialog = ref(false);
 const isEditing = ref(false);
 const isSubmitting = ref(false);
 const editId = ref(null);
+
+const showPhotoDialog = ref(false);
+const photoUrl = ref('');
+const photoUser = ref(null);
+
+const viewFullPhoto = (user) => {
+  if (user.profile?.profile_picture) {
+    photoUrl.value = `http://localhost:8000/storage/${user.profile.profile_picture}`;
+    photoUser.value = user;
+    showPhotoDialog.value = true;
+  }
+};
+
+const approveUserFromPhoto = async () => {
+  if (photoUser.value) {
+    await approveUser(photoUser.value);
+    showPhotoDialog.value = false;
+  }
+};
 
 const formData = ref({
   name: '',
@@ -249,7 +306,15 @@ const columns = [
 ];
 
 const isLoading = computed(() => adminStore.isLoading);
-const filteredUsers = computed(() => adminStore.users);
+const filteredUsers = computed(() => {
+  let users = adminStore.users;
+  if (filterStatus.value === 'pending') {
+    users = users.filter(u => !u.is_approved);
+  } else if (filterStatus.value === 'approved') {
+    users = users.filter(u => u.is_approved);
+  }
+  return users;
+});
 
 const getRoleColor = (role) => {
   switch(role) {

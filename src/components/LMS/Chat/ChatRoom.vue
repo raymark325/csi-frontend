@@ -107,7 +107,7 @@ const scrollToBottom = async () => {
 const loadMessages = async () => {
   try {
     loading.value = true;
-    const res = await API.get(`/sections/${props.sectionId}/messages`);
+    const res = await API.get(`/subjects/${props.sectionId}/messages`);
     messages.value = res;
     scrollToBottom();
   } catch (err) {
@@ -125,7 +125,7 @@ const sendMessage = async () => {
   sending.value = true;
   
   try {
-    const res = await API.post(`/sections/${props.sectionId}/messages`, {
+    const res = await API.post(`/subjects/${props.sectionId}/messages`, {
       message: text
     });
     if (!messages.value.find(m => m.id === res.id)) {
