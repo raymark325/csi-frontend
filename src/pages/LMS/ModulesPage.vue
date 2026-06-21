@@ -3,10 +3,10 @@
     <!-- Header -->
     <div class="row justify-between items-center q-mb-xl">
       <div>
-        <q-btn flat no-caps color="primary" icon="arrow_back" label="Back to Courses" to="/lms" class="q-mb-md" style="margin-left: -12px;" />
+        <q-btn flat no-caps color="primary" icon="arrow_back" label="Back to Subjects" to="/lms" class="q-mb-md" style="margin-left: -12px;" />
         <p class="text-label q-mb-xs" style="color: var(--sms-blue);">LEARNING MANAGEMENT SYSTEM</p>
         <h1 class="text-display q-my-none">{{ courseName }}</h1>
-        <p class="text-body q-my-none" style="color: var(--text-secondary);">Browse modules and learning guides for this course.</p>
+        <p class="text-body q-my-none" style="color: var(--text-secondary);">Browse modules and learning guides for this subject.</p>
       </div>
       <!-- Teacher only action -->
       <q-btn
@@ -27,7 +27,7 @@
 
     <div v-else class="q-gutter-y-xl">
       <div v-if="filteredModules.length === 0" class="text-center text-muted q-py-xl glass-card">
-        No modules have been posted for this course yet.
+        No modules have been posted for this subject yet.
       </div>
       
       <div class="row q-col-gutter-lg">
@@ -111,6 +111,8 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <GroupChat :sectionId="currentSectionId" />
   </div>
 </template>
 
@@ -119,6 +121,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
 import { useLmsStore } from '../../stores/LMS/lmsStore';
+import GroupChat from '../../components/LMS/Chat/GroupChat.vue';
 
 const route = useRoute();
 const authStore = useAuthStore();

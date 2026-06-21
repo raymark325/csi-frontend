@@ -3,33 +3,23 @@
     <!-- Header -->
     <div class="row justify-between items-center q-mb-xl">
       <div>
+        <q-btn flat no-caps color="primary" icon="arrow_back" label="Back to Subjects" to="/assignments" class="q-mb-md" style="margin-left: -12px;" />
         <p class="text-label q-mb-xs" style="color: var(--sms-blue);">LMS SUBSYSTEM</p>
         <h1 class="text-display q-my-none">Assignments</h1>
         <p class="text-body q-my-none" style="color: var(--text-secondary);">Manage and submit class tasks and homework assignments.</p>
       </div>
     </div>
 
-    <!-- Section Selection Row (Teacher only) -->
-    <div v-if="authStore.user?.role === 'teacher' || authStore.user?.role === 'admin'" class="row q-gutter-md q-mb-xl items-center">
-      <div class="col-12 col-sm-4">
-        <p class="text-label q-mb-xs">Select Section</p>
-        <select v-model="selectedSectionId" class="input-glass" @change="loadSectionAssignments">
-          <option v-for="sec in sections" :key="sec.id" :value="sec.id">
-            {{ sec.name }} - {{ sec.course?.title }}
-          </option>
-        </select>
-      </div>
-      <div class="col">
-        <q-btn
-          color="primary"
-          icon="add"
-          label="Create Assignment"
-          rounded
-          unelevated
-          class="q-mt-md"
-          @click="openCreateDialog"
-        />
-      </div>
+    <!-- Action Row (Teacher only) -->
+    <div v-if="authStore.user?.role === 'teacher' || authStore.user?.role === 'admin'" class="row justify-end q-mb-xl items-center">
+      <q-btn
+        color="primary"
+        icon="add"
+        label="Create Assignment"
+        rounded
+        unelevated
+        @click="openCreateDialog"
+      />
     </div>
 
     <!-- Loading -->
@@ -256,7 +246,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
+import { useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
 import { useLmsStore } from '../../stores/LMS/lmsStore';
 import { useNotificationStore } from '../../stores/notificationStore';
@@ -265,13 +256,14 @@ import { useDashboardStore } from '../../stores/dashboardStore';
 import { gradeService } from '../../services/GradingSystem/gradeService';
 import { lmsService } from '../../services/LMS/lmsService';
 
+const route = useRoute();
 const authStore = ref(useAuthStore());
 const lmsStore = useLmsStore();
 const notifStore = useNotificationStore();
 const dashboardStore = useDashboardStore();
 const $q = useQuasar();
 
-const selectedSectionId = ref(null);
+const selectedSectionId = computed(() => Number(route.params.id));
 const sections = ref([]);
 const categories = ref([]);
 const showCreateDialog = ref(false);
@@ -415,8 +407,7 @@ const confirmDelete = (assign) => {
 
 onMounted(async () => {
   if (authStore.value.user?.role === 'student') {
-    const studentSecId = authStore.value.user?.profile?.section_id || 1;
-    await lmsStore.fetchAssignments(studentSecId);
+    await lmsStore.fetchAssignments(selectedSectionId.value);
 
     // Load the student's own submissions for per-card status badges
     try {
@@ -430,16 +421,7 @@ onMounted(async () => {
     const ids = lmsStore.assignments.map(a => a.id);
     notifStore.markAssignmentsRead(ids);
   } else {
-    try {
-      const data = await dashboardStore.fetchSections();
-      sections.value = dashboardStore.sections;
-      if (sections.value.length > 0) {
-        selectedSectionId.value = sections.value[0].id;
-        loadSectionAssignments();
-      }
-    } catch (err) {
-      console.error(err);
-    }
+    await loadSectionAssignments();
   }
 });
 </script>

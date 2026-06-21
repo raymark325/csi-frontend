@@ -4,8 +4,8 @@
     <div class="row justify-between items-center q-mb-xl">
       <div>
         <p class="text-label q-mb-xs" style="color: var(--sms-blue);">LEARNING MANAGEMENT SYSTEM</p>
-        <h1 class="text-display q-my-none">My Subjects</h1>
-        <p class="text-body q-my-none" style="color: var(--text-secondary);">Select a subject to view its modules and learning materials.</p>
+        <h1 class="text-display q-my-none">Assignments by Subject</h1>
+        <p class="text-body q-my-none" style="color: var(--text-secondary);">Select a subject to view and manage assignments.</p>
       </div>
     </div>
 
@@ -23,7 +23,7 @@
         <div class="glass-card q-pa-xl course-card cursor-pointer" @click="goToCourse(course.id)">
           <div class="row items-center q-mb-md q-gutter-sm">
             <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(0,122,255,0.1); display: flex; align-items: center; justify-content: center;">
-              <q-icon name="menu_book" color="primary" size="24px" />
+              <q-icon name="assignment" color="primary" size="24px" />
             </div>
           </div>
           <h3 class="q-mt-none q-mb-xs" style="font-size: 20px; font-weight: 700; color: var(--text-primary);">
@@ -45,7 +45,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
 import { useDashboardStore } from '../../stores/dashboardStore';
@@ -75,7 +75,7 @@ const normalizedCourses = computed(() => {
 });
 
 const goToCourse = (sectionId) => {
-  router.push(`/lms/course/${sectionId}`);
+  router.push(`/assignments/course/${sectionId}`);
 };
 
 onMounted(async () => {

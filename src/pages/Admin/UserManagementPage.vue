@@ -37,6 +37,17 @@
         </q-input>
       </template>
 
+      <template v-slot:body-cell-photo="props">
+        <q-td :props="props" class="text-center">
+          <q-avatar size="40px" class="shadow-1" v-if="props.row.profile?.profile_picture">
+            <img :src="`http://localhost:8000/storage/${props.row.profile.profile_picture}`" style="object-fit: cover;" />
+          </q-avatar>
+          <q-avatar size="40px" color="grey-3" text-color="grey-6" v-else>
+            <q-icon name="person" />
+          </q-avatar>
+        </q-td>
+      </template>
+
       <template v-slot:body-cell-role="props">
         <q-td :props="props">
           <q-badge :color="getRoleColor(props.row.role)">
@@ -123,6 +134,16 @@
             <q-separator class="q-my-md" />
             <div class="text-subtitle2 q-mb-sm">Profile Details</div>
             
+            <div v-if="isEditing && formData.profile_picture" class="row justify-center q-mb-md">
+              <div class="text-center">
+                <p class="text-caption q-mb-xs" style="color: var(--text-secondary);">User Verification Photo</p>
+                <q-img 
+                  :src="`http://localhost:8000/storage/${formData.profile_picture}`" 
+                  style="width: 150px; height: 150px; border-radius: 12px; border: 3px solid var(--sms-blue); object-fit: cover;" 
+                />
+              </div>
+            </div>
+            
             <div class="row q-col-gutter-sm">
               <div class="col-12 col-md-4">
                 <q-input v-model="formData.first_name" label="First Name" outlined dense required />
@@ -200,6 +221,7 @@ const formData = ref({
   address: '',
   contact_number: '',
   section_id: null,
+  profile_picture: null,
 });
 
 const roleOptions = [
@@ -217,6 +239,7 @@ const sectionOptions = computed(() => {
 });
 
 const columns = [
+  { name: 'photo', align: 'center', label: 'Photo ID', field: 'photo' },
   { name: 'name', align: 'left', label: 'Name', field: 'name', sortable: true },
   { name: 'email', align: 'left', label: 'Email', field: 'email', sortable: true },
   { name: 'role', align: 'center', label: 'Role', field: 'role', sortable: true },
@@ -265,6 +288,7 @@ const openEditDialog = (user) => {
     address: user.profile?.address || '',
     contact_number: user.profile?.contact_number || '',
     section_id: user.profile?.section_id || null,
+    profile_picture: user.profile?.profile_picture || null,
   };
   showDialog.value = true;
 };

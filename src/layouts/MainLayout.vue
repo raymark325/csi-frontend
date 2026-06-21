@@ -27,6 +27,16 @@
 
         <q-space/>
 
+        <!-- Chat Icon -->
+        <q-btn
+          flat round dense size="sm"
+          icon="chat"
+          style="color: var(--text-secondary); margin-right: 8px;"
+          @click="globalChatModalRef?.openModal()"
+        >
+          <q-tooltip>Class Chats</q-tooltip>
+        </q-btn>
+
         <!-- Notification Bell (student only) -->
         <div v-if="authStore.userRole === 'student'" style="position: relative; margin-right: 8px;" @click.stop>
           <q-btn
@@ -42,23 +52,39 @@
               rounded
               :label="studentBellCount > 99 ? '99+' : studentBellCount"
             />
-            <q-tooltip>Assignment Notifications</q-tooltip>
+            <q-tooltip>Notifications</q-tooltip>
           </q-btn>
 
           <!-- Notification dropdown panel -->
           <div v-if="notifPanelOpen" class="notif-panel" @click.stop>
             <div class="notif-panel-header">
-              <span>New Assignments</span>
+              <span>Notifications</span>
               <q-btn flat dense round icon="close" size="xs" @click="notifPanelOpen = false" style="color: var(--text-secondary);" />
             </div>
-            <div v-if="notifStore.unreadAssignmentCount === 0" class="notif-empty">
+            <div v-if="notifStore.unreadAssignmentCount === 0 && notifStore.unreadAnnouncementCount === 0" class="notif-empty">
               <q-icon name="check_circle" size="28px" color="positive" />
               <p>You're all caught up!</p>
             </div>
-            <div v-else>
+            <div v-else style="max-height: 350px; overflow-y: auto;">
+              <!-- New Announcements -->
+              <div
+                v-for="annId in notifStore.newAnnouncementIds"
+                :key="'ann-' + annId"
+                class="notif-item"
+                @click="goToAnnouncements"
+              >
+                <div class="notif-dot" style="background: #10b981; box-shadow: 0 0 8px rgba(16,185,129,0.6);" />
+                <div>
+                  <p class="notif-title">{{ getAnnouncementTitle(annId) }}</p>
+                  <p class="notif-sub">New announcement posted — tap to view</p>
+                </div>
+                <q-icon name="chevron_right" size="16px" style="color: var(--text-muted); margin-left: auto;" />
+              </div>
+
+              <!-- New Assignments -->
               <div
                 v-for="aId in notifStore.newAssignmentIds"
-                :key="aId"
+                :key="'assign-' + aId"
                 class="notif-item"
                 @click="goToAssignments"
               >
@@ -70,7 +96,7 @@
                 <q-icon name="chevron_right" size="16px" style="color: var(--text-muted); margin-left: auto;" />
               </div>
             </div>
-            <div v-if="notifStore.unreadAssignmentCount > 0" class="notif-footer">
+            <div v-if="notifStore.unreadAssignmentCount > 0 || notifStore.unreadAnnouncementCount > 0" class="notif-footer">
               <q-btn flat dense label="Mark all as read" size="sm" color="primary" @click="markAllRead" />
             </div>
           </div>
@@ -141,7 +167,7 @@
           <p class="text-label q-mb-sm">ADMINISTRATION</p>
           <q-list dense>
             <SidebarItem icon="manage_accounts" label="Manage Users" to="/admin/users" />
-            <SidebarItem icon="subject" label="Manage Courses" to="/admin/courses" />
+            <SidebarItem icon="subject" label="Manage Subjects" to="/admin/courses" />
             <SidebarItem icon="class" label="Manage Sections" to="/admin/sections" />
           </q-list>
         </template>
@@ -159,6 +185,7 @@
       <router-view />
     </q-page-container>
 
+    <GlobalChatModal ref="globalChatModalRef" />
   </q-layout>
 </template>
 
@@ -169,6 +196,7 @@ import { useQuasar } from 'quasar'
 import { useAuthStore } from '../stores/auth'
 import { useNotificationStore } from '../stores/notificationStore'
 import SidebarItem from '@/components/ui/SidebarItem.vue'
+import GlobalChatModal from '@/components/LMS/Chat/GlobalChatModal.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -177,6 +205,7 @@ const $q = useQuasar()
 
 const leftDrawerOpen = ref(false)
 const notifPanelOpen = ref(false)
+const globalChatModalRef = ref(null)
 
 function toggleLeftDrawer() { leftDrawerOpen.value = !leftDrawerOpen.value }
 
@@ -195,13 +224,28 @@ const getAssignmentTitle = (id) => {
   return found?.title || `Assignment #${id}`;
 };
 
+const getAnnouncementTitle = (id) => {
+  const found = notifStore.latestAnnouncements.find(a => a.id === id);
+  return found?.title || `Announcement #${id}`;
+};
+
 const goToAssignments = () => {
   notifPanelOpen.value = false;
   router.push('/assignments');
 };
 
+const goToAnnouncements = () => {
+  notifPanelOpen.value = false;
+  router.push('/announcements');
+};
+
 const markAllRead = () => {
-  notifStore.markAssignmentsRead(notifStore.newAssignmentIds);
+  if (notifStore.newAssignmentIds.length > 0) {
+    notifStore.markAssignmentsRead(notifStore.newAssignmentIds);
+  }
+  if (notifStore.newAnnouncementIds.length > 0) {
+    notifStore.markAnnouncementsRead(notifStore.newAnnouncementIds);
+  }
   notifPanelOpen.value = false;
 };
 
@@ -241,9 +285,34 @@ const handleNewAssignments = (newOnes) => {
   });
 };
 
+// Notification handler: fires only when NEW announcements appear after initial load
+const handleNewAnnouncements = (newOnes) => {
+  const count = newOnes.length;
+  const firstTitle = newOnes[0]?.title || 'New announcement';
+
+  $q.notify({
+    group: 'new-announcement',
+    color: 'positive',
+    icon: 'campaign',
+    message: count === 1
+      ? `📢 New Announcement: "${firstTitle}"`
+      : `📢 ${count} new announcements posted!`,
+    caption: 'Click to view announcements',
+    position: 'top-right',
+    timeout: 6000,
+    actions: [
+      {
+        label: 'View',
+        color: 'white',
+        handler: () => router.push('/announcements'),
+      },
+    ],
+  });
+};
+
 // Badge counts
 const studentBellCount = computed(() =>
-  notifStore.unreadAssignmentCount + notifStore.pendingSubmissionCount
+  notifStore.unreadAssignmentCount + notifStore.unreadAnnouncementCount + notifStore.pendingSubmissionCount
 );
 
 // Nav items — pass correct badge count per role
@@ -253,25 +322,25 @@ const navItems = computed(() => {
   if (role === 'student') {
     return [
       { icon: 'dashboard',  label: 'Dashboard',     to: '/dashboard',            badge: 0 },
-      { icon: 'campaign',   label: 'Announcements', to: '/announcements',badge: 0 },
-      { icon: 'menu_book',  label: 'My Modules',    to: '/lms',         badge: 0 },
-      { icon: 'assignment', label: 'My Assignments', to: '/assignments', badge: notifStore.pendingSubmissionCount },
-      { icon: 'code',       label: 'Coding Lab',    to: '/lms/lab',     badge: 0 },
-      { icon: 'how_to_reg', label: 'Attendance',    to: '/attendance',  badge: 0 },
-      { icon: 'grade',      label: 'My Grades',     to: '/grading',     badge: 0 },
-      { icon: 'bar_chart',  label: 'Report Card',   to: '/reports',     badge: 0 },
+      { icon: 'campaign',   label: 'Announcements', to: '/announcements',        badge: notifStore.unreadAnnouncementCount },
+      { icon: 'menu_book',  label: 'My Modules',    to: '/lms',                  badge: 0 },
+      { icon: 'assignment', label: 'My Assignments', to: '/assignments',          badge: notifStore.pendingSubmissionCount },
+      { icon: 'code',       label: 'Coding Lab',    to: '/lms/lab',              badge: 0 },
+      { icon: 'how_to_reg', label: 'Attendance',    to: '/attendance',            badge: 0 },
+      { icon: 'grade',      label: 'My Grades',     to: '/grading',              badge: 0 },
+      { icon: 'bar_chart',  label: 'Report Card',   to: '/reports',              badge: 0 },
     ];
   }
 
   if (role === 'teacher' || role === 'admin') {
     return [
       { icon: 'dashboard',  label: 'Dashboard',      to: '/dashboard',            badge: 0 },
-      { icon: 'campaign',   label: 'Announcements',  to: '/announcements',badge: 0 },
-      { icon: 'menu_book',  label: 'LMS Modules',    to: '/lms',         badge: 0 },
-      { icon: 'assignment', label: 'Assignments',    to: '/assignments',  badge: notifStore.pendingGradingCount },
-      { icon: 'how_to_reg', label: 'Mark Attendance',to: '/attendance',  badge: 0 },
-      { icon: 'grade',      label: 'Gradebook',      to: '/grading',     badge: 0 },
-      { icon: 'bar_chart',  label: 'Report Cards',   to: '/reports',     badge: 0 },
+      { icon: 'campaign',   label: 'Announcements',  to: '/announcements',        badge: 0 },
+      { icon: 'menu_book',  label: 'LMS Modules',    to: '/lms',                  badge: 0 },
+      { icon: 'assignment', label: 'Assignments',    to: '/assignments',          badge: notifStore.pendingGradingCount },
+      { icon: 'how_to_reg', label: 'Mark Attendance',to: '/attendance',            badge: 0 },
+      { icon: 'grade',      label: 'Gradebook',      to: '/grading',              badge: 0 },
+      { icon: 'bar_chart',  label: 'Report Cards',   to: '/reports',              badge: 0 },
     ];
   }
 
@@ -290,7 +359,11 @@ import { watch } from 'vue'
 
 watch(() => authStore.userRole, (newRole) => {
   if (newRole === 'student' || newRole === 'teacher' || newRole === 'admin') {
-    notifStore.startPolling(newRole === 'student' ? handleNewAssignments : null, 30000);
+    notifStore.startPolling(
+      newRole === 'student' ? handleNewAssignments : null,
+      newRole === 'student' ? handleNewAnnouncements : null,
+      30000
+    );
   }
 }, { immediate: true });
 

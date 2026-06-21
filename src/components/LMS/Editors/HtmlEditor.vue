@@ -45,6 +45,14 @@ const props = defineProps({
     type: String,
     default: ''
   },
+  allFiles: {
+    type: Array,
+    default: () => []
+  },
+  activeFileName: {
+    type: String,
+    default: ''
+  },
   disabled: {
     type: Boolean,
     default: false
@@ -77,20 +85,67 @@ const defaultHtml = `<!DOCTYPE html>
 </html>`;
 
 const htmlCode = ref(props.initialCode || defaultHtml);
-const previewSrcDoc = ref(htmlCode.value);
+const previewSrcDoc = ref('');
 const iframeKey = ref(0);
 
-watch(htmlCode, (newVal) => {
-  emit('change', newVal);
-  previewSrcDoc.value = newVal;
-});
+const generatePreview = () => {
+  let filesToUse = [];
+  if (props.allFiles && props.allFiles.length > 0) {
+    filesToUse = props.allFiles.map(f => {
+      if (f.name === props.activeFileName) {
+        return { name: f.name, code: htmlCode.value };
+      }
+      return f;
+    });
+  } else {
+    filesToUse = [{ name: props.activeFileName || 'index.html', code: htmlCode.value }];
+  }
+
+  const indexFile = filesToUse.find(f => f.name.toLowerCase() === 'index.html');
+  let indexContent = indexFile ? indexFile.code : (props.activeFileName === 'index.html' ? htmlCode.value : '');
+
+  let cssInjections = '';
+  let jsInjections = '';
+
+  filesToUse.forEach(f => {
+    if (f.name.toLowerCase().endsWith('.css')) {
+      cssInjections += `\n<style>${f.code}</style>`;
+    }
+    if (f.name.toLowerCase().endsWith('.js')) {
+      jsInjections += `\n<script>${f.code}<\/script>`;
+    }
+  });
+
+  if (cssInjections) {
+    if (indexContent.includes('</head>')) {
+      indexContent = indexContent.replace('</head>', cssInjections + '\n</head>');
+    } else {
+      indexContent = cssInjections + '\n' + indexContent;
+    }
+  }
+
+  if (jsInjections) {
+    if (indexContent.includes('</body>')) {
+      indexContent = indexContent.replace('</body>', jsInjections + '\n</body>');
+    } else {
+      indexContent += jsInjections;
+    }
+  }
+
+  return indexContent;
+};
+
+watch([htmlCode, () => props.allFiles], () => {
+  emit('change', htmlCode.value);
+  previewSrcDoc.value = generatePreview();
+}, { deep: true, immediate: true });
 
 watch(() => props.initialCode, (newVal) => {
   if (newVal !== undefined && newVal !== null) {
     const targetVal = newVal || defaultHtml;
     if (targetVal !== htmlCode.value) {
       htmlCode.value = targetVal;
-      previewSrcDoc.value = targetVal;
+      previewSrcDoc.value = generatePreview();
       iframeKey.value++;
     }
   }

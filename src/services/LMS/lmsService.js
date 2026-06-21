@@ -54,10 +54,34 @@ export const lmsService = {
   },
 
   saveDraft(data) {
+    if (data.db_file) {
+      const formData = new FormData();
+      Object.keys(data).forEach(key => {
+        formData.append(key, data[key]);
+      });
+      formData.append('status', 'draft');
+      const token = localStorage.getItem('auth_token');
+      const baseURL = API.defaults.baseURL;
+      return axios.post(`${baseURL}/lms/submissions`, formData, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).then(res => res.data);
+    }
     return API.post('/lms/submissions', { ...data, status: 'draft' });
   },
 
   submitAssignment(data) {
+    if (data.db_file) {
+      const formData = new FormData();
+      Object.keys(data).forEach(key => {
+        formData.append(key, data[key]);
+      });
+      formData.append('status', 'submitted');
+      const token = localStorage.getItem('auth_token');
+      const baseURL = API.defaults.baseURL;
+      return axios.post(`${baseURL}/lms/submissions`, formData, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).then(res => res.data);
+    }
     return API.post('/lms/submissions', { ...data, status: 'submitted' });
   },
 
@@ -68,5 +92,10 @@ export const lmsService = {
   gradeSubmission(id, score, feedback) {
     return API.post(`/lms/submissions/${id}/grade`, { score, feedback });
   },
+
+  downloadSubmissionFile(id) {
+    return API.get(`/lms/submissions/${id}/download`, { responseType: 'arraybuffer' })
+      .then(res => res.data);
+  }
 };
 export default lmsService;

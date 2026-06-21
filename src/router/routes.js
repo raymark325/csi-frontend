@@ -15,7 +15,8 @@ const routes = [
       { path: 'lms/course/:id', component: () => import('@/pages/LMS/ModulesPage.vue') },
       { path: 'lms/modules/:id', component: () => import('@/pages/LMS/ModuleDetailPage.vue') },
       { path: 'lms/lab', component: () => import('@/pages/LMS/CodingLabPage.vue') },
-      { path: 'assignments', component: () => import('@/pages/LMS/AssignmentsPage.vue') },
+      { path: 'assignments', component: () => import('@/pages/LMS/AssignmentCoursesPage.vue') },
+      { path: 'assignments/course/:id', component: () => import('@/pages/LMS/AssignmentsPage.vue') },
       { 
         path: 'lms/submissions', 
         component: () => import('@/pages/LMS/SubmissionsPage.vue'),

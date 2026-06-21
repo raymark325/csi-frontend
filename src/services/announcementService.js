@@ -2,7 +2,7 @@ import API from './api';
 
 export const announcementService = {
   getAnnouncements() {
-    return API.get('/announcements');
+    return API.get('/announcements', { params: { _t: Date.now() } });
   },
 
   createAnnouncement(data) {

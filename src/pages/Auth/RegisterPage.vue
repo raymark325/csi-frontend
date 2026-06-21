@@ -81,7 +81,7 @@
           </div>
 
           <div class="q-mb-md">
-            <p class="text-label q-mb-xs">Profile Picture (Optional)</p>
+            <p class="text-label q-mb-xs">Verification Photo (Required) <span class="text-negative">*</span></p>
             <div class="row q-gutter-sm items-center">
               <input type="file" ref="fileInput" @change="handleProfilePic" accept="image/*" style="display: none;" />
               <q-btn outline color="primary" icon="upload_file" label="Upload Image" @click="$refs.fileInput.click()" class="col" />
@@ -263,6 +263,11 @@ const handleRegister = async () => {
     return;
   }
 
+  if (!selectedProfilePic) {
+    errorMsg.value = 'A verification photo is required. Please upload an image or take a photo.';
+    return;
+  }
+
   isLoading.value = true;
   try {
     const payload = {
@@ -284,10 +289,10 @@ const handleRegister = async () => {
 
     await authStore.register(payload);
 
-    successMsg.value = 'Registration successful! Redirecting to login...';
+    successMsg.value = 'Registration successful! Please wait for admin approval.';
     setTimeout(() => {
       router.push('/login');
-    }, 2000);
+    }, 3000);
   } catch (error) {
     errorMsg.value = error.response?.data?.message || 'Registration failed. Email might already exist.';
   } finally {

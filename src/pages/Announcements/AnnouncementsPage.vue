@@ -9,15 +9,17 @@
           Important updates and notices from your instructors and administrators.
         </p>
       </div>
-      <q-btn
-        v-if="canCreate"
-        color="primary"
-        icon="campaign"
-        label="New Announcement"
-        unelevated
-        rounded
-        @click="openCreateDialog"
-      />
+      <div class="row q-gutter-sm">
+        <q-btn
+          v-if="canCreate"
+          color="primary"
+          icon="campaign"
+          label="New Announcement"
+          unelevated
+          rounded
+          @click="openCreateDialog"
+        />
+      </div>
     </div>
 
     <!-- Loading State -->
@@ -126,6 +128,8 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+
   </div>
 </template>
 
@@ -134,6 +138,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useAuthStore } from '../../stores/auth';
 import { useAnnouncementStore } from '../../stores/announcementStore';
 import { useDashboardStore } from '../../stores/dashboardStore';
+import { useNotificationStore } from '../../stores/notificationStore';
 import { useQuasar } from 'quasar';
 
 const authStore = useAuthStore();
@@ -149,6 +154,8 @@ const newAnnouncement = ref({
   content: '',
   section_id: null,
 });
+
+
 
 const isLoading = computed(() => announcementStore.isLoading);
 const announcements = computed(() => announcementStore.announcements);
@@ -214,10 +221,17 @@ const confirmDelete = (ann) => {
   });
 };
 
+
 onMounted(async () => {
-  announcementStore.fetchAnnouncements();
+  await announcementStore.fetchAnnouncements();
   if (canCreate.value) {
     dashboardStore.fetchSections();
+  }
+  // Clear unread announcements badge count upon viewing the page
+  if (authStore.userRole === 'student') {
+    const notifStore = useNotificationStore();
+    const ids = announcementStore.announcements.map(a => a.id);
+    notifStore.markAnnouncementsRead(ids);
   }
 });
 </script>

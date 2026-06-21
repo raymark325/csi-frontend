@@ -46,10 +46,9 @@
         @click="activeTab = 'java'"
       />
       <q-btn
-        disable
         :flat="activeTab !== 'sql'"
         :color="activeTab === 'sql' ? 'warning' : 'grey-7'"
-        label="SQL Playground (Disabled)"
+        label="SQL Playground"
         icon="storage"
         rounded
         @click="activeTab = 'sql'"
@@ -86,13 +85,71 @@
       <!-- Coding Playgrounds -->
       <template v-else>
         <div v-show="activeTab === 'java'">
-          <JavaEditor ref="javaEditorRef" :initial-code="initialJavaCode" :disabled="isReadOnly" @change="handleJavaChange" />
+          <div class="row q-gutter-sm q-mb-md items-center">
+            <q-btn
+              v-for="(f, idx) in javaFiles"
+              :key="'java-'+idx"
+              :flat="activeJavaFileIndex !== idx"
+              :color="activeJavaFileIndex === idx ? 'primary' : 'grey-7'"
+              :label="f.name"
+              size="sm"
+              rounded
+              @click="activeJavaFileIndex = idx"
+            />
+            <q-btn flat round size="sm" icon="add" color="primary" @click="addJavaFile" :disable="isReadOnly"/>
+          </div>
+          <JavaEditor 
+            ref="javaEditorRef" 
+            :initial-code="javaFiles[activeJavaFileIndex]?.code || ''" 
+            :all-files="javaFiles"
+            :disabled="isReadOnly" 
+            @change="handleJavaChange" 
+          />
         </div>
         <div v-show="activeTab === 'sql'">
-          <SqlEditor ref="sqlEditorRef" />
+          <div class="row q-gutter-sm q-mb-md items-center">
+            <q-btn
+              v-for="(f, idx) in sqlFiles"
+              :key="'sql-'+idx"
+              :flat="activeSqlFileIndex !== idx"
+              :color="activeSqlFileIndex === idx ? 'warning' : 'grey-7'"
+              :label="f.name"
+              size="sm"
+              rounded
+              @click="changeActiveSqlFile(idx)"
+            />
+            <q-btn flat round size="sm" icon="add" color="warning" @click="addSqlFile" :disable="isReadOnly"/>
+          </div>
+          <SqlEditor 
+            ref="sqlEditorRef" 
+            :initial-code="sqlFiles[activeSqlFileIndex]?.code || ''"
+            :initial-db-buffer="sqlFiles[activeSqlFileIndex]?.buffer || null"
+            :disabled="isReadOnly"
+            @change="handleSqlChange"
+          />
         </div>
         <div v-show="activeTab === 'html'">
-          <HtmlEditor ref="htmlEditorRef" :initial-code="initialHtmlCode" :disabled="isReadOnly" @change="handleHtmlChange" />
+          <div class="row q-gutter-sm q-mb-md items-center">
+            <q-btn
+              v-for="(f, idx) in htmlFiles"
+              :key="'html-'+idx"
+              :flat="activeHtmlFileIndex !== idx"
+              :color="activeHtmlFileIndex === idx ? 'positive' : 'grey-7'"
+              :label="f.name"
+              size="sm"
+              rounded
+              @click="activeHtmlFileIndex = idx"
+            />
+            <q-btn flat round size="sm" icon="add" color="positive" @click="addHtmlFile" :disable="isReadOnly"/>
+          </div>
+          <HtmlEditor 
+            ref="htmlEditorRef" 
+            :initial-code="htmlFiles[activeHtmlFileIndex]?.code || ''" 
+            :all-files="htmlFiles"
+            :active-file-name="htmlFiles[activeHtmlFileIndex]?.name || ''"
+            :disabled="isReadOnly" 
+            @change="handleHtmlChange" 
+          />
         </div>
       </template>
     </div>
@@ -105,6 +162,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useLmsStore } from '../../stores/LMS/lmsStore';
 import { useAuthStore } from '../../stores/auth';
+import lmsService from '../../services/LMS/lmsService';
+import { bufferToBase64, base64ToBuffer } from '../../utils/base64';
 import JavaEditor from '../../components/LMS/Editors/JavaEditor.vue';
 import SqlEditor from '../../components/LMS/Editors/SqlEditor.vue';
 import HtmlEditor from '../../components/LMS/Editors/HtmlEditor.vue';
@@ -121,8 +180,13 @@ const maxScore = ref(0);
 const isSubmitting = ref(false);
 
 // Isolated initial code states to prevent tab contamination
-const initialJavaCode = ref('');
-const initialHtmlCode = ref('');
+const javaFiles = ref([{ name: 'Main.java', code: '' }]);
+const htmlFiles = ref([{ name: 'index.html', code: '' }]);
+const activeJavaFileIndex = ref(0);
+const activeHtmlFileIndex = ref(0);
+
+const sqlFiles = ref([{ name: 'main.db', code: '', buffer: null }]);
+const activeSqlFileIndex = ref(0);
 
 const saveStatus = ref('All changes saved');
 const writtenResponse = ref('');
@@ -159,14 +223,14 @@ const getActiveCode = () => {
   if (assignmentType.value === 'written') {
     return writtenResponse.value;
   }
-  if (activeTab.value === 'java' && javaEditorRef.value) {
-    return javaEditorRef.value.code;
+  if (activeTab.value === 'java') {
+    return JSON.stringify(javaFiles.value);
   }
-  if (activeTab.value === 'sql' && sqlEditorRef.value) {
-    return sqlEditorRef.value.query;
+  if (activeTab.value === 'sql') {
+    return JSON.stringify(sqlFiles.value.map(f => ({ name: f.name, code: f.code })));
   }
-  if (activeTab.value === 'html' && htmlEditorRef.value) {
-    return htmlEditorRef.value.htmlCode;
+  if (activeTab.value === 'html') {
+    return JSON.stringify(htmlFiles.value);
   }
   return '';
 };
@@ -199,6 +263,13 @@ const getAssignmentLanguage = (codeVal) => {
   ) {
     return 'html';
   }
+  if (
+    title.toLowerCase().includes('sql') ||
+    desc.toLowerCase().includes('sql') ||
+    desc.toLowerCase().includes('database')
+  ) {
+    return 'sql';
+  }
   if (codeVal && isHtml(codeVal)) {
     return 'html';
   }
@@ -208,14 +279,98 @@ const getAssignmentLanguage = (codeVal) => {
 // Save handlers
 let saveTimeout = null;
 
+const addJavaFile = () => {
+  const name = prompt('Enter new Java file name (e.g. Helper.java)');
+  if (name) {
+    javaFiles.value.push({ name: name.endsWith('.java') ? name : name + '.java', code: '' });
+    activeJavaFileIndex.value = javaFiles.value.length - 1;
+    saveCode(JSON.stringify(javaFiles.value), 'java');
+  }
+};
+
+const addHtmlFile = () => {
+  const name = prompt('Enter new file name (e.g. style.css, script.js, about.html)');
+  if (name) {
+    htmlFiles.value.push({ name, code: '' });
+    activeHtmlFileIndex.value = htmlFiles.value.length - 1;
+    saveCode(JSON.stringify(htmlFiles.value), 'html');
+  }
+};
+
+const addSqlFile = () => {
+  const name = prompt('Enter new database file name (e.g. employees.db, inventory.sqlite)');
+  if (name) {
+    if (sqlEditorRef.value) {
+      const dbBuffer = sqlEditorRef.value.exportDatabase();
+      if (dbBuffer) {
+        sqlFiles.value[activeSqlFileIndex.value].buffer = dbBuffer;
+      }
+    }
+    sqlFiles.value.push({ name: name.endsWith('.db') || name.endsWith('.sqlite') ? name : name + '.db', code: '', buffer: null });
+    activeSqlFileIndex.value = sqlFiles.value.length - 1;
+    saveCode(JSON.stringify(sqlFiles.value.map(f => ({ name: f.name, code: f.code }))), 'sql');
+  }
+};
+
+const changeActiveSqlFile = (idx) => {
+  if (sqlEditorRef.value) {
+    const dbBuffer = sqlEditorRef.value.exportDatabase();
+    if (dbBuffer) {
+      sqlFiles.value[activeSqlFileIndex.value].buffer = dbBuffer;
+    }
+  }
+  activeSqlFileIndex.value = idx;
+};
+
 const handleJavaChange = (newCode) => {
   if (activeTab.value !== 'java') return;
-  saveCode(newCode, 'java');
+  const currentFile = javaFiles.value[activeJavaFileIndex.value];
+  if (currentFile && currentFile.code !== newCode) {
+    currentFile.code = newCode;
+    saveCode(JSON.stringify(javaFiles.value), 'java');
+  }
 };
 
 const handleHtmlChange = (newCode) => {
   if (activeTab.value !== 'html') return;
-  saveCode(newCode, 'html');
+  const currentFile = htmlFiles.value[activeHtmlFileIndex.value];
+  if (currentFile && currentFile.code !== newCode) {
+    currentFile.code = newCode;
+    saveCode(JSON.stringify(htmlFiles.value), 'html');
+  }
+};
+
+const handleSqlChange = (newCode) => {
+  if (activeTab.value !== 'sql') return;
+  const currentFile = sqlFiles.value[activeSqlFileIndex.value];
+  if (currentFile && currentFile.code !== newCode) {
+    currentFile.code = newCode;
+    saveCode(JSON.stringify(sqlFiles.value.map(f => ({ name: f.name, code: f.code }))), 'sql');
+  }
+};
+
+const getSubmissionPayload = (content) => {
+  const payload = {
+    assignment_id: assignmentId.value,
+    content: content,
+  };
+  if (activeTab.value === 'sql' && sqlEditorRef.value) {
+    // Export active buffer before saving
+    const dbBuffer = sqlEditorRef.value.exportDatabase();
+    if (dbBuffer) {
+      sqlFiles.value[activeSqlFileIndex.value].buffer = dbBuffer;
+    }
+    
+    // Package all databases into JSON array
+    const packagedDbs = sqlFiles.value.map(f => ({
+      name: f.name,
+      code: f.code,
+      bufferBase64: f.buffer ? bufferToBase64(f.buffer) : null
+    }));
+    
+    payload.db_file = new Blob([JSON.stringify(packagedDbs)], { type: 'application/json' });
+  }
+  return payload;
 };
 
 const saveCode = (newCode, lang) => {
@@ -247,10 +402,7 @@ const saveCode = (newCode, lang) => {
   saveStatus.value = 'Saving draft...';
   saveTimeout = setTimeout(async () => {
     try {
-      await lmsStore.saveDraft({
-        assignment_id: assignmentId.value,
-        content: newCode,
-      });
+      await lmsStore.saveDraft(getSubmissionPayload(newCode));
       localStorage.removeItem(getStorageKey(`sms_pending_sync_${assignmentId.value}`));
       localStorage.setItem(getStorageKey(`sms_assignment_cache_${assignmentId.value}`), newCode);
       saveStatus.value = 'All changes saved';
@@ -269,10 +421,7 @@ const syncPendingDrafts = async () => {
 
   saveStatus.value = 'Syncing offline changes...';
   try {
-    await lmsStore.saveDraft({
-      assignment_id: assignmentId.value,
-      content: pendingCode,
-    });
+    await lmsStore.saveDraft(getSubmissionPayload(pendingCode));
     localStorage.removeItem(getStorageKey(`sms_pending_sync_${assignmentId.value}`));
     saveStatus.value = 'All changes saved';
     $q.notify({
@@ -307,10 +456,7 @@ const handleSubmitCode = async () => {
 
   isSubmitting.value = true;
   try {
-    await lmsStore.submitAssignment({
-      assignment_id: assignmentId.value,
-      content: content,
-    });
+    await lmsStore.submitAssignment(getSubmissionPayload(content));
     localStorage.removeItem(getStorageKey(`sms_pending_sync_${assignmentId.value}`));
     submissionStatus.value = 'submitted';
     $q.notify({
@@ -337,10 +483,14 @@ watch(writtenResponse, (newVal) => {
 watch(activeTab, (newTab) => {
   if (!assignmentId.value) {
     const draft = localStorage.getItem(getStorageKey(`sms_lab_freeplay_${newTab}`));
-    if (newTab === 'java') {
-      initialJavaCode.value = draft || '';
-    } else if (newTab === 'html') {
-      initialHtmlCode.value = draft || '';
+    if (draft) {
+      if (newTab === 'html') {
+        try { htmlFiles.value = JSON.parse(draft); } catch { htmlFiles.value = [{ name: 'index.html', code: draft }]; }
+        activeHtmlFileIndex.value = 0;
+      } else if (newTab === 'java') {
+        try { javaFiles.value = JSON.parse(draft); } catch { javaFiles.value = [{ name: 'Main.java', code: draft }]; }
+        activeJavaFileIndex.value = 0;
+      }
     }
     // Save active tab preference
     localStorage.setItem(getStorageKey('sms_lab_active_tab'), newTab);
@@ -350,8 +500,12 @@ watch(activeTab, (newTab) => {
 const resetState = () => {
   assignmentId.value = null;
   maxScore.value = 0;
-  initialJavaCode.value = '';
-  initialHtmlCode.value = '';
+  javaFiles.value = [{ name: 'Main.java', code: '' }];
+  htmlFiles.value = [{ name: 'index.html', code: '' }];
+  sqlFiles.value = [{ name: 'main.db', code: '', buffer: null }];
+  activeJavaFileIndex.value = 0;
+  activeHtmlFileIndex.value = 0;
+  activeSqlFileIndex.value = 0;
   writtenResponse.value = '';
   submissionStatus.value = null;
   saveStatus.value = 'All changes saved';
@@ -373,12 +527,38 @@ const loadDraftsForCurrentUser = async () => {
     const setCodeByLanguage = (codeVal) => {
       const lang = getAssignmentLanguage(codeVal);
       if (lang === 'html') {
-        initialHtmlCode.value = codeVal || '';
-        initialJavaCode.value = '';
+        try {
+          const parsed = JSON.parse(codeVal);
+          if (Array.isArray(parsed)) htmlFiles.value = parsed;
+          else throw new Error();
+        } catch {
+          htmlFiles.value = [{ name: 'index.html', code: codeVal || '' }];
+        }
+        javaFiles.value = [{ name: 'Main.java', code: '' }];
+        activeHtmlFileIndex.value = 0;
         activeTab.value = 'html';
+      } else if (lang === 'sql') {
+        try {
+          const parsed = JSON.parse(codeVal);
+          if (Array.isArray(parsed)) sqlFiles.value = parsed.map(f => ({ ...f, buffer: null }));
+          else throw new Error();
+        } catch {
+          sqlFiles.value = [{ name: 'main.db', code: codeVal || '', buffer: null }];
+        }
+        javaFiles.value = [{ name: 'Main.java', code: '' }];
+        htmlFiles.value = [{ name: 'index.html', code: '' }];
+        activeSqlFileIndex.value = 0;
+        activeTab.value = 'sql';
       } else {
-        initialJavaCode.value = codeVal || '';
-        initialHtmlCode.value = '';
+        try {
+          const parsed = JSON.parse(codeVal);
+          if (Array.isArray(parsed)) javaFiles.value = parsed;
+          else throw new Error();
+        } catch {
+          javaFiles.value = [{ name: 'Main.java', code: codeVal || '' }];
+        }
+        htmlFiles.value = [{ name: 'index.html', code: '' }];
+        activeJavaFileIndex.value = 0;
         activeTab.value = 'java';
       }
     };
@@ -406,6 +586,12 @@ const loadDraftsForCurrentUser = async () => {
         desc.toLowerCase().includes('css')
       ) {
         activeTab.value = 'html';
+      } else if (
+        title.toLowerCase().includes('sql') ||
+        desc.toLowerCase().includes('sql') ||
+        desc.toLowerCase().includes('database')
+      ) {
+        activeTab.value = 'sql';
       } else {
         activeTab.value = 'java';
       }
@@ -423,6 +609,23 @@ const loadDraftsForCurrentUser = async () => {
             setCodeByLanguage(serverCode);
             localStorage.setItem(getStorageKey(`sms_assignment_cache_${assignmentId.value}`), serverCode);
             saveStatus.value = existing.status === 'draft' ? 'All changes saved' : 'Submitted';
+
+            if (activeTab.value === 'sql' && existing.file_path) {
+              try {
+                const arrayBuffer = await lmsService.downloadSubmissionFile(existing.id);
+                const jsonStr = new TextDecoder('utf-8').decode(arrayBuffer);
+                const parsedDbs = JSON.parse(jsonStr);
+                if (Array.isArray(parsedDbs)) {
+                  sqlFiles.value = parsedDbs.map(db => ({
+                    name: db.name,
+                    code: db.code,
+                    buffer: db.bufferBase64 ? base64ToBuffer(db.bufferBase64) : null
+                  }));
+                }
+              } catch (e) {
+                console.error("Failed to fetch sqlite db json", e);
+              }
+            }
           }
         }
       } catch (err) {
@@ -440,15 +643,31 @@ const loadDraftsForCurrentUser = async () => {
     const draft = localStorage.getItem(getStorageKey(`sms_lab_freeplay_${activeTab.value}`));
     if (draft) {
       if (activeTab.value === 'html') {
-        initialHtmlCode.value = draft;
-        initialJavaCode.value = '';
+        try { htmlFiles.value = JSON.parse(draft); } catch { htmlFiles.value = [{ name: 'index.html', code: draft }]; }
+        javaFiles.value = [{ name: 'Main.java', code: '' }];
+        sqlFiles.value = [{ name: 'main.db', code: '', buffer: null }];
+        activeHtmlFileIndex.value = 0;
+      } else if (activeTab.value === 'sql') {
+        try { 
+          const parsed = JSON.parse(draft);
+          sqlFiles.value = parsed.map(f => ({ ...f, buffer: null }));
+        } catch { sqlFiles.value = [{ name: 'main.db', code: draft, buffer: null }]; }
+        htmlFiles.value = [{ name: 'index.html', code: '' }];
+        javaFiles.value = [{ name: 'Main.java', code: '' }];
+        activeSqlFileIndex.value = 0;
       } else {
-        initialJavaCode.value = draft;
-        initialHtmlCode.value = '';
+        try { javaFiles.value = JSON.parse(draft); } catch { javaFiles.value = [{ name: 'Main.java', code: draft }]; }
+        htmlFiles.value = [{ name: 'index.html', code: '' }];
+        sqlFiles.value = [{ name: 'main.db', code: '', buffer: null }];
+        activeJavaFileIndex.value = 0;
       }
     } else {
-      initialHtmlCode.value = '';
-      initialJavaCode.value = '';
+      htmlFiles.value = [{ name: 'index.html', code: '' }];
+      javaFiles.value = [{ name: 'Main.java', code: '' }];
+      sqlFiles.value = [{ name: 'main.db', code: '', buffer: null }];
+      activeJavaFileIndex.value = 0;
+      activeHtmlFileIndex.value = 0;
+      activeSqlFileIndex.value = 0;
     }
   }
 };

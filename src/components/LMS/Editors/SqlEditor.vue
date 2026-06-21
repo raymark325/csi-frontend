@@ -15,6 +15,7 @@
         class="code-textarea"
         placeholder="SELECT * FROM students;"
         spellcheck="false"
+        :disabled="disabled"
         @copy.prevent="preventAction"
         @paste.prevent="preventAction"
         @cut.prevent="preventAction"
@@ -44,13 +45,68 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { useQuasar } from 'quasar';
+import initSqlJs from 'sql.js';
+import sqlWasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
+
+const props = defineProps({
+  initialCode: { type: String, default: '' },
+  initialDbBuffer: { type: ArrayBuffer, default: null },
+  disabled: { type: Boolean, default: false }
+});
+
+const emit = defineEmits(['change']);
 
 const $q = useQuasar();
-const query = ref('SELECT * FROM subjects;');
+const query = ref(props.initialCode || '');
 const isRunning = ref(false);
 const results = ref(null);
+
+let SQL = null;
+let db = null;
+
+const initDb = async (buffer) => {
+  if (!SQL) {
+    try {
+      SQL = await initSqlJs({
+        locateFile: () => sqlWasmUrl
+      });
+    } catch (err) {
+      console.error("Failed to load sql.js", err);
+      $q.notify({ type: 'negative', message: 'Failed to initialize SQLite engine.' });
+      return;
+    }
+  }
+  
+  if (db) db.close();
+
+  if (buffer && buffer.byteLength > 0) {
+    db = new SQL.Database(new Uint8Array(buffer));
+  } else {
+    db = new SQL.Database();
+  }
+};
+
+watch(() => props.initialDbBuffer, async (newVal) => {
+  await initDb(newVal);
+}, { immediate: true });
+
+watch(() => props.initialCode, (newVal) => {
+  if (newVal !== undefined && newVal !== null && newVal !== query.value) {
+    query.value = newVal;
+  }
+});
+
+let typingTimer = null;
+watch(query, (newVal) => {
+  emit('change', newVal);
+  
+  if (typingTimer) clearTimeout(typingTimer);
+  typingTimer = setTimeout(() => {
+    runQuery();
+  }, 500);
+});
 
 const preventAction = () => {
   $q.notify({
@@ -62,26 +118,49 @@ const preventAction = () => {
 };
 
 const runQuery = () => {
+  if (!db) {
+    $q.notify({ type: 'warning', message: 'Database is initializing...' });
+    return;
+  }
+
   isRunning.value = true;
-  setTimeout(() => {
-    const qUpper = query.value.toUpperCase();
-    if (qUpper.includes('SELECT * FROM SUBJECTS') || qUpper.includes('SELECT * FROM SUBJECT')) {
-      results.value = [
-        { id: 1, name: 'Grade 12 - Java', code: 'G12-JAVA' },
-        { id: 2, name: 'Grade 11 - Hardware', code: 'G11-HW' },
-        { id: 3, name: 'Grade 11 - Code', code: 'G11-CODE' }
-      ];
-    } else if (qUpper.includes('SELECT * FROM STUDENTS') || qUpper.includes('SELECT * FROM STUDENT')) {
-      results.value = [
-        { id: 101, name: 'John Doe', email: 'student@sms.edu' },
-        { id: 102, name: 'Alice Johnson', email: 'student2@sms.edu' }
-      ];
+  try {
+    const res = db.exec(query.value);
+    if (res && res.length > 0) {
+      const columns = res[0].columns;
+      const values = res[0].values;
+      results.value = values.map(row => {
+        const obj = {};
+        columns.forEach((col, idx) => {
+          obj[col] = row[idx];
+        });
+        return obj;
+      });
     } else {
-      results.value = [];
+      results.value = []; // Empty set (for CREATE/INSERT/UPDATE)
     }
+  } catch (err) {
+    results.value = [{ Error: err.message }];
+  } finally {
     isRunning.value = false;
-  }, 1000);
+  }
 };
+
+const exportDatabase = () => {
+  if (db) {
+    return db.export(); // Returns Uint8Array
+  }
+  return null;
+};
+
+onUnmounted(() => {
+  if (db) db.close();
+});
+
+defineExpose({
+  exportDatabase,
+  query
+});
 </script>
 
 <style scoped>

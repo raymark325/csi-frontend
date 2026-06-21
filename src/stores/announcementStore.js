@@ -10,6 +10,23 @@ export const useAnnouncementStore = defineStore('announcements', () => {
   const error = ref(null);
 
   const _fetchedAt = ref(0);
+  let _echoInitialized = false;
+
+  const initEcho = () => {
+    if (_echoInitialized || !window.Echo) return;
+    _echoInitialized = true;
+    
+    window.Echo.channel('announcements')
+      .listen('.AnnouncementCreated', (e) => {
+        if (e && e.announcement) {
+          // Check if it already exists to prevent duplicates
+          const exists = announcements.value.find(a => a.id === e.announcement.id);
+          if (!exists) {
+            announcements.value.unshift(e.announcement);
+          }
+        }
+      });
+  };
 
   const _isCacheValid = (timestamp) => {
     return timestamp && (Date.now() - timestamp < CACHE_TTL);
@@ -25,6 +42,7 @@ export const useAnnouncementStore = defineStore('announcements', () => {
       const response = await announcementService.getAnnouncements();
       announcements.value = response.data;
       _fetchedAt.value = Date.now();
+      initEcho();
     } catch (err) {
       error.value = err.message || 'Failed to fetch announcements';
     } finally {

@@ -56,6 +56,10 @@ const props = defineProps({
     type: String,
     default: ''
   },
+  allFiles: {
+    type: Array,
+    default: () => []
+  },
   disabled: {
     type: Boolean,
     default: false
@@ -140,7 +144,10 @@ const runCode = async () => {
   resolveInputPromise = null;
 
   setTimeout(async () => {
-    const rawCode = code.value;
+    let rawCode = code.value;
+    if (props.allFiles && props.allFiles.length > 0) {
+      rawCode = props.allFiles.map(f => f.code).join('\n\n');
+    }
 
     // 1. Parse main method body
     const mainStart = rawCode.indexOf('public static void main');
