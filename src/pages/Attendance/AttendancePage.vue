@@ -25,7 +25,12 @@
       </div>
       <div class="col-12 col-sm-3">
         <p class="text-label q-mb-xs">Time (Optional)</p>
-        <input v-model="selectedTime" class="input-glass" type="time" />
+        <select v-model="selectedTime" class="input-glass">
+          <option value="">No specific time</option>
+          <option v-for="time in timeOptions" :key="time.value" :value="time.value">
+            {{ time.label }}
+          </option>
+        </select>
       </div>
     </div>
 
@@ -132,6 +137,23 @@ const selectedSectionId = ref(null);
 const selectedDate = ref(new Date().toISOString().substring(0, 10));
 const selectedTime = ref('');
 const sections = ref([]);
+
+const timeOptions = [];
+for (let h = 7; h <= 17; h++) {
+  for (let m = 0; m < 60; m += 30) {
+    if (h === 7 && m === 0) continue; // Skip 7:00 AM
+    if (h === 17 && m === 30) continue; // Skip 5:30 PM
+    
+    const hh = h.toString().padStart(2, '0');
+    const mm = m.toString().padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const hour12 = h % 12 || 12;
+    timeOptions.push({
+      value: `${hh}:${mm}`,
+      label: `${hour12}:${mm} ${ampm}`
+    });
+  }
+}
 
 const loadSectionRoster = () => {
   if (!selectedSectionId.value) return;
