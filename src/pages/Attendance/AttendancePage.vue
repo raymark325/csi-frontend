@@ -12,16 +12,20 @@
     <!-- Section & Date Selection -->
     <div class="row q-col-gutter-md q-mb-xl items-center">
       <div class="col-12 col-sm-4">
-        <p class="text-label q-mb-xs">Select Section</p>
+        <p class="text-label q-mb-xs">Select Subject</p>
         <select v-model="selectedSectionId" class="input-glass" @change="loadSectionRoster">
           <option v-for="sec in sections" :key="sec.id" :value="sec.id">
-            {{ sec.name }} - {{ sec.course?.title }}
+            {{ sec.course?.title }} - {{ sec.section?.name || sec.name }}
           </option>
         </select>
       </div>
-      <div class="col-12 col-sm-4">
+      <div class="col-12 col-sm-3">
         <p class="text-label q-mb-xs">Date</p>
         <input v-model="selectedDate" class="input-glass" type="date" @change="loadSectionRoster"/>
+      </div>
+      <div class="col-12 col-sm-3">
+        <p class="text-label q-mb-xs">Time (Optional)</p>
+        <input v-model="selectedTime" class="input-glass" type="time" />
       </div>
     </div>
 
@@ -44,7 +48,7 @@
           <tbody>
             <tr
               v-for="row in attendanceStore.sectionAttendance"
-              :key="row.enrollment_id"
+              :key="row.student_id"
               style="border-bottom: 1px solid var(--border-color);"
             >
               <td style="padding: 14px 20px;" class="text-body text-weight-bold">
@@ -126,6 +130,7 @@ const dashboardStore = useDashboardStore();
 
 const selectedSectionId = ref(null);
 const selectedDate = ref(new Date().toISOString().substring(0, 10));
+const selectedTime = ref('');
 const sections = ref([]);
 
 const loadSectionRoster = () => {
@@ -136,8 +141,10 @@ const loadSectionRoster = () => {
 const updateStatus = async (row, status) => {
   try {
     await attendanceStore.markAttendance({
-      enrollment_id: row.enrollment_id,
+      student_id: row.student_id,
+      section_subject_id: selectedSectionId.value,
       date: selectedDate.value,
+      time: selectedTime.value || null,
       status: status,
       remarks: row.remarks,
     });
@@ -156,8 +163,10 @@ const updateStatus = async (row, status) => {
 const updateRemarks = async (row) => {
   try {
     await attendanceStore.markAttendance({
-      enrollment_id: row.enrollment_id,
+      student_id: row.student_id,
+      section_subject_id: selectedSectionId.value,
       date: selectedDate.value,
+      time: selectedTime.value || null,
       status: row.status,
       remarks: row.remarks,
     });

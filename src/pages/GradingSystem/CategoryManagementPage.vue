@@ -12,10 +12,10 @@
     <!-- Section Selection -->
     <div class="row q-col-gutter-md q-mb-xl items-center">
       <div class="col-12 col-sm-4">
-        <p class="text-label q-mb-xs">Select Section</p>
+        <p class="text-label q-mb-xs">Select Subject</p>
         <select v-model="selectedSectionId" class="input-glass" @change="loadCategories">
           <option v-for="sec in sections" :key="sec.id" :value="sec.id">
-            {{ sec.name }} - {{ sec.course?.title }}
+            {{ sec.course?.title }} - {{ sec.section?.name || sec.name }}
           </option>
         </select>
       </div>

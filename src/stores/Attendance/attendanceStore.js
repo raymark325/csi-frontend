@@ -88,10 +88,10 @@ export const useAttendanceStore = defineStore('attendance', () => {
     try {
       const response = await attendanceService.markAttendance(data);
       // Update local state if matching student is present
-      const idx = sectionAttendance.value.findIndex(a => a.enrollment_id === data.enrollment_id);
+      const idx = sectionAttendance.value.findIndex(a => a.student_id === data.student_id);
       if (idx !== -1) {
-        sectionAttendance.value[idx].status = response.data.status;
-        sectionAttendance.value[idx].remarks = response.data.remarks;
+        sectionAttendance.value[idx].status = response.data.data.status;
+        sectionAttendance.value[idx].remarks = response.data.data.remarks;
         sectionAttendance.value[idx].marked = true;
       }
       // Invalidate related caches
