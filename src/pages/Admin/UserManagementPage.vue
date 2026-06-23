@@ -290,7 +290,7 @@ const roleOptions = [
 
 const sectionOptions = computed(() => {
   return dashboardStore.sections.map(s => ({
-    label: `${s.course?.course_code || 'Unknown'} - ${s.course?.title || 'Course'} (${s.room || 'TBA'})`,
+    label: s.name || `Section ${s.id}`,
     value: s.id
   }));
 });

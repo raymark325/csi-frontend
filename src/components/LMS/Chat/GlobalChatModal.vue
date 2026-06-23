@@ -85,15 +85,15 @@ const normalizedCourses = computed(() => {
     const data = dashboardStore.studentData?.sections || [];
     return data.map(sec => ({
       id: sec.id,
-      code: sec.course, 
-      title: sec.course,
+      code: `${sec.name} (${sec.course_code || 'TBA'})`, 
+      title: sec.name,
     }));
   } else {
     const data = dashboardStore.sections || [];
     return data.map(sec => ({
       id: sec.id,
-      code: sec.course?.course_code || 'General',
-      title: sec.course?.title || 'Unknown Course',
+      code: `${sec.name} (${sec.course_code || 'TBA'})`,
+      title: sec.name || 'Unknown Course',
     }));
   }
 });

@@ -55,24 +55,57 @@
           </div>
         </div>
 
+        <div class="row items-center justify-between q-mb-md">
+          <h2 class="text-h5 q-my-none text-primary">Lesson Content</h2>
+          <q-btn
+            color="secondary"
+            label="Download PDF"
+            icon="picture_as_pdf"
+            rounded
+            outline
+            :loading="isDownloadingPdf"
+            @click="downloadPDF"
+          />
+        </div>
         <!-- HTML Content body -->
-        <div class="module-rich-content text-body" v-html="lmsStore.activeModule.content"></div>
+        <div id="lesson-content" class="module-rich-content text-body" v-html="lmsStore.activeModule.content" style="padding: 20px; background: #fff;"></div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useLmsStore } from '../../stores/LMS/lmsStore';
+import html2pdf from 'html2pdf.js';
 
 const route = useRoute();
 const lmsStore = useLmsStore();
+const isDownloadingPdf = ref(false);
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+};
+
+const downloadPDF = () => {
+  isDownloadingPdf.value = true;
+  const element = document.getElementById('lesson-content');
+  const opt = {
+    margin:       [0.5, 0.5, 0.5, 0.5],
+    filename:     `${lmsStore.activeModule.title || 'lesson'}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true },
+    jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opt).from(element).save().then(() => {
+    isDownloadingPdf.value = false;
+  }).catch((err) => {
+    console.error('PDF generation error', err);
+    isDownloadingPdf.value = false;
+  });
 };
 
 onMounted(() => {

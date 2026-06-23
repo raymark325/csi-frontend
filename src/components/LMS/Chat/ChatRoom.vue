@@ -10,17 +10,17 @@
       </div>
       <div v-else class="q-gutter-y-md">
         <div v-for="msg in messages" :key="msg.id" :class="['row', isMe(msg) ? 'justify-end' : 'justify-start']">
-          <div class="row items-end" style="max-width: 80%;">
-            <q-avatar v-if="!isMe(msg)" size="32px" class="q-mr-sm">
+          <div :class="['row items-end', isMe(msg) ? 'reverse' : '']" style="max-width: 80%;">
+            <q-avatar size="32px" :class="isMe(msg) ? 'q-ml-sm' : 'q-mr-sm'">
               <img :src="getAvatar(msg)" />
             </q-avatar>
             
             <div :class="['message-bubble', isMe(msg) ? 'bubble-me' : 'bubble-other']">
-              <div v-if="!isMe(msg)" class="text-caption text-weight-bold q-mb-xs" style="font-size: 11px; opacity: 0.8;">
-                {{ msg.user?.name }} <span v-if="msg.user?.role === 'teacher'" class="text-primary">(Teacher)</span>
+              <div class="text-caption text-weight-bold q-mb-xs" style="font-size: 11px; opacity: 0.8;" :class="isMe(msg) ? 'text-right' : 'text-left'">
+                {{ msg.user?.name }} <span v-if="msg.user?.role === 'teacher'" :class="isMe(msg) ? 'text-white' : 'text-primary'">(Teacher)</span>
               </div>
-              <div>{{ msg.message }}</div>
-              <div class="text-right q-mt-xs" style="font-size: 10px; opacity: 0.6;">
+              <div :class="isMe(msg) ? 'text-right' : 'text-left'">{{ msg.message }}</div>
+              <div class="q-mt-xs" style="font-size: 10px; opacity: 0.6;" :class="isMe(msg) ? 'text-right' : 'text-right'">
                 {{ formatTime(msg.created_at) }}
               </div>
             </div>
