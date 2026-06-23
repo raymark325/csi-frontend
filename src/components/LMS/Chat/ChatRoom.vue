@@ -17,7 +17,7 @@
             
             <div :class="['message-bubble', isMe(msg) ? 'bubble-me' : 'bubble-other']">
               <div class="text-caption text-weight-bold q-mb-xs" style="font-size: 11px; opacity: 0.8;" :class="isMe(msg) ? 'text-right' : 'text-left'">
-                {{ msg.user?.name }} <span v-if="msg.user?.role === 'teacher'" :class="isMe(msg) ? 'text-white' : 'text-primary'">(Teacher)</span>
+                {{ msg.user?.name }}
               </div>
               <div :class="isMe(msg) ? 'text-right' : 'text-left'">{{ msg.message }}</div>
               <div class="q-mt-xs" style="font-size: 10px; opacity: 0.6;" :class="isMe(msg) ? 'text-right' : 'text-right'">
