@@ -126,8 +126,27 @@
             </div>
           </div>
 
+          <!-- Data Privacy & Terms Checkbox -->
+          <div class="privacy-box q-mb-lg">
+            <label class="row items-start q-gutter-sm cursor-pointer">
+              <input
+                type="checkbox"
+                v-model="agreedToTerms"
+                class="q-mt-xs"
+                style="width:17px; height:17px; flex-shrink:0; accent-color: var(--sms-blue);"
+              />
+              <span style="font-size:13px; line-height:1.5; color: var(--text-secondary);">
+                I have read and agree to the
+                <a href="#" @click.prevent="showTermsModal = true" style="color: var(--sms-blue); font-weight:600; text-decoration:underline;">Data Privacy Policy</a>
+                and
+                <a href="#" @click.prevent="showTermsModal = true" style="color: var(--sms-blue); font-weight:600; text-decoration:underline;">Terms &amp; Conditions</a>
+                of this Learning Management System.
+              </span>
+            </label>
+          </div>
+
           <!-- Submit Button -->
-          <button class="btn-primary full-width justify-center q-mb-lg" type="submit" :disabled="isLoading">
+          <button class="btn-primary full-width justify-center q-mb-lg" type="submit" :disabled="isLoading || !agreedToTerms">
             <span v-if="isLoading">Registering...</span>
             <span v-else>Register as Student</span>
           </button>
@@ -144,6 +163,143 @@
       </div>
     </div>
   </div>
+
+  <!-- Data Privacy & Terms Modal -->
+  <q-dialog v-model="showTermsModal" maximized transition-show="slide-up" transition-hide="slide-down">
+    <q-card class="column" style="max-width: 760px; margin: auto; border-radius: 20px;">
+      <q-card-section class="row items-center justify-between q-pb-none" style="background: var(--sms-blue); color: white;">
+        <div class="text-h6 text-white"><q-icon name="gavel" class="q-mr-sm" />Data Privacy &amp; Terms of Use</div>
+        <q-btn icon="close" flat round dense color="white" v-close-popup />
+      </q-card-section>
+
+      <q-card-section class="col scroll q-pa-xl" style="background: #f8fafc;">
+        <!-- Tabs -->
+        <q-tabs v-model="termsTab" dense align="left" class="q-mb-lg" active-color="primary" indicator-color="primary">
+          <q-tab name="privacy" label="Data Privacy Policy" icon="shield" />
+          <q-tab name="terms" label="Terms &amp; Conditions" icon="description" />
+        </q-tabs>
+
+        <!-- Data Privacy Policy -->
+        <q-tab-panels v-model="termsTab" animated>
+          <q-tab-panel name="privacy" class="q-pa-none">
+            <div class="terms-content">
+              <h3>Data Privacy Policy</h3>
+              <p class="effective-date">Effective Date: June 2026</p>
+
+              <h4>1. Introduction</h4>
+              <p>The CSI Learning Management System (&ldquo;LMS&rdquo;) is committed to protecting your personal data in accordance with the Republic Act No. 10173, also known as the <strong>Data Privacy Act of 2012</strong> of the Philippines. This policy explains how we collect, use, and safeguard your information.</p>
+
+              <h4>2. Information We Collect</h4>
+              <ul>
+                <li><strong>Personal Identification:</strong> Full name, age, contact number, home address</li>
+                <li><strong>Account Credentials:</strong> Email address, encrypted password</li>
+                <li><strong>Academic Data:</strong> Section/grade level, submitted assignments, quiz scores, attendance records, grades</li>
+                <li><strong>Profile Photo:</strong> Used for identity verification and display purposes</li>
+                <li><strong>Usage Data:</strong> Login timestamps, activity logs, and system interactions</li>
+              </ul>
+
+              <h4>3. Purpose of Data Collection</h4>
+              <p>We collect and process your data solely for the following purposes:</p>
+              <ul>
+                <li>To create and manage your student account</li>
+                <li>To facilitate learning activities, assignments, and grade tracking</li>
+                <li>To monitor attendance and academic performance</li>
+                <li>To communicate system updates, announcements, and notifications</li>
+                <li>To ensure security and prevent unauthorized access</li>
+              </ul>
+
+              <h4>4. Data Sharing</h4>
+              <p>Your personal data will only be accessible to:</p>
+              <ul>
+                <li>System Administrators for account management</li>
+                <li>Your assigned Teachers for academic assessment</li>
+                <li>Authorized school personnel for reporting purposes</li>
+              </ul>
+              <p>We do <strong>not</strong> sell, rent, or share your personal data with third parties for commercial purposes.</p>
+
+              <h4>5. Data Retention</h4>
+              <p>Your data will be retained for the duration of your enrollment and up to three (3) years after graduation or withdrawal, as required by academic record-keeping standards.</p>
+
+              <h4>6. Your Rights</h4>
+              <p>Under the Data Privacy Act, you have the right to:</p>
+              <ul>
+                <li><strong>Access</strong> your personal data held by the institution</li>
+                <li><strong>Correct</strong> inaccurate or outdated information</li>
+                <li><strong>Object</strong> to the processing of your data under certain conditions</li>
+                <li><strong>Erasure</strong> of your data when no longer necessary</li>
+              </ul>
+
+              <h4>7. Security Measures</h4>
+              <p>We implement appropriate technical and organizational measures including encrypted storage, secure authentication, and access controls to protect your data from unauthorized access, disclosure, or loss.</p>
+
+              <h4>8. Contact</h4>
+              <p>For data privacy concerns, please contact the School Data Protection Officer (DPO) through the school administration office.</p>
+            </div>
+          </q-tab-panel>
+
+          <!-- Terms & Conditions -->
+          <q-tab-panel name="terms" class="q-pa-none">
+            <div class="terms-content">
+              <h3>Terms &amp; Conditions of Use</h3>
+              <p class="effective-date">Effective Date: June 2026</p>
+
+              <h4>1. Acceptance</h4>
+              <p>By creating an account and using this LMS, you agree to abide by these Terms and Conditions. Failure to comply may result in suspension or permanent termination of your account.</p>
+
+              <h4>2. Account Responsibility</h4>
+              <ul>
+                <li>You are responsible for maintaining the confidentiality of your login credentials.</li>
+                <li>Do not share your account with other students or individuals.</li>
+                <li>Report unauthorized access immediately to your teacher or administrator.</li>
+              </ul>
+
+              <h4>3. Academic Integrity</h4>
+              <ul>
+                <li>All submitted work must be your own. Plagiarism and cheating are strictly prohibited.</li>
+                <li>Copy-paste, screen sharing, and screenshot features are restricted during assessments.</li>
+                <li>Any attempt to circumvent security controls will be reported to school administration.</li>
+              </ul>
+
+              <h4>4. Acceptable Use</h4>
+              <p>You agree to use this system only for lawful educational purposes. The following are strictly prohibited:</p>
+              <ul>
+                <li>Accessing other students' accounts or data</li>
+                <li>Uploading malicious files or code</li>
+                <li>Harassment, bullying, or inappropriate communication in chat features</li>
+                <li>Attempting to reverse-engineer or tamper with the system</li>
+              </ul>
+
+              <h4>5. Intellectual Property</h4>
+              <p>All course materials, modules, and content provided through this LMS are the intellectual property of the school and its instructors. Redistribution or reproduction without permission is prohibited.</p>
+
+              <h4>6. System Availability</h4>
+              <p>The school does not guarantee uninterrupted access to the LMS. Scheduled maintenance windows will be announced in advance. The school is not liable for data loss due to technical failures beyond its control.</p>
+
+              <h4>7. Modifications</h4>
+              <p>These terms may be updated from time to time. Continued use of the system after changes are posted constitutes acceptance of the revised terms.</p>
+
+              <h4>8. Consequences of Violation</h4>
+              <p>Violations of these terms may result in:</p>
+              <ul>
+                <li>Temporary or permanent suspension of account access</li>
+                <li>Academic disciplinary action</li>
+                <li>Referral to school administration or legal authorities if applicable</li>
+              </ul>
+            </div>
+          </q-tab-panel>
+        </q-tab-panels>
+      </q-card-section>
+
+      <q-card-section class="row justify-end q-pa-md" style="border-top: 1px solid rgba(0,0,0,0.07);">
+        <q-btn
+          unelevated rounded color="primary"
+          label="I Understand & Agree"
+          icon="check_circle"
+          @click="agreedToTerms = true; showTermsModal = false"
+        />
+      </q-card-section>
+    </q-card>
+  </q-dialog>
 </template>
 
 <script setup>
@@ -189,6 +345,9 @@ onMounted(async () => {
 const isLoading = ref(false);
 const errorMsg = ref('');
 const successMsg = ref('');
+const agreedToTerms = ref(false);
+const showTermsModal = ref(false);
+const termsTab = ref('privacy');
 let selectedProfilePic = null;
 const photoPreview = ref(null);
 const cameraActive = ref(false);
@@ -263,6 +422,11 @@ const handleRegister = async () => {
     return;
   }
 
+  if (!agreedToTerms.value) {
+    errorMsg.value = 'You must agree to the Data Privacy Policy and Terms & Conditions to register.';
+    return;
+  }
+
   if (!selectedProfilePic) {
     errorMsg.value = 'A verification photo is required. Please upload an image or take a photo.';
     return;
@@ -320,5 +484,38 @@ const handleRegister = async () => {
 textarea.input-glass {
   resize: vertical;
   min-height: 80px;
+}
+
+.privacy-box {
+  background: rgba(0, 122, 255, 0.04);
+  border: 1px solid rgba(0, 122, 255, 0.15);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.terms-content h3 {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--sms-blue);
+  margin-bottom: 4px;
+}
+.terms-content h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #222;
+  margin: 20px 0 6px;
+}
+.terms-content p, .terms-content li {
+  font-size: 14px;
+  color: #444;
+  line-height: 1.7;
+}
+.terms-content ul {
+  padding-left: 20px;
+}
+.effective-date {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 16px;
 }
 </style>

@@ -119,6 +119,9 @@
               @click="changeActiveSqlFile(idx)"
             />
             <q-btn flat round size="sm" icon="add" color="warning" @click="addSqlFile" :disable="isReadOnly"/>
+            <q-btn flat round size="sm" icon="download" color="warning" @click="downloadSqlFile">
+              <q-tooltip>Download SQL</q-tooltip>
+            </q-btn>
           </div>
           <SqlEditor 
             ref="sqlEditorRef" 
@@ -310,6 +313,44 @@ const addSqlFile = () => {
     activeSqlFileIndex.value = sqlFiles.value.length - 1;
     saveCode(JSON.stringify(sqlFiles.value.map(f => ({ name: f.name, code: f.code }))), 'sql');
   }
+};
+
+const downloadSqlFile = () => {
+  // Grab the latest code from the active file
+  const currentFile = sqlFiles.value[activeSqlFileIndex.value];
+  const code = currentFile?.code?.trim() || '';
+
+  const studentName = authStore.user?.name || 'Unknown Student';
+  const studentId   = authStore.user?.id   || 'N/A';
+  const fileName    = currentFile?.name?.replace(/\.(db|sqlite)$/i, '') || 'query';
+  const now         = new Date().toLocaleString();
+  const assignTitle = assignment.value?.title || 'Free Play';
+
+  // Build SQL file content with student identity header
+  const header = [
+    `-- ============================================================`,
+    `-- Student Name : ${studentName}`,
+    `-- Student ID   : ${studentId}`,
+    `-- Assignment   : ${assignTitle}`,
+    `-- File         : ${fileName}.sql`,
+    `-- Downloaded   : ${now}`,
+    `-- ============================================================`,
+    ``,
+  ].join('\n');
+
+  const content = header + code;
+
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `${studentName.replace(/\s+/g, '_')}_${fileName}.sql`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  $q.notify({ type: 'positive', icon: 'download', message: `Downloaded ${a.download}`, position: 'top', timeout: 2000 });
 };
 
 const changeActiveSqlFile = (idx) => {

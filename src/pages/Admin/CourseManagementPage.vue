@@ -43,6 +43,18 @@
         </q-td>
       </template>
 
+      <template v-slot:body-cell-semester="props">
+        <q-td :props="props">
+          <q-badge
+            v-if="props.row.semester"
+            color="primary"
+            :label="props.row.semester.name"
+            rounded
+          />
+          <span v-else class="text-grey-5">—</span>
+        </q-td>
+      </template>
+
       <template v-slot:body-cell-actions="props">
         <q-td :props="props" class="text-right">
           <q-btn flat round color="primary" icon="edit" size="sm" @click="openEditDialog(props.row)">
@@ -88,6 +100,19 @@
               outlined 
               dense 
             />
+            <q-select
+              v-model="formData.semester_id"
+              :options="semesterOptions"
+              label="Semester"
+              outlined
+              dense
+              clearable
+              emit-value
+              map-options
+              option-value="value"
+              option-label="label"
+              hint="Optional: assign this subject to a semester"
+            />
 
             <div class="row justify-end q-mt-md">
               <q-btn flat label="Cancel" v-close-popup class="q-mr-sm" />
@@ -104,6 +129,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useAdminStore } from '../../stores/adminStore';
 import { useQuasar } from 'quasar';
+import API from '../../services/api';
 
 const adminStore = useAdminStore();
 const $q = useQuasar();
@@ -113,26 +139,33 @@ const showDialog = ref(false);
 const isEditing = ref(false);
 const isSubmitting = ref(false);
 const editId = ref(null);
+const semesters = ref([]);
 
 const formData = ref({
   course_code: '',
   title: '',
   description: '',
+  semester_id: null,
 });
 
 const columns = [
   { name: 'course_code', align: 'left', label: 'Code', field: 'course_code', sortable: true },
   { name: 'title', align: 'left', label: 'Title', field: 'title', sortable: true },
+  { name: 'semester', align: 'left', label: 'Semester', field: 'semester', sortable: true },
   { name: 'description', align: 'left', label: 'Description', field: 'description' },
   { name: 'actions', align: 'right', label: 'Actions' }
 ];
+
+const semesterOptions = computed(() =>
+  semesters.value.map(s => ({ label: `${s.name}${s.school_year ? ' — ' + s.school_year : ''}`, value: s.id }))
+);
 
 const isLoading = computed(() => adminStore.isLoading);
 const filteredCourses = computed(() => adminStore.courses);
 
 const openCreateDialog = () => {
   isEditing.value = false;
-  formData.value = { course_code: '', title: '', description: '' };
+  formData.value = { course_code: '', title: '', description: '', semester_id: null };
   showDialog.value = true;
 };
 
@@ -143,6 +176,7 @@ const openEditDialog = (course) => {
     course_code: course.course_code,
     title: course.title,
     description: course.description || '',
+    semester_id: course.semester_id || null,
   };
   showDialog.value = true;
 };
@@ -184,5 +218,6 @@ const confirmDelete = (course) => {
 
 onMounted(() => {
   adminStore.fetchCourses();
+  API.get('/semesters').then(r => { semesters.value = r.data || []; }).catch(() => {});
 });
 </script>

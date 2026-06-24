@@ -51,6 +51,11 @@ const routes = [
         component: () => import('@/pages/Admin/SystemSettingsPage.vue'),
         meta: { roles: ['admin'] }
       },
+      { 
+        path: 'admin/semesters', 
+        component: () => import('@/pages/Admin/SemesterManagementPage.vue'),
+        meta: { roles: ['admin'] }
+      },
     ],
   },
   {

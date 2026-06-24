@@ -168,6 +168,7 @@
           <q-list dense>
             <SidebarItem icon="manage_accounts" label="Manage Users" to="/admin/users" />
             <SidebarItem icon="subject" label="Manage Subjects" to="/admin/courses" />
+            <SidebarItem icon="calendar_month" label="Manage Semesters" to="/admin/semesters" />
             <SidebarItem icon="class" label="Manage Sections" to="/admin/sections" />
             <SidebarItem icon="settings" label="System Settings" to="/admin/settings" />
           </q-list>
