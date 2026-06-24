@@ -10,7 +10,6 @@ const routes = [
     meta: { requiresAuth: true },
     children: [
       { path: 'dashboard', component: () => import('@/pages/IndexPage.vue') },
-      { path: 'components', component: () => import('@/pages/ComponentsPage.vue') },
       { path: 'lms', component: () => import('@/pages/LMS/LMSCoursesPage.vue') },
       { path: 'lms/course/:id', component: () => import('@/pages/LMS/ModulesPage.vue') },
       { path: 'lms/modules/:id', component: () => import('@/pages/LMS/ModuleDetailPage.vue') },

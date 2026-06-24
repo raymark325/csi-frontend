@@ -22,7 +22,6 @@
 
         <nav class="row items-center q-gutter-xs gt-sm">
           <router-link to="/dashboard" class="nav-link" active-class="nav-link--active">Dashboard</router-link>
-          <router-link to="/components" class="nav-link" active-class="nav-link--active">Components</router-link>
         </nav>
 
         <q-space/>
@@ -173,12 +172,6 @@
             <SidebarItem icon="settings" label="System Settings" to="/admin/settings" />
           </q-list>
         </template>
-
-        <hr class="section-divider" style="margin: 20px 0;"/>
-        <p class="text-label q-mb-sm">DEVELOPER</p>
-        <q-list dense>
-          <SidebarItem icon="widgets" label="Components" to="/components" />
-        </q-list>
       </div>
     </q-drawer>
 
