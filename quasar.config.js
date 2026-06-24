@@ -53,7 +53,7 @@ export default defineConfig((/* ctx */) => {
       // defineEnv: {}
       // ignorePublicFolder: true,
       // minify: false,
-      // distDir
+      distDir: 'dist',
 
       extendViteConf (viteConf) {
         viteConf.build = viteConf.build || {};
