@@ -5,11 +5,11 @@ import API from '../services/api';
 export default ({ app }) => {
   window.Pusher = Pusher;
 
-  const wsHost    = import.meta.env.QCLI_REVERB_HOST      || 'localhost';
-  const wsPort    = import.meta.env.QCLI_REVERB_PORT      || 8080;
-  const wssPort   = import.meta.env.QCLI_REVERB_PORT      || 8080;
-  const forceTLS  = import.meta.env.QCLI_REVERB_SCHEME === 'https';
-  const apiBase   = import.meta.env.QCLI_API_URL          || 'http://localhost:8000/api';
+  const wsHost    = import.meta.env.QCLI_REVERB_HOST   || 'soon-area-constitution-faqs.trycloudflare.com';
+  const wsPort    = import.meta.env.QCLI_REVERB_PORT   || 443;
+  const wssPort   = import.meta.env.QCLI_REVERB_PORT   || 443;
+  const forceTLS  = import.meta.env.QCLI_REVERB_SCHEME ? import.meta.env.QCLI_REVERB_SCHEME === 'https' : true;
+  const apiBase   = import.meta.env.QCLI_API_URL        || 'https://gary-audience-decided-own.trycloudflare.com/api';
 
   window.Echo = new Echo({
     broadcaster: 'reverb',
