@@ -5,11 +5,18 @@ import API from '../services/api';
 export default ({ app }) => {
   window.Pusher = Pusher;
 
-  const wsHost    = import.meta.env.QCLI_REVERB_HOST   || 'soon-area-constitution-faqs.trycloudflare.com';
-  const wsPort    = import.meta.env.QCLI_REVERB_PORT   || 443;
-  const wssPort   = import.meta.env.QCLI_REVERB_PORT   || 443;
-  const forceTLS  = import.meta.env.QCLI_REVERB_SCHEME ? import.meta.env.QCLI_REVERB_SCHEME === 'https' : true;
-  const apiBase   = import.meta.env.QCLI_API_URL        || 'https://gary-audience-decided-own.trycloudflare.com/api';
+  // Runtime-configurable — update in browser console with:
+  //   localStorage.setItem('csi_ws_host', 'new-tunnel.trycloudflare.com')
+  //   localStorage.setItem('csi_api_url', 'https://new-tunnel.trycloudflare.com/api')
+  const wsHost    = localStorage.getItem('csi_ws_host')
+                 || import.meta.env.QCLI_REVERB_HOST
+                 || 'soon-area-constitution-faqs.trycloudflare.com';
+  const wsPort    = Number(localStorage.getItem('csi_ws_port')  || import.meta.env.QCLI_REVERB_PORT  || 443);
+  const wssPort   = wsPort;
+  const forceTLS  = (localStorage.getItem('csi_ws_tls') ?? (import.meta.env.QCLI_REVERB_SCHEME || 'https')) === 'https';
+  const apiBase   = localStorage.getItem('csi_api_url')
+                 || import.meta.env.QCLI_API_URL
+                 || 'https://gary-audience-decided-own.trycloudflare.com/api';
 
   window.Echo = new Echo({
     broadcaster: 'reverb',

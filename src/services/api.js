@@ -1,10 +1,21 @@
 import axios from 'axios';
 
+const getBaseURL = () =>
+  localStorage.getItem('csi_api_url') ||
+  import.meta.env.QCLI_API_URL ||
+  'https://gary-audience-decided-own.trycloudflare.com/api';
+
 const API = axios.create({
-  baseURL: import.meta.env.QCLI_API_URL || 'https://gary-audience-decided-own.trycloudflare.com/api',
+  baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+// Allow runtime API URL override (useful when Cloudflare tunnel URL changes)
+API.interceptors.request.use((config) => {
+  config.baseURL = getBaseURL();
+  return config;
 });
 
 // Add token to requests
