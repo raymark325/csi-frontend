@@ -55,7 +55,10 @@ export default defineConfig((/* ctx */) => {
       // minify: false,
       // distDir
 
-      // extendViteConf (viteConf) {},
+      extendViteConf (viteConf) {
+        viteConf.build = viteConf.build || {};
+        viteConf.build.chunkSizeWarningLimit = 1000;
+      },
       // viteVuePluginOptions: {},
 
       // vitePlugins: [
