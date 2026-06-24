@@ -5,19 +5,25 @@ import API from '../services/api';
 export default ({ app }) => {
   window.Pusher = Pusher;
 
+  const wsHost    = import.meta.env.QCLI_REVERB_HOST      || 'localhost';
+  const wsPort    = import.meta.env.QCLI_REVERB_PORT      || 8080;
+  const wssPort   = import.meta.env.QCLI_REVERB_PORT      || 8080;
+  const forceTLS  = import.meta.env.QCLI_REVERB_SCHEME === 'https';
+  const apiBase   = import.meta.env.QCLI_API_URL          || 'http://localhost:8000/api';
+
   window.Echo = new Echo({
     broadcaster: 'reverb',
-    key: 'xoaw9trlnpec7xbcakyp',
-    wsHost: 'localhost',
-    wsPort: 8080,
-    wssPort: 8080,
-    forceTLS: false,
+    key: import.meta.env.QCLI_REVERB_APP_KEY || 'xoaw9trlnpec7xbcakyp',
+    wsHost,
+    wsPort: Number(wsPort),
+    wssPort: Number(wssPort),
+    forceTLS,
     enabledTransports: ['ws', 'wss'],
-    authEndpoint: 'http://localhost:8000/api/broadcasting/auth',
+    authEndpoint: `${apiBase}/broadcasting/auth`,
     authorizer: (channel, options) => {
         return {
             authorize: (socketId, callback) => {
-                API.post('http://localhost:8000/api/broadcasting/auth', {
+                API.post(`${apiBase}/broadcasting/auth`, {
                     socket_id: socketId,
                     channel_name: channel.name
                 })
@@ -34,3 +40,4 @@ export default ({ app }) => {
 
   app.config.globalProperties.$echo = window.Echo;
 };
+

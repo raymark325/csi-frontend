@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: (typeof process !== 'undefined' && process.env?.VUE_APP_API_URL) || 'https://gary-audience-decided-own.trycloudflare.com/api',
+  baseURL: import.meta.env.QCLI_API_URL || 'https://gary-audience-decided-own.trycloudflare.com/api',
   headers: {
     'Content-Type': 'application/json',
   },
