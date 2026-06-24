@@ -1,4 +1,5 @@
 {
+  "outputDirectory": "dist/spa",
   "cleanUrls": true,
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
