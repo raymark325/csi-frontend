@@ -1,5 +1,5 @@
 {
-  "outputDirectory": "dist/spa",
+  "outputDirectory": "dist/pwa",
   "cleanUrls": true,
   "routes": [
     {
