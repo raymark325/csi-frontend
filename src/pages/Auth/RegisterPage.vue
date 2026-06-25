@@ -458,7 +458,12 @@ const handleRegister = async () => {
       router.push('/login');
     }, 3000);
   } catch (error) {
-    errorMsg.value = error.response?.data?.message || 'Registration failed. Email might already exist.';
+    if (error?.errors) {
+      const firstError = Object.values(error.errors)[0][0];
+      errorMsg.value = firstError;
+    } else {
+      errorMsg.value = error?.message || 'Registration failed. Please check your inputs.';
+    }
   } finally {
     isLoading.value = false;
   }

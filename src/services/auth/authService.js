@@ -14,8 +14,11 @@ export const authService = {
           formData.append(key, userData[key]);
         }
       });
-      const baseURL = API.defaults.baseURL;
-      return axios.post(`${baseURL}/auth/register`, formData).then(res => res.data);
+      return API.post('/auth/register', formData, {
+        headers: {
+          'Content-Type': undefined,
+        },
+      });
     }
     return API.post('/auth/register', userData);
   },
