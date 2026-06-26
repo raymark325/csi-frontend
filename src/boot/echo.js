@@ -16,7 +16,7 @@ export default ({ app }) => {
   const forceTLS  = (localStorage.getItem('csi_ws_tls') ?? (import.meta.env.QCLI_REVERB_SCHEME || 'https')) === 'https';
   const apiBase   = localStorage.getItem('csi_api_url')
                  || import.meta.env.QCLI_API_URL
-                 || 'https://gary-audience-decided-own.trycloudflare.com/api';
+                 || 'https://csi.publicvm.com/api';
 
   window.Echo = new Echo({
     broadcaster: 'reverb',

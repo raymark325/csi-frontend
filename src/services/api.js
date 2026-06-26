@@ -3,7 +3,7 @@ import axios from 'axios';
 const getBaseURL = () =>
   localStorage.getItem('csi_api_url') ||
   import.meta.env.QCLI_API_URL ||
-  'https://gary-audience-decided-own.trycloudflare.com/api';
+  'https://csi.publicvm.com/api';
 
 const API = axios.create({
   baseURL: getBaseURL(),
