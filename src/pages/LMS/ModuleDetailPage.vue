@@ -68,7 +68,15 @@
           />
         </div>
         <!-- HTML Content body -->
-        <div id="lesson-content" class="module-rich-content text-body" v-html="lmsStore.activeModule.content" style="padding: 20px; background: #fff;"></div>
+        <iframe 
+          v-if="lmsStore.activeModule?.content"
+          ref="lessonIframe"
+          id="lesson-content-iframe"
+          class="module-iframe" 
+          :srcdoc="lmsStore.activeModule.content"
+          @load="adjustIframeHeight"
+          sandbox="allow-same-origin allow-scripts allow-popups"
+        ></iframe>
       </div>
     </div>
   </div>
@@ -83,15 +91,58 @@ import html2pdf from 'html2pdf.js';
 const route = useRoute();
 const lmsStore = useLmsStore();
 const isDownloadingPdf = ref(false);
+const lessonIframe = ref(null);
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '';
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 };
 
+const adjustIframeHeight = () => {
+  if (lessonIframe.value && lessonIframe.value.contentWindow) {
+    try {
+      const doc = lessonIframe.value.contentWindow.document;
+      
+      // Inject default font and padding if the content isn't a full HTML document
+      if (!lmsStore.activeModule.content.toLowerCase().includes('<html')) {
+        doc.body.style.fontFamily = 'Roboto, Arial, sans-serif';
+        doc.body.style.padding = '20px';
+        doc.body.style.margin = '0';
+        doc.body.style.color = '#333';
+        doc.body.style.lineHeight = '1.7';
+      }
+
+      const setHeight = () => {
+        // Add a small buffer to avoid double scrollbars
+        lessonIframe.value.style.height = (doc.documentElement.scrollHeight + 30) + 'px';
+      };
+
+      // Set initial height
+      setTimeout(setHeight, 100);
+
+      // Auto resize if content changes (e.g. images load)
+      const observer = new ResizeObserver(setHeight);
+      observer.observe(doc.body);
+      
+    } catch (e) {
+      console.warn('Iframe auto-resize failed (possibly due to CORS or sandbox):', e);
+    }
+  }
+};
+
 const downloadPDF = () => {
   isDownloadingPdf.value = true;
-  const element = document.getElementById('lesson-content');
+  let element = document.getElementById('lesson-content');
+  
+  if (lessonIframe.value && lessonIframe.value.contentWindow) {
+    element = lessonIframe.value.contentWindow.document.body;
+  }
+
+  if (!element) {
+    isDownloadingPdf.value = false;
+    return;
+  }
+
   const opt = {
     margin:       [0.5, 0.5, 0.5, 0.5],
     filename:     `${lmsStore.activeModule.title || 'lesson'}.pdf`,
@@ -114,6 +165,16 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.module-iframe {
+  width: 100%;
+  border: none;
+  min-height: 400px;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
 .module-rich-content :deep(h2), .module-rich-content :deep(h3) {
   color: var(--text-primary);
   font-weight: 700;
