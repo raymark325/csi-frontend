@@ -14,11 +14,7 @@ export const authService = {
           formData.append(key, userData[key]);
         }
       });
-      return API.post('/auth/register', formData, {
-        headers: {
-          'Content-Type': undefined,
-        },
-      });
+      return API.post('/auth/register', formData);
     }
     return API.post('/auth/register', userData);
   },
