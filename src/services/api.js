@@ -8,7 +8,7 @@ const getBaseURL = () =>
 const API = axios.create({
   baseURL: getBaseURL(),
   headers: {
-    'Content-Type': 'application/json',
+    Accept: 'application/json',
   },
 });
 
