@@ -397,6 +397,8 @@ const approveUser = async (user) => {
       section_id: user.profile?.section_id || null,
     };
     await adminStore.updateUser(user.id, payload);
+    // Force-refresh the full list so no stale is_approved:false lingers in local state
+    await adminStore.fetchUsers(true);
     $q.notify({ type: 'positive', message: 'User approved successfully' });
   } catch (err) {
     $q.notify({ type: 'negative', message: err.message || 'Failed to approve user' });
