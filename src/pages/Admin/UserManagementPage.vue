@@ -51,7 +51,7 @@
       <template v-slot:body-cell-photo="props">
         <q-td :props="props" class="text-center">
           <q-avatar size="40px" class="shadow-1 cursor-pointer" v-if="props.row.profile?.profile_picture" @click="viewFullPhoto(props.row)">
-            <img :src="`http://localhost:8000/storage/${props.row.profile.profile_picture}`" style="object-fit: cover;" />
+            <q-img :src="props.row.profile.profile_picture" style="height: 100%; width: 100%; object-fit: cover;" />
             <q-tooltip>Click to enlarge verification photo</q-tooltip>
           </q-avatar>
           <q-avatar size="40px" color="grey-3" text-color="grey-6" v-else>
@@ -150,7 +150,7 @@
               <div class="text-center">
                 <p class="text-caption q-mb-xs" style="color: var(--text-secondary);">User Verification Photo</p>
                 <q-img 
-                  :src="`http://localhost:8000/storage/${formData.profile_picture}`" 
+                  :src="formData.profile_picture" 
                   style="width: 150px; height: 150px; border-radius: 12px; border: 3px solid var(--sms-blue); object-fit: cover;" 
                 />
               </div>
@@ -251,7 +251,7 @@ const photoUser = ref(null);
 
 const viewFullPhoto = (user) => {
   if (user.profile?.profile_picture) {
-    photoUrl.value = `http://localhost:8000/storage/${user.profile.profile_picture}`;
+    photoUrl.value = user.profile.profile_picture;
     photoUser.value = user;
     showPhotoDialog.value = true;
   }

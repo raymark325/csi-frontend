@@ -181,7 +181,7 @@ const getSenderName = (msg) => {
 
 const getAvatar = (msg) => {
   if (msg.user?.profile?.profile_picture) {
-    return `http://localhost:8000/storage/${msg.user.profile.profile_picture}`;
+    return msg.user.profile.profile_picture;
   }
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.user?.name || 'U')}&background=random&size=64`;
 };
