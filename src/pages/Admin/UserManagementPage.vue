@@ -51,7 +51,7 @@
       <template v-slot:body-cell-photo="props">
         <q-td :props="props" class="text-center">
           <q-avatar size="40px" class="shadow-1 cursor-pointer" v-if="props.row.profile?.profile_picture" @click="viewFullPhoto(props.row)">
-            <q-img :src="props.row.profile.profile_picture" style="height: 100%; width: 100%; object-fit: cover;" />
+            <q-img :src="props.row.profile.profile_icon || props.row.profile.profile_picture" style="height: 100%; width: 100%; object-fit: cover;" />
             <q-tooltip>Click to enlarge verification photo</q-tooltip>
           </q-avatar>
           <q-avatar size="40px" color="grey-3" text-color="grey-6" v-else>
