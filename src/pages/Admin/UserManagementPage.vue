@@ -37,6 +37,15 @@
       <template v-slot:top-right>
         <div class="row q-gutter-md items-center">
           <q-select
+            v-model="filterSection"
+            :options="filterSectionOptions"
+            dense
+            outlined
+            emit-value
+            map-options
+            style="min-width: 150px"
+          />
+          <q-select
             v-model="filterStatus"
             :options="[
               { label: 'All Users', value: 'all' },
@@ -362,6 +371,7 @@ const $q = useQuasar();
 
 const filter = ref("");
 const filterStatus = ref("all"); // 'all', 'pending', 'approved'
+const filterSection = ref("all");
 const showDialog = ref(false);
 const isEditing = ref(false);
 const isSubmitting = ref(false);
@@ -417,6 +427,16 @@ const sectionOptions = computed(() => {
   }));
 });
 
+const filterSectionOptions = computed(() => {
+  return [
+    { label: "All Sections", value: "all" },
+    ...dashboardStore.sections.map((s) => ({
+      label: s.name || `Section ${s.id}`,
+      value: s.id,
+    })),
+  ];
+});
+
 const columns = [
   { name: "photo", align: "center", label: "Photo ID", field: "photo" },
   { name: "name", align: "left", label: "Name", field: "name", sortable: true },
@@ -458,6 +478,11 @@ const filteredUsers = computed(() => {
   } else if (filterStatus.value === "approved") {
     users = users.filter((u) => u.is_approved);
   }
+
+  if (filterSection.value !== "all") {
+    users = users.filter(u => u.profile?.section_id === filterSection.value);
+  }
+
   return users;
 });
 
