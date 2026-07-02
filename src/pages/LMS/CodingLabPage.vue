@@ -36,8 +36,9 @@
     </div>
 
     <!-- Language Selector Tabs (Coding mode only) -->
-    <div v-if="assignmentType === 'coding'" class="row q-gutter-sm q-mb-lg">
+    <div v-if="assignmentType === 'coding' && !allCompilersDisabled" class="row q-gutter-sm q-mb-lg">
       <q-btn
+        v-if="!disabledCompilers.includes('java')"
         :flat="activeTab !== 'java'"
         :color="activeTab === 'java' ? 'primary' : 'grey-7'"
         label="Java Compiler"
@@ -46,6 +47,7 @@
         @click="activeTab = 'java'"
       />
       <q-btn
+        v-if="!disabledCompilers.includes('sql')"
         :flat="activeTab !== 'sql'"
         :color="activeTab === 'sql' ? 'warning' : 'grey-7'"
         label="SQL Playground"
@@ -54,6 +56,7 @@
         @click="activeTab = 'sql'"
       />
       <q-btn
+        v-if="!disabledCompilers.includes('html')"
         :flat="activeTab !== 'html'"
         :color="activeTab === 'html' ? 'positive' : 'grey-7'"
         label="HTML/CSS Live"
@@ -80,6 +83,16 @@
             @cut.prevent="preventAction"
           ></textarea>
         </div>
+      </div>
+
+      <!-- Compilers Unavailable Notice -->
+      <div v-else-if="allCompilersDisabled" class="glass-card q-pa-xl text-center">
+        <q-icon name="warning" size="xl" color="warning" class="q-mb-md" />
+        <h2 class="text-h5 text-warning font-weight-bold q-my-none">Compilers Unavailable</h2>
+        <p class="text-body1 text-muted q-mt-md q-mb-none" style="max-width: 600px; margin-left: auto; margin-right: auto;">
+          All coding playground compilers have been temporarily disabled by your administrator. 
+          Please contact your instructor or administrator for assistance.
+        </p>
       </div>
 
       <!-- Coding Playgrounds -->
@@ -166,6 +179,7 @@ import { useQuasar } from 'quasar';
 import { useLmsStore } from '../../stores/LMS/lmsStore';
 import { useAuthStore } from '../../stores/auth';
 import lmsService from '../../services/LMS/lmsService';
+import API from '../../services/api';
 import { bufferToBase64, base64ToBuffer } from '../../utils/base64';
 import JavaEditor from '../../components/LMS/Editors/JavaEditor.vue';
 import SqlEditor from '../../components/LMS/Editors/SqlEditor.vue';
@@ -178,6 +192,20 @@ const lmsStore = useLmsStore();
 const authStore = useAuthStore();
 
 const activeTab = ref('java');
+const disabledCompilers = ref([]);
+
+const allCompilersDisabled = computed(() => {
+  return ['java', 'sql', 'html'].every(lang => disabledCompilers.value.includes(lang));
+});
+
+const getFallbackTab = (desiredTab) => {
+  const allTabs = ['java', 'sql', 'html'];
+  if (!disabledCompilers.value.includes(desiredTab)) {
+    return desiredTab;
+  }
+  const fallback = allTabs.find(tab => !disabledCompilers.value.includes(tab));
+  return fallback || desiredTab;
+};
 const assignmentId = ref(null);
 const maxScore = ref(0);
 const isSubmitting = ref(false);
@@ -550,10 +578,20 @@ const resetState = () => {
   writtenResponse.value = '';
   submissionStatus.value = null;
   saveStatus.value = 'All changes saved';
-  activeTab.value = 'java';
+  activeTab.value = getFallbackTab('java');
 };
 
 const loadDraftsForCurrentUser = async () => {
+  try {
+    const res = await API.get('/settings/compilers');
+    disabledCompilers.value = res.disabled || [];
+  } catch (err) {
+    console.error('Failed to load compiler settings:', err);
+  }
+
+  // Ensure activeTab is not disabled
+  activeTab.value = getFallbackTab(activeTab.value);
+
   if (route.query.assignment_id) {
     assignmentId.value = parseInt(route.query.assignment_id);
     maxScore.value = route.query.max_score || 100;
@@ -577,7 +615,7 @@ const loadDraftsForCurrentUser = async () => {
         }
         javaFiles.value = [{ name: 'Main.java', code: '' }];
         activeHtmlFileIndex.value = 0;
-        activeTab.value = 'html';
+        activeTab.value = getFallbackTab('html');
       } else if (lang === 'sql') {
         try {
           const parsed = JSON.parse(codeVal);
@@ -589,7 +627,7 @@ const loadDraftsForCurrentUser = async () => {
         javaFiles.value = [{ name: 'Main.java', code: '' }];
         htmlFiles.value = [{ name: 'index.html', code: '' }];
         activeSqlFileIndex.value = 0;
-        activeTab.value = 'sql';
+        activeTab.value = getFallbackTab('sql');
       } else {
         try {
           const parsed = JSON.parse(codeVal);
@@ -600,7 +638,7 @@ const loadDraftsForCurrentUser = async () => {
         }
         htmlFiles.value = [{ name: 'index.html', code: '' }];
         activeJavaFileIndex.value = 0;
-        activeTab.value = 'java';
+        activeTab.value = getFallbackTab('java');
       }
     };
 
@@ -626,15 +664,15 @@ const loadDraftsForCurrentUser = async () => {
         desc.toLowerCase().includes('html') ||
         desc.toLowerCase().includes('css')
       ) {
-        activeTab.value = 'html';
+        activeTab.value = getFallbackTab('html');
       } else if (
         title.toLowerCase().includes('sql') ||
         desc.toLowerCase().includes('sql') ||
         desc.toLowerCase().includes('database')
       ) {
-        activeTab.value = 'sql';
+        activeTab.value = getFallbackTab('sql');
       } else {
-        activeTab.value = 'java';
+        activeTab.value = getFallbackTab('java');
       }
     }
 
@@ -677,7 +715,9 @@ const loadDraftsForCurrentUser = async () => {
     // Restore free play active tab preference if saved
     const savedTab = localStorage.getItem(getStorageKey('sms_lab_active_tab'));
     if (savedTab && ['java', 'sql', 'html'].includes(savedTab)) {
-      activeTab.value = savedTab;
+      activeTab.value = getFallbackTab(savedTab);
+    } else {
+      activeTab.value = getFallbackTab('java');
     }
 
     // Check free play local draft

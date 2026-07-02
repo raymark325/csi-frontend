@@ -59,8 +59,8 @@ const normalizedCourses = computed(() => {
     const data = dashboardStore.studentData?.sections || [];
     return data.map(sec => ({
       id: sec.id,
-      code: sec.course, // student payload only returns title currently as 'course'
-      title: sec.course,
+      code: sec.course_code || 'General',
+      title: sec.course || 'Unknown Course',
       room: sec.room || 'TBA',
     }));
   } else {
