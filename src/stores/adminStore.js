@@ -52,7 +52,7 @@ export const useAdminStore = defineStore('admin', () => {
       const res = await adminService.updateUser(id, data);
       const index = users.value.findIndex(u => u.id === id);
       if (index !== -1) {
-        users.value[index] = res.data;
+        users.value[index] = res.data.data ? res.data.data : res.data;
       }
       _usersFetchedAt.value = 0;
     } catch (err) {
@@ -106,7 +106,7 @@ export const useAdminStore = defineStore('admin', () => {
       const res = await adminService.updateCourse(id, data);
       const index = courses.value.findIndex(c => c.id === id);
       if (index !== -1) {
-        courses.value[index] = res.data;
+        courses.value[index] = res.data.data ? res.data.data : res.data;
       }
       _coursesFetchedAt.value = 0;
     } catch (err) {
@@ -163,7 +163,7 @@ export const useAdminStore = defineStore('admin', () => {
       const res = await adminService.updateSection(id, data);
       const index = sections.value.findIndex(s => s.id === id);
       if (index !== -1) {
-        sections.value[index] = res.data;
+        sections.value[index] = res.data.data ? res.data.data : res.data;
       }
       _sectionsFetchedAt.value = 0;
     } catch (err) {

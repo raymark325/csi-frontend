@@ -208,7 +208,7 @@ export const useChatStore = defineStore('chat', () => {
     const tempMsg = {
       id:      tempId,
       user_id: authStore.user?.id,
-      section_subject_id: roomId,
+      section_id: roomId,
       message: text,
       created_at: new Date().toISOString(),
       _status: 'sending',

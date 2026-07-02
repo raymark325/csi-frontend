@@ -164,6 +164,37 @@
     </div>
   </div>
 
+  <!-- OTP Modal -->
+  <q-dialog v-model="showOtpModal" persistent>
+    <q-card style="min-width: 350px; border-radius: 16px;" class="q-pa-md text-center">
+      <q-card-section>
+        <div class="text-h6 text-weight-bold" style="color: var(--sms-blue);">Email Verification</div>
+        <p class="text-caption q-mt-sm" style="color: var(--text-secondary);">
+          We have sent a 6-digit One Time Password (OTP) to <strong>{{ formData.email }}</strong>. Please enter it below to complete your registration.
+        </p>
+      </q-card-section>
+
+      <q-card-section class="q-pt-none">
+        <q-input 
+          v-model="otpCode" 
+          outlined 
+          dense 
+          mask="######" 
+          placeholder="Enter 6-digit OTP" 
+          autofocus 
+          @keyup.enter="completeRegistration"
+          :error="!!otpError"
+          :error-message="otpError"
+        />
+      </q-card-section>
+
+      <q-card-actions align="center" class="q-pb-md">
+        <q-btn flat label="Cancel" color="negative" v-close-popup :disable="isLoading" />
+        <q-btn unelevated rounded color="primary" label="Verify & Register" @click="completeRegistration" :loading="isLoading" />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+
   <!-- Data Privacy & Terms Modal -->
   <q-dialog v-model="showTermsModal" maximized transition-show="slide-up" transition-hide="slide-down">
     <q-card class="column" style="max-width: 760px; margin: auto; border-radius: 20px;">
@@ -348,6 +379,9 @@ const successMsg = ref('');
 const agreedToTerms = ref(false);
 const showTermsModal = ref(false);
 const termsTab = ref('privacy');
+const showOtpModal = ref(false);
+const otpCode = ref('');
+const otpError = ref('');
 let selectedProfilePic = null;
 const photoPreview = ref(null);
 const cameraActive = ref(false);
@@ -434,6 +468,33 @@ const handleRegister = async () => {
 
   isLoading.value = true;
   try {
+    // Check if email already exists or is valid by sending OTP
+    await authStore.sendOtp(formData.value.email);
+    showOtpModal.value = true;
+    otpCode.value = '';
+    otpError.value = '';
+  } catch (error) {
+    if (error?.errors) {
+      const firstError = Object.values(error.errors)[0][0];
+      errorMsg.value = firstError;
+    } else {
+      errorMsg.value = error?.message || 'Failed to send OTP. Please try again.';
+    }
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const completeRegistration = async () => {
+  if (otpCode.value.length !== 6) {
+    otpError.value = 'Please enter a valid 6-digit OTP.';
+    return;
+  }
+
+  otpError.value = '';
+  isLoading.value = true;
+
+  try {
     const payload = {
       first_name: formData.value.firstName,
       middle_name: formData.value.middleName,
@@ -445,6 +506,7 @@ const handleRegister = async () => {
       section_id: formData.value.section_id || null,
       email: formData.value.email,
       password: formData.value.password,
+      otp: otpCode.value,
     };
     
     if (selectedProfilePic) {
@@ -453,6 +515,7 @@ const handleRegister = async () => {
 
     await authStore.register(payload);
 
+    showOtpModal.value = false;
     successMsg.value = 'Registration successful! Please wait for admin approval.';
     setTimeout(() => {
       router.push('/login');
@@ -460,9 +523,14 @@ const handleRegister = async () => {
   } catch (error) {
     if (error?.errors) {
       const firstError = Object.values(error.errors)[0][0];
-      errorMsg.value = firstError;
+      if (error.errors.otp) {
+        otpError.value = error.errors.otp[0];
+      } else {
+        errorMsg.value = firstError;
+        showOtpModal.value = false;
+      }
     } else {
-      errorMsg.value = error?.message || 'Registration failed. Please check your inputs.';
+      otpError.value = error?.message || 'Registration failed. Please check your OTP.';
     }
   } finally {
     isLoading.value = false;

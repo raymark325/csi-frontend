@@ -46,6 +46,19 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
+  const sendOtp = async (email) => {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      await authService.sendOtp(email);
+    } catch (err) {
+      error.value = err.message || 'Failed to send OTP';
+      throw err;
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
   const logout = async () => {
     try {
       await authService.logout();
@@ -96,6 +109,7 @@ export const useAuthStore = defineStore('auth', () => {
     userRole,
     login,
     register,
+    sendOtp,
     logout,
     refreshToken,
     fetchCurrentUser,

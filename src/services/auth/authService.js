@@ -6,6 +6,10 @@ export const authService = {
     return API.post('/auth/login', { email, password });
   },
 
+  sendOtp(email) {
+    return API.post('/auth/send-otp', { email });
+  },
+
   register(userData) {
     if (userData.profile_picture) {
       const formData = new FormData();
