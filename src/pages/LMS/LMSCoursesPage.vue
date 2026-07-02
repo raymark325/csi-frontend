@@ -60,7 +60,7 @@ const normalizedCourses = computed(() => {
     return data.map(sec => ({
       id: sec.id,
       code: sec.course_code || 'General',
-      title: sec.course || 'Unknown Course',
+      title: sec.course || sec.name || 'Unknown Course',
       room: sec.room || 'TBA',
     }));
   } else {
