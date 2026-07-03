@@ -81,7 +81,7 @@
           </div>
 
           <div class="q-mb-md">
-            <p class="text-label q-mb-xs">Verification Photo (Required) <span class="text-negative">*</span></p>
+            <p class="text-label q-mb-xs">Verification Photo (Required) <span class="text-negative">*</span> <span class="text-caption" style="color: var(--text-secondary);">(Max 10MB)</span></p>
             <div class="row q-gutter-sm items-center">
               <input type="file" ref="fileInput" @change="handleProfilePic" accept="image/*" style="display: none;" />
               <q-btn outline color="primary" icon="upload_file" label="Upload Image" @click="$refs.fileInput.click()" class="col" />
@@ -418,10 +418,16 @@ const capturePhoto = () => {
   const ctx = canvas.getContext('2d');
   ctx.drawImage(videoElement.value, 0, 0, canvas.width, canvas.height);
   
-  photoPreview.value = canvas.toDataURL('image/jpeg');
-  
   canvas.toBlob((blob) => {
     if (blob) {
+      if (blob.size > 10 * 1024 * 1024) {
+        errorMsg.value = 'Profile picture size must not exceed 10MB.';
+        removePhoto();
+        stopCamera();
+        return;
+      }
+      errorMsg.value = '';
+      photoPreview.value = canvas.toDataURL('image/jpeg');
       const file = new File([blob], "profile_photo.jpg", { type: "image/jpeg" });
       selectedProfilePic = file;
     }
@@ -439,6 +445,13 @@ const fileInput = ref(null);
 const handleProfilePic = (event) => {
   const file = event.target.files[0];
   if (file) {
+    if (file.size > 10 * 1024 * 1024) {
+      errorMsg.value = 'Profile picture size must not exceed 10MB.';
+      removePhoto();
+      event.target.value = '';
+      return;
+    }
+    errorMsg.value = '';
     selectedProfilePic = file;
     photoPreview.value = URL.createObjectURL(file);
     stopCamera();
