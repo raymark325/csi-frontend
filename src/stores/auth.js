@@ -59,6 +59,32 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
+  const sendForgotPasswordOtp = async (email) => {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      await authService.sendForgotPasswordOtp(email);
+    } catch (err) {
+      error.value = err.message || 'Failed to send reset password OTP';
+      throw err;
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
+  const resetPassword = async (email, otp, password) => {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      await authService.resetPassword(email, otp, password);
+    } catch (err) {
+      error.value = err.message || 'Failed to reset password';
+      throw err;
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
   const logout = async () => {
     try {
       await authService.logout();
@@ -110,6 +136,8 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     sendOtp,
+    sendForgotPasswordOtp,
+    resetPassword,
     logout,
     refreshToken,
     fetchCurrentUser,

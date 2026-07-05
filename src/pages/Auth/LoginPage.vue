@@ -37,7 +37,12 @@
           </div>
 
           <div class="q-mb-xl">
-            <p class="text-label q-mb-xs">Password</p>
+            <div class="row justify-between items-center q-mb-xs">
+              <p class="text-label" style="margin: 0;">Password</p>
+              <router-link to="/forgot-password" style="color: var(--sms-blue); font-size: 12px; font-weight: 600; text-decoration: none;">
+                Forgot Password?
+              </router-link>
+            </div>
             <input
               v-model="password"
               class="input-glass"

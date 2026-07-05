@@ -66,6 +66,10 @@ const routes = [
     component: () => import('@/pages/Auth/RegisterPage.vue'),
   },
   {
+    path: '/forgot-password',
+    component: () => import('@/pages/Auth/ForgotPasswordPage.vue'),
+  },
+  {
     path: '/maintenance',
     component: () => import('@/pages/MaintenancePage.vue'),
     meta: { public: true }

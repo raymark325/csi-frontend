@@ -10,6 +10,14 @@ export const authService = {
     return API.post('/auth/send-otp', { email });
   },
 
+  sendForgotPasswordOtp(email) {
+    return API.post('/auth/forgot-password-otp', { email });
+  },
+
+  resetPassword(email, otp, password) {
+    return API.post('/auth/reset-password', { email, otp, password });
+  },
+
   register(userData) {
     if (userData.profile_picture) {
       const formData = new FormData();
