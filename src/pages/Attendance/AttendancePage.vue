@@ -127,11 +127,13 @@ import { useRoute } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAttendanceStore } from '../../stores/Attendance/attendanceStore';
 import { useDashboardStore } from '../../stores/dashboardStore';
+import { useAuthStore } from '../../stores/auth';
 
 const route = useRoute();
 const $q = useQuasar();
 const attendanceStore = useAttendanceStore();
 const dashboardStore = useDashboardStore();
+const authStore = useAuthStore();
 
 const selectedSectionId = ref(null);
 const selectedDate = ref(new Date().toISOString().substring(0, 10));
@@ -200,7 +202,26 @@ const updateRemarks = async (row) => {
 onMounted(async () => {
   try {
     await dashboardStore.fetchSections();
-    sections.value = dashboardStore.sections;
+    
+    let rawSections = dashboardStore.sections;
+    if (authStore.userRole === 'admin' || authStore.userRole === 'registrar') {
+      let flattened = [];
+      rawSections.forEach(sec => {
+        if (sec.section_subjects) {
+          sec.section_subjects.forEach(sub => {
+            flattened.push({
+              id: sub.id,
+              course: sub.course,
+              section: { name: sec.name }
+            });
+          });
+        }
+      });
+      sections.value = flattened;
+    } else {
+      sections.value = rawSections;
+    }
+
     if (sections.value.length > 0) {
       if (route.query.section_id) {
         selectedSectionId.value = parseInt(route.query.section_id);
