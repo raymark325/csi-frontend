@@ -10,7 +10,7 @@ export const attendanceService = {
   },
 
   getSectionAttendance(sectionId, date = null) {
-    const url = date ? `/attendance/section?section_id=${sectionId}&date=${date}` : `/attendance/section?section_id=${sectionId}`;
+    const url = date ? `/attendance/section?section_subject_id=${sectionId}&date=${date}` : `/attendance/section?section_subject_id=${sectionId}`;
     return API.get(url);
   },
 
