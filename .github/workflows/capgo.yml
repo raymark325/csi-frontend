@@ -24,8 +24,4 @@ jobs:
         run: npm run build
 
       - name: Capgo Upload
-        uses: Cap-go/capgo-action@v1
-        with:
-          token: ${{ secrets.CAPGO_TOKEN }}
-          appId: com.csi.ussap
-          channel: production
+        run: npx @capgo/cli@latest bundle upload -a ${{ secrets.CAPGO_TOKEN }} -c production
