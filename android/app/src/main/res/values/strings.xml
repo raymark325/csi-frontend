@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">CSI-USSAP</string>
-    <string name="title_activity_main">CSI-USSAP</string>
+    <string name="app_name">CSI USSAP</string>
+    <string name="title_activity_main">CSI USSAP</string>
     <string name="package_name">com.csi.ussap</string>
     <string name="custom_url_scheme">com.csi.ussap</string>
 </resources>
