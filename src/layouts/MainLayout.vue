@@ -33,6 +33,13 @@
           style="color: var(--text-secondary); margin-right: 8px;"
           @click="globalChatModalRef?.openModal()"
         >
+          <q-badge
+            v-if="chatStore.totalUnreadCount > 0"
+            color="red"
+            floating
+            rounded
+            :label="chatStore.totalUnreadCount > 99 ? '99+' : chatStore.totalUnreadCount"
+          />
           <q-tooltip>Class Chats</q-tooltip>
         </q-btn>
 
@@ -190,12 +197,14 @@ import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '../stores/auth'
 import { useNotificationStore } from '../stores/notificationStore'
+import { useChatStore } from '../stores/chatStore'
 import SidebarItem from '@/components/ui/SidebarItem.vue'
 import GlobalChatModal from '@/components/LMS/Chat/GlobalChatModal.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const notifStore = useNotificationStore()
+const chatStore = useChatStore()
 const $q = useQuasar()
 
 const leftDrawerOpen = ref(false)
@@ -352,7 +361,6 @@ const navItems = computed(() => {
 
 import { watch } from 'vue'
 import { useDashboardStore } from '../stores/dashboardStore'
-import { useChatStore } from '../stores/chatStore'
 
 watch(() => authStore.userRole, async (newRole) => {
   if (newRole === 'student' || newRole === 'teacher' || newRole === 'admin') {
@@ -387,7 +395,6 @@ onMounted(() => {
   document.addEventListener('click', () => { notifPanelOpen.value = false; });
   
   // Watch for pending chat open requests (from push notifications)
-  const chatStore = useChatStore();
   watch(() => chatStore.pendingChatOpen, (newSectionId) => {
     if (newSectionId) {
       globalChatModalRef.value?.openModal(newSectionId);

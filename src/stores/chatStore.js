@@ -265,9 +265,7 @@ export const useChatStore = defineStore('chat', () => {
   const activeChannels = new Set();
   const activeViewedRoom = ref(null); // The room ID currently open in ChatRoom.vue
 
-  function setActiveViewedRoom(roomId) {
-    activeViewedRoom.value = roomId;
-  }
+
 
   const pendingChatOpen = ref(null);
 
@@ -275,6 +273,42 @@ export const useChatStore = defineStore('chat', () => {
     pendingChatOpen.value = sectionId;
     // reset it slightly later so it can trigger watchers again if needed
     setTimeout(() => { pendingChatOpen.value = null; }, 1000);
+  }
+
+  // Unread badge logic
+  const unreadCounts = reactive(JSON.parse(localStorage.getItem('csi_chat_unread') || '{}'));
+
+  function saveUnread() {
+    localStorage.setItem('csi_chat_unread', JSON.stringify(unreadCounts));
+  }
+
+  function incrementUnread(roomId) {
+    const key = String(roomId);
+    unreadCounts[key] = (unreadCounts[key] || 0) + 1;
+    saveUnread();
+  }
+
+  function clearUnread(roomId) {
+    const key = String(roomId);
+    if (unreadCounts[key]) {
+      unreadCounts[key] = 0;
+      saveUnread();
+    }
+  }
+
+  const totalUnreadCount = computed(() => {
+    return Object.values(unreadCounts).reduce((acc, val) => acc + val, 0);
+  });
+
+  function getUnreadCount(roomId) {
+    return unreadCounts[String(roomId)] || 0;
+  }
+
+  function setActiveViewedRoom(roomId) {
+    activeViewedRoom.value = roomId;
+    if (roomId) {
+      clearUnread(roomId);
+    }
   }
 
   async function initGlobalListeners(sectionIds) {
@@ -364,6 +398,8 @@ export const useChatStore = defineStore('chat', () => {
           
           // If we are NOT actively viewing this room, show a notification
           if (activeViewedRoom.value != roomId) {
+            incrementUnread(roomId);
+
             const senderName = message.user?.name || 'Someone';
             const textPreview = message.message.substring(0, 40) + (message.message.length > 40 ? '...' : '');
             
@@ -412,6 +448,10 @@ export const useChatStore = defineStore('chat', () => {
     initGlobalListeners,
     setActiveViewedRoom,
     pendingChatOpen,
-    triggerChatOpen
+    triggerChatOpen,
+    unreadCounts,
+    totalUnreadCount,
+    getUnreadCount,
+    clearUnread
   };
 });

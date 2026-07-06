@@ -50,7 +50,10 @@
                 <q-item-label caption lines="1">{{ course.title }}</q-item-label>
               </q-item-section>
               <q-item-section side>
-                <q-icon name="chevron_right" color="grey-5" />
+                <div class="row items-center q-gutter-x-sm">
+                  <q-badge v-if="chatStore.getUnreadCount(course.id) > 0" color="red" rounded :label="chatStore.getUnreadCount(course.id)" />
+                  <q-icon name="chevron_right" color="grey-5" />
+                </div>
               </q-item-section>
             </q-item>
           </q-list>
@@ -70,6 +73,7 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { useAuthStore } from '../../../stores/auth';
 import { useDashboardStore } from '../../../stores/dashboardStore';
+import { useChatStore } from '../../../stores/chatStore';
 import ChatRoom from './ChatRoom.vue';
 
 const isOpen = ref(false);
@@ -79,6 +83,7 @@ const loading = ref(false);
 
 const authStore = useAuthStore();
 const dashboardStore = useDashboardStore();
+const chatStore = useChatStore();
 
 const normalizedCourses = computed(() => {
   if (authStore.user?.role === 'student') {
