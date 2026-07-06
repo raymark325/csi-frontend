@@ -33,15 +33,22 @@
       </div>
       
       <!-- Console Content -->
-      <div class="console-content" @click="focusConsole">
+      <div class="console-content" @click="focusConsole" style="position: relative;">
         <pre
-          ref="consoleRef"
           class="console-text"
-          tabindex="0"
-          @keydown="handleConsoleKeydown"
+        ><span>{{ output || 'Console ready. Click Run Code to execute.' }}</span><span class="user-typed-input">{{ currentInput }}</span><span v-if="consoleFocused && isWaitingForInput" class="console-cursor">_</span></pre>
+        <input 
+          ref="consoleInputRef"
+          v-model="currentInput"
+          type="text"
+          class="hidden-mobile-input"
+          @keydown.enter.prevent="submitMobileInput"
           @focus="consoleFocused = true"
           @blur="consoleFocused = false"
-        ><span>{{ output || 'Console ready. Click Run Code to execute.' }}</span><span class="user-typed-input">{{ currentInput }}</span><span v-if="consoleFocused && isWaitingForInput" class="console-cursor">_</span></pre>
+          autocapitalize="off"
+          autocomplete="off"
+          spellcheck="false"
+        />
       </div>
     </div>
   </div>
@@ -82,38 +89,24 @@ const output = ref(null);
 const stdin = ref('');
 const currentInput = ref('');
 const consoleFocused = ref(false);
-const consoleRef = ref(null);
+const consoleInputRef = ref(null);
 const isWaitingForInput = ref(false);
 
 const focusConsole = () => {
-  if (isWaitingForInput.value && consoleRef.value) {
-    consoleRef.value.focus();
+  if (isWaitingForInput.value && consoleInputRef.value) {
+    consoleInputRef.value.focus();
   }
 };
 
 // Global input resolver callback
 let resolveInputPromise = null;
 
-const handleConsoleKeydown = (e) => {
+const submitMobileInput = (e) => {
   if (props.disabled || !isRunning.value || !isWaitingForInput.value) return;
-
-  // Prevent browser scroll or back actions
-  if (e.key === ' ' || e.key === 'Backspace' || e.key === 'Enter') {
-    e.preventDefault();
-  }
-
-  if (e.key === 'Enter') {
-    const val = currentInput.value;
-    currentInput.value = '';
-    if (resolveInputPromise) {
-      resolveInputPromise(val);
-    }
-  } else if (e.key === 'Backspace') {
-    currentInput.value = currentInput.value.slice(0, -1);
-  } else if (e.key === ' ') {
-    currentInput.value += ' ';
-  } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-    currentInput.value += e.key;
+  const val = currentInput.value;
+  currentInput.value = '';
+  if (resolveInputPromise) {
+    resolveInputPromise(val);
   }
 };
 
@@ -333,6 +326,19 @@ watch(() => props.initialCode, (newVal) => {
   animation: blink 1s step-end infinite;
   color: #5af78e;
   font-weight: bold;
+}
+
+.hidden-mobile-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  top: 0;
+  left: 0;
+  border: none;
+  padding: 0;
+  margin: 0;
+  pointer-events: none;
 }
 
 @keyframes blink {
