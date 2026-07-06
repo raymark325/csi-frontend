@@ -1,5 +1,5 @@
 {
   "appId": "com.csi.ussap",
   "appName": "CSI USSAP",
-  "webDir": "dist/spa"
+  "webDir": "dist/pwa"
 }
