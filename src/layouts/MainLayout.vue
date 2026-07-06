@@ -3,7 +3,7 @@
 
     <!-- ── Top Navigation Bar ──────────────────── -->
     <q-header class="glass-navbar" style="color: var(--text-primary);">
-      <q-toolbar style="min-height: 60px; padding: 0 24px;">
+      <q-toolbar class="q-px-sm" style="min-height: 60px;">
         <q-btn
           flat round dense
           icon="menu"
@@ -12,12 +12,12 @@
           @click="toggleLeftDrawer"
         />
 
-        <q-toolbar-title class="row items-center q-gutter-xs" style="flex: none; margin: 0 16px 0 8px;">
+        <q-toolbar-title class="row items-center q-gutter-xs" style="flex: none; margin: 0 8px 0 8px;">
           <div style="width:30px; height:30px; border-radius:8px; background: linear-gradient(135deg, var(--sms-blue), var(--sms-blue-light)); display:flex; align-items:center; justify-content:center;">
             <q-icon name="school" size="16px" style="color:#fff"/>
           </div>
           <span style="font-weight:800; font-size:15px; color: var(--text-primary);">CSI</span>
-          <span style="font-weight:400; font-size:13px; color: var(--text-muted);">School System</span>
+          <span class="gt-xs" style="font-weight:400; font-size:13px; color: var(--text-muted);">School System</span>
         </q-toolbar-title>
 
         <nav class="row items-center q-gutter-xs gt-sm">
@@ -110,8 +110,8 @@
           <q-tooltip>Toggle Dark Mode</q-tooltip>
         </q-btn>
 
-        <q-btn flat round dense size="md" style="margin-left: 12px;">
-          <q-avatar size="36px">
+        <q-btn flat round dense size="md" class="q-ml-xs">
+          <q-avatar size="34px">
             <div style="width:100%; height:100%; border-radius:50%; background: linear-gradient(135deg, var(--sms-blue), var(--sms-red)); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff;">
               {{ userInitials }}
             </div>
@@ -390,8 +390,9 @@ onUnmounted(() => {
 .notif-panel {
   position: absolute;
   top: calc(100% + 10px);
-  right: 0;
+  right: -10px;
   width: 320px;
+  max-width: calc(100vw - 32px);
   background: var(--glass-bg, rgba(20,20,30,0.97));
   border: 1px solid var(--border-color, rgba(255,255,255,0.12));
   border-radius: 14px;
