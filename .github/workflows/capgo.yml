@@ -23,5 +23,8 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Auto-bump version
+        run: npm version 0.0.${{ github.run_number }} --no-git-tag-version
+
       - name: Capgo Upload
         run: npx @capgo/cli@latest bundle upload -a e375d60d-7be4-4da7-bec1-0b2f4562a53f -c production
