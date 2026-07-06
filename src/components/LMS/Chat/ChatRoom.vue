@@ -280,28 +280,11 @@ const handleSend = async () => {
 // ── WebSocket (Realtime) ──────────────────────────────────────────────────────
 
 const initEcho = () => {
-  if (!window.Echo) return;
-
-  echoChannel = window.Echo.join(`section.${props.sectionId}`)
-    .listen('MessageSent', (e) => {
-      const wasNearBottom = checkNearBottom();
-
-      chatStore.appendRealtime(props.sectionId, e.message);
-      emit('unread');
-
-      if (wasNearBottom) {
-        scrollToBottom();
-      } else {
-        hasNewMessages.value = true;
-      }
-    });
+  chatStore.setActiveViewedRoom(props.sectionId);
 };
 
 const leaveEcho = () => {
-  if (echoChannel && window.Echo) {
-    window.Echo.leave(`section.${props.sectionId}`);
-    echoChannel = null;
-  }
+  chatStore.setActiveViewedRoom(null);
 };
 
 // ── Network recovery ──────────────────────────────────────────────────────────
@@ -331,6 +314,17 @@ watch(() => props.sectionId, (newId, oldId) => {
     initRoom();
   }
 });
+
+watch(messages, (newMsgs, oldMsgs) => {
+  if (newMsgs.length > (oldMsgs?.length || 0)) {
+    const wasNearBottom = checkNearBottom();
+    if (wasNearBottom) {
+      scrollToBottom();
+    } else {
+      hasNewMessages.value = true;
+    }
+  }
+}, { deep: true });
 
 onMounted(async () => {
   await initRoom();

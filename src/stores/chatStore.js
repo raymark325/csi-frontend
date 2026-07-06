@@ -14,6 +14,8 @@ import { defineStore } from 'pinia';
 import { ref, reactive } from 'vue';
 import API from '../services/api';
 import { getMessages, saveMessages, clearRoom } from '../services/chatCache';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { Notify } from 'quasar';
 
 // Shape of a single room's state
 function createRoomState() {
@@ -256,6 +258,77 @@ export const useChatStore = defineStore('chat', () => {
     await clearRoom(roomId).catch(() => {});
   }
 
+  /**
+   * Initialize global listeners for all the user's sections.
+   * Shows a LocalNotification/Quasar Notify if message arrives and room is not actively viewed.
+   */
+  const activeChannels = new Set();
+  const activeViewedRoom = ref(null); // The room ID currently open in ChatRoom.vue
+
+  function setActiveViewedRoom(roomId) {
+    activeViewedRoom.value = roomId;
+  }
+
+  async function initGlobalListeners(sectionIds) {
+    if (!window.Echo) return;
+    
+    // Request notification permissions
+    try {
+      const perm = await LocalNotifications.requestPermissions();
+    } catch(e) {}
+
+    sectionIds.forEach(roomId => {
+      const channelName = `section.${roomId}`;
+      if (activeChannels.has(channelName)) return;
+      
+      activeChannels.add(channelName);
+      window.Echo.join(channelName)
+        .listen('MessageSent', async (e) => {
+          const message = e.message;
+          const { useAuthStore } = await import('./auth');
+          const authStore = useAuthStore();
+          
+          // Don't notify for our own messages
+          if (message.user_id === authStore.user?.id) return;
+          
+          // Append to store if viewing or not
+          appendRealtime(roomId, message);
+          
+          // If we are NOT actively viewing this room, show a notification
+          if (activeViewedRoom.value != roomId) {
+            const senderName = message.user?.name || 'Someone';
+            const textPreview = message.message.substring(0, 40) + (message.message.length > 40 ? '...' : '');
+            
+            // Show Quasar in-app toast
+            Notify.create({
+              message: `New message from ${senderName}`,
+              caption: textPreview,
+              color: 'primary',
+              icon: 'chat',
+              position: 'top',
+              timeout: 4000
+            });
+
+            // Show Android Notification Bar push notification
+            try {
+              await LocalNotifications.schedule({
+                notifications: [
+                  {
+                    title: `New message from ${senderName}`,
+                    body: textPreview,
+                    id: Math.floor(Math.random() * 100000),
+                    schedule: { at: new Date(Date.now() + 100) },
+                    actionTypeId: "",
+                    extra: null
+                  }
+                ]
+              });
+            } catch(err) {}
+          }
+        });
+    });
+  }
+
   return {
     rooms,
     getRoom,
@@ -265,5 +338,7 @@ export const useChatStore = defineStore('chat', () => {
     appendRealtime,
     sendMessage,
     resetRoom,
+    initGlobalListeners,
+    setActiveViewedRoom,
   };
 });

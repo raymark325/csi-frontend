@@ -351,14 +351,34 @@ const navItems = computed(() => {
 });
 
 import { watch } from 'vue'
+import { useDashboardStore } from '../stores/dashboardStore'
+import { useChatStore } from '../stores/chatStore'
 
-watch(() => authStore.userRole, (newRole) => {
+watch(() => authStore.userRole, async (newRole) => {
   if (newRole === 'student' || newRole === 'teacher' || newRole === 'admin') {
     notifStore.startPolling(
       newRole === 'student' ? handleNewAssignments : null,
       newRole === 'student' ? handleNewAnnouncements : null,
       30000
     );
+
+    // Initialize global chat listeners
+    try {
+      const dashboardStore = useDashboardStore();
+      const chatStore = useChatStore();
+      
+      if (newRole === 'student') {
+        await dashboardStore.fetchStudentDashboard();
+        const sectionIds = (dashboardStore.studentData?.sections || []).map(s => s.id);
+        chatStore.initGlobalListeners(sectionIds);
+      } else if (newRole === 'teacher') {
+        await dashboardStore.fetchSections(); // Admin/Teacher fetch generic sections
+        const sectionIds = dashboardStore.sections.map(s => s.id);
+        chatStore.initGlobalListeners(sectionIds);
+      }
+    } catch (err) {
+      console.warn('Failed to init global chat listeners', err);
+    }
   }
 }, { immediate: true });
 
