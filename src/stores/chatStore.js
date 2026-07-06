@@ -315,15 +315,24 @@ export const useChatStore = defineStore('chat', () => {
       // Handle when the user clicks the notification!
       PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
         const data = notification.notification.data;
-        if (data && data.section_id) {
-          triggerChatOpen(data.section_id);
+        if (data) {
+          if (data.type === 'announcement') {
+            window.location.hash = '#/announcements';
+          } else if (data.section_id) {
+            triggerChatOpen(data.section_id);
+          }
         }
       });
 
       // Local notifications click
       LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
-        if (notification.notification.extra && notification.notification.extra.section_id) {
-          triggerChatOpen(notification.notification.extra.section_id);
+        const extra = notification.notification.extra;
+        if (extra) {
+          if (extra.type === 'announcement') {
+            window.location.hash = '#/announcements';
+          } else if (extra.section_id) {
+            triggerChatOpen(extra.section_id);
+          }
         }
       });
 
