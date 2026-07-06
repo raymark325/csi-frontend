@@ -272,10 +272,46 @@ export const useChatStore = defineStore('chat', () => {
   async function initGlobalListeners(sectionIds) {
     if (!window.Echo) return;
     
-    // Request notification permissions
+    // Request local notification permissions
     try {
       const perm = await LocalNotifications.requestPermissions();
     } catch(e) {}
+
+    // Initialize FCM Push Notifications
+    try {
+      const { PushNotifications } = await import('@capacitor/push-notifications');
+      let permStatus = await PushNotifications.checkPermissions();
+      
+      if (permStatus.receive === 'prompt') {
+        permStatus = await PushNotifications.requestPermissions();
+      }
+
+      if (permStatus.receive === 'granted') {
+        // Register with Apple / Google to receive push via APNS/FCM
+        await PushNotifications.register();
+      }
+
+      PushNotifications.addListener('registration', async (token) => {
+        // Send token to backend to be saved
+        try {
+          await API.post('/user/fcm-token', { token: token.value });
+        } catch (e) {
+          console.error('Failed to save FCM token', e);
+        }
+      });
+      
+      PushNotifications.addListener('registrationError', (error) => {
+        console.error('Error on registration: ' + JSON.stringify(error));
+      });
+
+      // Listen for push notifications received in foreground
+      PushNotifications.addListener('pushNotificationReceived', (notification) => {
+        // We can show Quasar Toast if needed here, but Echo usually handles realtime in foreground.
+      });
+
+    } catch (e) {
+      console.log('PushNotifications not supported on this platform', e);
+    }
 
     sectionIds.forEach(roomId => {
       const channelName = `section.${roomId}`;
