@@ -38,6 +38,7 @@
           class="console-text"
         ><span>{{ output || 'Console ready. Click Run Code to execute.' }}</span><span class="user-typed-input">{{ currentInput }}</span><span v-if="consoleFocused && isWaitingForInput" class="console-cursor">_</span></pre>
         <input 
+          v-show="isWaitingForInput"
           ref="consoleInputRef"
           v-model="currentInput"
           type="text"
@@ -331,14 +332,16 @@ watch(() => props.initialCode, (newVal) => {
 .hidden-mobile-input {
   position: absolute;
   opacity: 0;
-  width: 1px;
-  height: 1px;
+  width: 100%;
+  height: 100%;
   top: 0;
   left: 0;
   border: none;
   padding: 0;
   margin: 0;
-  pointer-events: none;
+  cursor: text;
+  z-index: 10;
+  font-size: 16px;
 }
 
 @keyframes blink {
