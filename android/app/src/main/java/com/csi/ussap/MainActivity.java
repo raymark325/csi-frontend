@@ -1,4 +1,4 @@
-package com.csi.maharlika;
+package com.csi.ussap;
 
 import com.getcapacitor.BridgeActivity;
 

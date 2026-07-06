@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.csi.maharlika"
+    namespace = "com.csi.ussap"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.csi.maharlika"
+        applicationId "com.csi.ussap"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
