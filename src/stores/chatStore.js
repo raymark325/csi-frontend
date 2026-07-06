@@ -286,11 +286,6 @@ export const useChatStore = defineStore('chat', () => {
         permStatus = await PushNotifications.requestPermissions();
       }
 
-      if (permStatus.receive === 'granted') {
-        // Register with Apple / Google to receive push via APNS/FCM
-        await PushNotifications.register();
-      }
-
       PushNotifications.addListener('registration', async (token) => {
         // Send token to backend to be saved
         try {
@@ -308,6 +303,11 @@ export const useChatStore = defineStore('chat', () => {
       PushNotifications.addListener('pushNotificationReceived', (notification) => {
         // We can show Quasar Toast if needed here, but Echo usually handles realtime in foreground.
       });
+
+      if (permStatus.receive === 'granted') {
+        // Register with Apple / Google to receive push via APNS/FCM
+        await PushNotifications.register();
+      }
 
     } catch (e) {
       console.log('PushNotifications not supported on this platform', e);
