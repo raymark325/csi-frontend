@@ -269,6 +269,14 @@ export const useChatStore = defineStore('chat', () => {
     activeViewedRoom.value = roomId;
   }
 
+  const pendingChatOpen = ref(null);
+
+  function triggerChatOpen(sectionId) {
+    pendingChatOpen.value = sectionId;
+    // reset it slightly later so it can trigger watchers again if needed
+    setTimeout(() => { pendingChatOpen.value = null; }, 1000);
+  }
+
   async function initGlobalListeners(sectionIds) {
     if (!window.Echo) return;
     
@@ -302,6 +310,21 @@ export const useChatStore = defineStore('chat', () => {
       // Listen for push notifications received in foreground
       PushNotifications.addListener('pushNotificationReceived', (notification) => {
         // We can show Quasar Toast if needed here, but Echo usually handles realtime in foreground.
+      });
+
+      // Handle when the user clicks the notification!
+      PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+        const data = notification.notification.data;
+        if (data && data.section_id) {
+          triggerChatOpen(data.section_id);
+        }
+      });
+
+      // Local notifications click
+      LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
+        if (notification.notification.extra && notification.notification.extra.section_id) {
+          triggerChatOpen(notification.notification.extra.section_id);
+        }
       });
 
       if (permStatus.receive === 'granted') {
@@ -342,7 +365,10 @@ export const useChatStore = defineStore('chat', () => {
               color: 'primary',
               icon: 'chat',
               position: 'top',
-              timeout: 4000
+              timeout: 4000,
+              actions: [
+                { label: 'View', color: 'white', handler: () => triggerChatOpen(roomId) }
+              ]
             });
 
             // Show Android Notification Bar push notification
@@ -355,7 +381,7 @@ export const useChatStore = defineStore('chat', () => {
                     id: Math.floor(Math.random() * 100000),
                     schedule: { at: new Date(Date.now() + 100) },
                     actionTypeId: "",
-                    extra: null
+                    extra: { section_id: roomId }
                   }
                 ]
               });
@@ -376,5 +402,7 @@ export const useChatStore = defineStore('chat', () => {
     resetRoom,
     initGlobalListeners,
     setActiveViewedRoom,
+    pendingChatOpen,
+    triggerChatOpen
   };
 });

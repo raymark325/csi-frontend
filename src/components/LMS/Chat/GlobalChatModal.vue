@@ -107,7 +107,7 @@ const openChat = (course) => {
   activeSectionName.value = course.code;
 };
 
-const openModal = async () => {
+const openModal = async (targetSectionId = null) => {
   isOpen.value = true;
   activeSectionId.value = null; // Reset to list view
 
@@ -117,6 +117,13 @@ const openModal = async () => {
       await dashboardStore.fetchStudentDashboard();
     } else {
       await dashboardStore.fetchSections();
+    }
+
+    if (targetSectionId) {
+      const course = normalizedCourses.value.find(c => c.id == targetSectionId);
+      if (course) {
+        openChat(course);
+      }
     }
   } catch (err) {
     console.error(err);

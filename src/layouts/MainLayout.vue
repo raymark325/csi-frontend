@@ -385,6 +385,14 @@ watch(() => authStore.userRole, async (newRole) => {
 onMounted(() => {
   // Close notification panel on outside click
   document.addEventListener('click', () => { notifPanelOpen.value = false; });
+  
+  // Watch for pending chat open requests (from push notifications)
+  const chatStore = useChatStore();
+  watch(() => chatStore.pendingChatOpen, (newSectionId) => {
+    if (newSectionId) {
+      globalChatModalRef.value?.openModal(newSectionId);
+    }
+  });
 });
 
 onUnmounted(() => {
