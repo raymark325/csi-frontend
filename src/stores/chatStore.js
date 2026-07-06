@@ -289,7 +289,7 @@ export const useChatStore = defineStore('chat', () => {
           const authStore = useAuthStore();
           
           // Don't notify for our own messages
-          if (message.user_id === authStore.user?.id) return;
+          if (String(message.user_id) === String(authStore.user?.id)) return;
           
           // Append to store if viewing or not
           appendRealtime(roomId, message);
