@@ -11,7 +11,7 @@
  */
 
 import { defineStore } from 'pinia';
-import { ref, reactive } from 'vue';
+import { ref, reactive, computed } from 'vue';
 import API from '../services/api';
 import { getMessages, saveMessages, clearRoom } from '../services/chatCache';
 import { LocalNotifications } from '@capacitor/local-notifications';
