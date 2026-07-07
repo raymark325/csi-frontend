@@ -51,7 +51,7 @@
               <div class="row justify-between items-center">
                 <span class="badge badge-blue">
                   <q-icon name="inventory" size="12px" class="q-mr-xs"/>
-                  Master Resource Bank
+                  Your Master Lessons
                 </span>
               </div>
             </div>
