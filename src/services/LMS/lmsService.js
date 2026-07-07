@@ -6,6 +6,10 @@ export const lmsService = {
     return API.get('/lms/modules');
   },
 
+  getMasterModules(courseId) {
+    return API.get(`/lms/modules?course_id=${courseId}`);
+  },
+
   getModule(id) {
     return API.get(`/lms/modules/${id}`);
   },
@@ -39,8 +43,11 @@ export const lmsService = {
     return API.post('/lms/modules', data);
   },
 
-  duplicateModule(id, section_subject_id) {
-    return API.post(`/lms/modules/${id}/duplicate`, { section_subject_id });
+  duplicateModule(id, sectionIds) {
+    if (Array.isArray(sectionIds)) {
+      return API.post(`/lms/modules/${id}/duplicate`, { section_subject_ids: sectionIds });
+    }
+    return API.post(`/lms/modules/${id}/duplicate`, { section_subject_id: sectionIds });
   },
 
   getAssignments(sectionId) {

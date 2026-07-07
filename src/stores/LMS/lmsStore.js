@@ -44,6 +44,21 @@ export const useLmsStore = defineStore('lms', () => {
     }
   };
 
+  const fetchMasterModules = async (courseId) => {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      const response = await lmsService.getMasterModules(courseId);
+      // Let's store master modules in the same `modules` array for simplicity
+      modules.value = response.data;
+      // We don't cache master modules as strictly right now
+    } catch (err) {
+      error.value = err.message || 'Failed to fetch master modules';
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
   const fetchModuleDetail = async (id, force = false) => {
     if (
       !force &&
@@ -251,6 +266,7 @@ export const useLmsStore = defineStore('lms', () => {
     isLoading,
     error,
     fetchModules,
+    fetchMasterModules,
     fetchModuleDetail,
     createModule,
     duplicateModule,
