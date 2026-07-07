@@ -65,31 +65,34 @@
           You are not enrolled in or assigned to any sections.
         </div>
         
-        <div v-for="section in groupedSections" :key="section.name" class="q-mb-xl">
-          <div class="row items-center q-mb-md">
-            <q-icon name="groups" size="28px" color="primary" class="q-mr-md" />
-            <h2 class="text-h5 q-my-none" style="font-weight: 700; color: var(--text-primary);">{{ section.name }}</h2>
-          </div>
-          
-          <div class="row q-col-gutter-lg">
-            <div v-for="course in section.subjects" :key="course.id" class="col-12 col-md-6 col-lg-4">
-              <div class="glass-card q-pa-xl course-card cursor-pointer" @click="goToCourse(course.id)">
-                <div class="row items-center q-mb-md q-gutter-sm">
-                  <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(0,122,255,0.1); display: flex; align-items: center; justify-content: center;">
-                    <q-icon name="menu_book" color="primary" size="24px" />
-                  </div>
+        <div class="row q-col-gutter-lg">
+          <div v-for="section in groupedSections" :key="section.name" class="col-12 col-md-6 col-lg-4">
+            <div class="glass-card q-pa-xl course-card">
+              <div class="row items-center q-mb-md q-gutter-sm">
+                <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(0,122,255,0.1); display: flex; align-items: center; justify-content: center;">
+                  <q-icon name="groups" color="primary" size="24px" />
                 </div>
-                <h3 class="q-mt-none q-mb-xs" style="font-size: 20px; font-weight: 700; color: var(--text-primary);">
-                  {{ course.code }}
-                </h3>
-                <p class="text-body text-secondary q-mb-md" style="font-size: 14px; line-height: 1.5;">
-                  {{ course.title }}
-                </p>
-                <div class="row justify-between items-center">
-                  <span class="badge" style="background: rgba(0,0,0,0.05); color: var(--text-secondary);">
-                    <q-icon name="meeting_room" size="12px" class="q-mr-xs"/>
-                    {{ course.room }}
-                  </span>
+              </div>
+              <h3 class="q-mt-none q-mb-xs" style="font-size: 20px; font-weight: 700; color: var(--text-primary);">
+                {{ section.name }}
+              </h3>
+              
+              <div class="q-mt-lg">
+                <p class="text-caption text-secondary q-mb-sm" style="font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Subjects in this Section</p>
+                <div 
+                  v-for="course in section.subjects" 
+                  :key="course.id"
+                  class="subject-list-item row items-center justify-between q-pa-md q-mb-sm cursor-pointer"
+                  @click="goToCourse(course.id)"
+                >
+                  <div class="row items-center" style="flex: 1; min-width: 0;">
+                    <q-icon name="menu_book" size="18px" color="primary" class="q-mr-sm" />
+                    <div class="ellipsis">
+                      <div style="font-weight: 600; font-size: 14px; color: var(--text-primary);">{{ course.title }}</div>
+                      <div style="font-size: 12px; color: var(--text-secondary);">{{ course.code }}</div>
+                    </div>
+                  </div>
+                  <q-icon name="chevron_right" size="20px" color="grey" />
                 </div>
               </div>
             </div>
@@ -187,5 +190,16 @@ onMounted(async () => {
 .course-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+}
+.subject-list-item {
+  border-radius: 8px;
+  background: rgba(0,0,0,0.02);
+  transition: all 0.2s ease;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+.subject-list-item:hover {
+  background: rgba(0,122,255,0.05);
+  border-color: rgba(0,122,255,0.2);
+  transform: translateX(4px);
 }
 </style>
