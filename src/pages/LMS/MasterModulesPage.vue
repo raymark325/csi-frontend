@@ -121,10 +121,12 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
 import { useLmsStore } from '../../stores/LMS/lmsStore';
+import { useDashboardStore } from '../../stores/dashboardStore';
 
 const route = useRoute();
 const authStore = useAuthStore();
 const lmsStore = useLmsStore();
+const dashboardStore = useDashboardStore();
 
 const showCreateDialog = ref(false);
 const isSubmitting = ref(false);
@@ -139,8 +141,6 @@ const newModule = ref({
   content: '',
 });
 
-
-
 let selectedFile = null;
 
 const filteredModules = computed(() => {
@@ -148,7 +148,20 @@ const filteredModules = computed(() => {
 });
 
 const courseName = computed(() => {
-  return 'Master Resources';
+  // Try to find the course title from the dashboard store based on course_id
+  let course = null;
+  if (authStore.userRole === 'teacher') {
+    const sec = dashboardStore.teacherSections?.find(s => s.course?.id === currentCourseId.value);
+    if (sec) course = sec.course;
+  } else if (authStore.userRole === 'admin') {
+    const sec = dashboardStore.sections?.find(s => s.course?.id === currentCourseId.value);
+    if (sec) course = sec.course;
+  }
+  
+  if (course) {
+    return `${course.course_code} - ${course.title} (Master Resources)`;
+  }
+  return 'Subject Master Resources';
 });
 
 const formatDate = (dateStr) => {
