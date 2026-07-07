@@ -11,6 +11,7 @@ const routes = [
     children: [
       { path: 'dashboard', component: () => import('@/pages/IndexPage.vue') },
       { path: 'lms', component: () => import('@/pages/LMS/LMSCoursesPage.vue') },
+      { path: 'lms/section/:section_id/subjects', component: () => import('@/pages/LMS/SectionSubjectsPage.vue') },
       { path: 'lms/course/:id', component: () => import('@/pages/LMS/ModulesPage.vue') },
       { path: 'lms/modules/:id', component: () => import('@/pages/LMS/ModuleDetailPage.vue') },
       { path: 'lms/master-course/:id', component: () => import('@/pages/LMS/MasterModulesPage.vue') },
