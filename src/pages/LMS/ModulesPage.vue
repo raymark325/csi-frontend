@@ -100,6 +100,24 @@
           </div>
 
           <div class="q-mb-md">
+            <p class="text-label q-mb-xs">Post to Additional Sections (Optional)</p>
+            <q-select
+              v-model="selectedAdditionalSections"
+              :options="availableOtherSections"
+              option-value="id"
+              :option-label="opt => `${opt.section?.name || opt.name} - ${opt.course?.title || opt.course_code}`"
+              multiple
+              use-chips
+              filled
+              dense
+              class="glass-q-select"
+              label="Select other sections"
+              emit-value
+              map-options
+            />
+          </div>
+
+          <div class="q-mb-md">
             <p class="text-label q-mb-xs">Attach File (PPT, PDF, Word, Image)</p>
             <input type="file" @change="handleFileUpload" class="input-glass q-pa-sm" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.gif" />
           </div>
@@ -116,14 +134,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
 import { useLmsStore } from '../../stores/LMS/lmsStore';
+import { useDashboardStore } from '../../stores/dashboardStore';
 
 const route = useRoute();
 const authStore = useAuthStore();
 const lmsStore = useLmsStore();
+const dashboardStore = useDashboardStore();
 
 const showCreateDialog = ref(false);
 const isSubmitting = ref(false);
@@ -136,6 +156,27 @@ const newModule = ref({
   category: 'Lecture',
   description: '',
   content: '',
+});
+
+const selectedAdditionalSections = ref([]);
+
+const availableOtherSections = computed(() => {
+  if (authStore.userRole === 'teacher') {
+    return dashboardStore.teacherSections.filter(s => s.id !== currentSectionSubjectId.value);
+  } else if (authStore.userRole === 'admin') {
+    return dashboardStore.sections.filter(s => s.id !== currentSectionSubjectId.value);
+  }
+  return [];
+});
+
+watch(showCreateDialog, async (val) => {
+  if (val) {
+    if (authStore.userRole === 'teacher' && dashboardStore.teacherSections.length === 0) {
+      await dashboardStore.fetchTeacherDashboard();
+    } else if (authStore.userRole === 'admin' && dashboardStore.sections.length === 0) {
+      await dashboardStore.fetchSections();
+    }
+  }
 });
 
 let selectedFile = null;
@@ -176,13 +217,26 @@ const handleCreateModule = async () => {
     payload.file = selectedFile;
   }
   
-  payload.section_subject_id = currentSectionSubjectId.value; // ensure it's locked
+  // Prepare an array of IDs: the current one PLUS any additional selected ones
+  const allIds = [currentSectionSubjectId.value, ...selectedAdditionalSections.value];
+
+  // If using FormData (because of file), the API expects arrays.
+  // We can pass them as a JSON string and decode on the backend, or pass multiple fields.
+  // Wait, backend expects an array. Let's send them individually as section_subject_ids[]
+  
+  // The lmsService uses FormData if file is present. We will handle the array properly by adding it directly to payload if it's JSON, but FormData will serialize it strangely.
+  
   isSubmitting.value = true;
-  console.log("handleCreateModule payload:", payload);
   try {
+    // If not file, it's easy. If file, we should modify lmsService or just pass it as JSON string and let backend decode. 
+    // Wait, axios handles arrays by default in JSON. In FormData, we need to append each element.
+    // Let's modify lmsService slightly to handle arrays, but for now we can just do:
+    payload.section_subject_ids = allIds;
+    
     await lmsStore.createModule(payload);
     showCreateDialog.value = false;
     newModule.value = { section_subject_id: currentSectionSubjectId.value, title: '', category: 'Lecture', description: '', content: '' };
+    selectedAdditionalSections.value = [];
     selectedFile = null;
   } catch (err) {
     console.error(err);
