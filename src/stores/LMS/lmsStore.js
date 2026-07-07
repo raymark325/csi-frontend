@@ -76,6 +76,18 @@ export const useLmsStore = defineStore('lms', () => {
     }
   };
 
+  const duplicateModule = async (id, sectionSubjectId) => {
+    try {
+      const response = await lmsService.duplicateModule(id, sectionSubjectId);
+      modules.value.push(response.data);
+      _modulesFetchedAt.value = 0; // Invalidate list cache
+      return response.data;
+    } catch (err) {
+      error.value = err.message || 'Failed to duplicate module';
+      throw err;
+    }
+  };
+
   const fetchAssignments = async (sectionId, force = false) => {
     if (
       !force &&
@@ -241,6 +253,7 @@ export const useLmsStore = defineStore('lms', () => {
     fetchModules,
     fetchModuleDetail,
     createModule,
+    duplicateModule,
     fetchAssignments,
     createAssignment,
     updateAssignment,

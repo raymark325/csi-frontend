@@ -33,6 +33,10 @@ export const lmsService = {
     return API.post('/lms/modules', data);
   },
 
+  duplicateModule(id, section_subject_id) {
+    return API.post(`/lms/modules/${id}/duplicate`, { section_subject_id });
+  },
+
   getAssignments(sectionId) {
     return API.get(`/lms/assignments/${sectionId}`);
   },
