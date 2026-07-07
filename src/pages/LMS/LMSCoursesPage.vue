@@ -51,7 +51,7 @@
               <div class="row justify-between items-center">
                 <span class="badge badge-blue">
                   <q-icon name="inventory" size="12px" class="q-mr-xs"/>
-                  Your Master Lessons
+                  Master Resource Bank
                 </span>
               </div>
             </div>
@@ -141,8 +141,7 @@ const uniqueSections = computed(() => {
       }
     });
   } else {
-    // Teachers use teacherSections, admins use sections
-    const data = (authStore.user?.role === 'teacher' ? dashboardStore.teacherSections : dashboardStore.sections) || [];
+    const data = dashboardStore.sections || [];
     data.forEach(sec => {
       const sectionId = sec.section_id || sec.section?.id;
       if (sectionId && !map.has(sectionId)) {
