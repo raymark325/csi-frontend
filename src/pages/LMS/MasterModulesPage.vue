@@ -150,13 +150,8 @@ const filteredModules = computed(() => {
 const courseName = computed(() => {
   // Try to find the course title from the dashboard store based on course_id
   let course = null;
-  if (authStore.userRole === 'teacher') {
-    const sec = dashboardStore.teacherSections?.find(s => s.course?.id === currentCourseId.value);
-    if (sec) course = sec.course;
-  } else if (authStore.userRole === 'admin') {
-    const sec = dashboardStore.sections?.find(s => s.course?.id === currentCourseId.value);
-    if (sec) course = sec.course;
-  }
+  const sec = dashboardStore.sections?.find(s => s.course?.id === currentCourseId.value);
+  if (sec) course = sec.course;
   
   if (course) {
     return `${course.course_code} - ${course.title} (Master Resources)`;

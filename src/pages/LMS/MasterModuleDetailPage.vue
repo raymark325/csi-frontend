@@ -158,23 +158,14 @@ const availableSections = computed(() => {
   const courseId = lmsStore.activeModule?.course_id;
   if (!courseId) return [];
 
-  if (authStore.userRole === 'teacher') {
-    return dashboardStore.teacherSections.filter(
-      s => s.course?.id === courseId
-    );
-  } else if (authStore.userRole === 'admin') {
-    return dashboardStore.sections.filter(
-      s => s.course?.id === courseId
-    );
-  }
-  return [];
+  return dashboardStore.sections.filter(
+    s => s.course?.id === courseId
+  );
 });
 
 const openDeployDialog = async () => {
   selectedSectionIds.value = [];
-  if (authStore.userRole === 'teacher' && dashboardStore.teacherSections.length === 0) {
-    await dashboardStore.fetchTeacherDashboard();
-  } else if (authStore.userRole === 'admin' && dashboardStore.sections.length === 0) {
+  if (dashboardStore.sections.length === 0) {
     await dashboardStore.fetchSections();
   }
   showDeployDialog.value = true;

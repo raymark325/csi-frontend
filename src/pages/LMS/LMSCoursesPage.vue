@@ -107,27 +107,16 @@ const activeTab = ref(authStore.userRole === 'teacher' || authStore.userRole ===
 
 const uniqueCourses = computed(() => {
   const coursesMap = new Map();
-  if (authStore.userRole === 'teacher') {
-    (dashboardStore.teacherSections || []).forEach(sec => {
-      if (sec.course && !coursesMap.has(sec.course.id)) {
-        coursesMap.set(sec.course.id, {
-          id: sec.course.id,
-          code: sec.course.course_code,
-          title: sec.course.title
-        });
-      }
-    });
-  } else if (authStore.userRole === 'admin') {
-    (dashboardStore.sections || []).forEach(sec => {
-      if (sec.course && !coursesMap.has(sec.course.id)) {
-        coursesMap.set(sec.course.id, {
-          id: sec.course.id,
-          code: sec.course.course_code,
-          title: sec.course.title
-        });
-      }
-    });
-  }
+  // Both teacher and admin use `dashboardStore.sections` fetched via fetchSections()
+  (dashboardStore.sections || []).forEach(sec => {
+    if (sec.course && !coursesMap.has(sec.course.id)) {
+      coursesMap.set(sec.course.id, {
+        id: sec.course.id,
+        code: sec.course.course_code,
+        title: sec.course.title
+      });
+    }
+  });
   return Array.from(coursesMap.values());
 });
 
@@ -141,7 +130,7 @@ const normalizedCourses = computed(() => {
       room: sec.room || 'TBA',
     }));
   } else {
-    const data = dashboardStore.teacherSections || dashboardStore.sections || [];
+    const data = dashboardStore.sections || [];
     return data.map(sec => ({
       id: sec.id,
       code: sec.course?.course_code || 'General',
@@ -162,8 +151,6 @@ const goToMasterCourse = (courseId) => {
 onMounted(async () => {
   if (authStore.user?.role === 'student') {
     await dashboardStore.fetchStudentDashboard();
-  } else if (authStore.user?.role === 'teacher') {
-    await dashboardStore.fetchTeacherDashboard();
   } else {
     await dashboardStore.fetchSections();
   }
