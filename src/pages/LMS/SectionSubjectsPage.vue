@@ -84,7 +84,7 @@ const sectionSubjects = computed(() => {
         sectionName: sec.section_name || sec.name || 'General'
       }));
   } else {
-    const data = dashboardStore.sections || [];
+    const data = (authStore.user?.role === 'teacher' ? dashboardStore.teacherSections : dashboardStore.sections) || [];
     return data
       .filter(sec => sec.section_id === sectionId.value || sec.section?.id === sectionId.value)
       .map(sec => ({
@@ -104,6 +104,8 @@ const goToCourse = (id) => {
 onMounted(async () => {
   if (authStore.user?.role === 'student' && !dashboardStore.studentData?.sections) {
     await dashboardStore.fetchStudentDashboard();
+  } else if (authStore.user?.role === 'teacher') {
+    await dashboardStore.fetchTeacherDashboard();
   } else if (!dashboardStore.sections || dashboardStore.sections.length === 0) {
     await dashboardStore.fetchSections();
   }

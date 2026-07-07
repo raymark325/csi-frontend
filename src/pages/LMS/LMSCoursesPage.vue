@@ -141,7 +141,8 @@ const uniqueSections = computed(() => {
       }
     });
   } else {
-    const data = dashboardStore.sections || [];
+    // Teachers use teacherSections, admins use sections
+    const data = (authStore.user?.role === 'teacher' ? dashboardStore.teacherSections : dashboardStore.sections) || [];
     data.forEach(sec => {
       const sectionId = sec.section_id || sec.section?.id;
       if (sectionId && !map.has(sectionId)) {
