@@ -59,6 +59,12 @@ export const useLmsStore = defineStore('lms', () => {
     }
   };
 
+  // Raw fetch — returns array, doesn't mutate store state (used for per-course lesson lists)
+  const fetchMasterModulesRaw = async (courseId) => {
+    const response = await lmsService.getMasterModules(courseId);
+    return response.data;
+  };
+
   const fetchModuleDetail = async (id, force = false) => {
     if (
       !force &&
@@ -267,6 +273,7 @@ export const useLmsStore = defineStore('lms', () => {
     error,
     fetchModules,
     fetchMasterModules,
+    fetchMasterModulesRaw,
     fetchModuleDetail,
     createModule,
     duplicateModule,
