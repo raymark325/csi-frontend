@@ -99,22 +99,30 @@
       <q-card class="glass-q-card" style="width: 500px; max-width: 90vw;">
         <q-card-section>
           <div class="text-h6 text-primary font-weight-bold">Post to Another Section</div>
-          <p class="text-caption text-muted">Select the section to post this lecture to.</p>
+          <p class="text-caption text-muted">Select the sections you want to post this lecture to.</p>
         </q-card-section>
 
         <q-card-section class="q-pt-none">
-          <p class="text-label q-mb-xs">Target Section</p>
-          <select v-model="selectedSectionId" class="input-glass">
-            <option value="" disabled>Select a section...</option>
-            <option v-for="sec in availableSections" :key="sec.id" :value="sec.id">
-              {{ sec.section?.name || sec.name }} - {{ sec.course?.title || sec.course_code || 'Subject' }}
-            </option>
-          </select>
+          <p class="text-label q-mb-xs">Target Sections</p>
+          <q-select
+            v-model="selectedSectionIds"
+            :options="availableSections"
+            option-value="id"
+            :option-label="opt => `${opt.section?.name || opt.name} - ${opt.course?.title || opt.course_code || 'Subject'}`"
+            multiple
+            use-chips
+            filled
+            dense
+            class="glass-q-select"
+            label="Select sections"
+            emit-value
+            map-options
+          />
         </q-card-section>
 
         <q-card-actions align="right" class="q-pb-md q-pr-md">
           <q-btn label="Cancel" flat rounded v-close-popup />
-          <q-btn label="Post Lecture" color="primary" rounded unelevated @click="handleDuplicate" :loading="isDuplicating" :disable="!selectedSectionId" />
+          <q-btn label="Post Lecture" color="primary" rounded unelevated @click="handleDuplicate" :loading="isDuplicating" :disable="!selectedSectionIds.length" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -144,43 +152,36 @@ const lessonIframe = ref(null);
 // Duplicate Logic
 const showDuplicateDialog = ref(false);
 const isDuplicating = ref(false);
-const selectedSectionId = ref('');
+const selectedSectionIds = ref([]);
 
 const availableSections = computed(() => {
-  if (authStore.userRole === 'teacher') {
-    return dashboardStore.teacherSections.filter(
-      s => s.id !== lmsStore.activeModule?.section_subject_id
-    );
-  } else if (authStore.userRole === 'admin') {
-    return dashboardStore.sections.filter(
-      s => s.id !== lmsStore.activeModule?.section_subject_id
-    );
-  }
-  return [];
+  const courseId = lmsStore.activeModule?.section_subject?.course_id || lmsStore.activeModule?.course_id;
+  if (!courseId) return [];
+
+  return dashboardStore.sections.filter(
+    s => s.course?.id === courseId && s.id !== lmsStore.activeModule?.section_subject_id
+  );
 });
 
 const openDuplicateDialog = async () => {
-  selectedSectionId.value = '';
-  if (authStore.userRole === 'teacher' && dashboardStore.teacherSections.length === 0) {
-    await dashboardStore.fetchTeacherDashboard();
-  } else if (authStore.userRole === 'admin' && dashboardStore.sections.length === 0) {
+  selectedSectionIds.value = [];
+  if (dashboardStore.sections.length === 0) {
     await dashboardStore.fetchSections();
   }
   showDuplicateDialog.value = true;
 };
 
 const handleDuplicate = async () => {
-  if (!selectedSectionId.value) return;
+  if (!selectedSectionIds.value.length) return;
   isDuplicating.value = true;
   try {
-    const newMod = await lmsStore.duplicateModule(lmsStore.activeModule.id, selectedSectionId.value);
+    await lmsStore.duplicateModule(lmsStore.activeModule.id, selectedSectionIds.value);
     $q.notify({
       color: 'positive',
-      message: 'Lecture posted to the section successfully!',
+      message: 'Lecture posted to the sections successfully!',
       icon: 'check_circle'
     });
     showDuplicateDialog.value = false;
-    // Optional: Ask user if they want to go to the new module, or just stay
   } catch (err) {
     $q.notify({
       color: 'negative',

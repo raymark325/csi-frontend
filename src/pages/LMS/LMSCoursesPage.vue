@@ -61,39 +61,29 @@
 
       <!-- Sections Tab -->
       <q-tab-panel name="sections" class="q-pa-none">
-        <div v-if="!groupedSections.length" class="col-12 text-center text-muted q-py-xl glass-card">
-          You are not enrolled in or assigned to any sections.
-        </div>
-        
         <div class="row q-col-gutter-lg">
-          <div v-for="section in groupedSections" :key="section.name" class="col-12 col-md-6 col-lg-4">
-            <div class="glass-card q-pa-xl course-card">
+          <div v-if="!normalizedCourses.length" class="col-12 text-center text-muted q-py-xl glass-card">
+            You are not enrolled in or assigned to any sections.
+          </div>
+          
+          <div v-for="course in normalizedCourses" :key="course.id" class="col-12 col-md-6 col-lg-4">
+            <div class="glass-card q-pa-xl course-card cursor-pointer" @click="goToCourse(course.id)">
               <div class="row items-center q-mb-md q-gutter-sm">
                 <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(0,122,255,0.1); display: flex; align-items: center; justify-content: center;">
-                  <q-icon name="groups" color="primary" size="24px" />
+                  <q-icon name="menu_book" color="primary" size="24px" />
                 </div>
               </div>
               <h3 class="q-mt-none q-mb-xs" style="font-size: 20px; font-weight: 700; color: var(--text-primary);">
-                {{ section.name }}
+                {{ course.code }}
               </h3>
-              
-              <div class="q-mt-lg">
-                <p class="text-caption text-secondary q-mb-sm" style="font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Subjects in this Section</p>
-                <div 
-                  v-for="course in section.subjects" 
-                  :key="course.id"
-                  class="subject-list-item row items-center justify-between q-pa-md q-mb-sm cursor-pointer"
-                  @click="goToCourse(course.id)"
-                >
-                  <div class="row items-center" style="flex: 1; min-width: 0;">
-                    <q-icon name="menu_book" size="18px" color="primary" class="q-mr-sm" />
-                    <div class="ellipsis">
-                      <div style="font-weight: 600; font-size: 14px; color: var(--text-primary);">{{ course.title }}</div>
-                      <div style="font-size: 12px; color: var(--text-secondary);">{{ course.code }}</div>
-                    </div>
-                  </div>
-                  <q-icon name="chevron_right" size="20px" color="grey" />
-                </div>
+              <p class="text-body text-secondary q-mb-md" style="font-size: 14px; line-height: 1.5;">
+                {{ course.title }}
+              </p>
+              <div class="row justify-between items-center">
+                <span class="badge" style="background: rgba(0,0,0,0.05); color: var(--text-secondary);">
+                  <q-icon name="meeting_room" size="12px" class="q-mr-xs"/>
+                  {{ course.room }}
+                </span>
               </div>
             </div>
           </div>
@@ -117,51 +107,48 @@ const activeTab = ref(authStore.userRole === 'teacher' || authStore.userRole ===
 
 const uniqueCourses = computed(() => {
   const coursesMap = new Map();
-  // Both teacher and admin use `dashboardStore.sections` fetched via fetchSections()
-  (dashboardStore.sections || []).forEach(sec => {
-    if (sec.course && !coursesMap.has(sec.course.id)) {
-      coursesMap.set(sec.course.id, {
-        id: sec.course.id,
-        code: sec.course.course_code,
-        title: sec.course.title
-      });
-    }
-  });
+  if (authStore.userRole === 'teacher') {
+    (dashboardStore.teacherSections || []).forEach(sec => {
+      if (sec.course && !coursesMap.has(sec.course.id)) {
+        coursesMap.set(sec.course.id, {
+          id: sec.course.id,
+          code: sec.course.course_code,
+          title: sec.course.title
+        });
+      }
+    });
+  } else if (authStore.userRole === 'admin') {
+    (dashboardStore.sections || []).forEach(sec => {
+      if (sec.course && !coursesMap.has(sec.course.id)) {
+        coursesMap.set(sec.course.id, {
+          id: sec.course.id,
+          code: sec.course.course_code,
+          title: sec.course.title
+        });
+      }
+    });
+  }
   return Array.from(coursesMap.values());
 });
 
-const groupedSections = computed(() => {
-  const groups = {};
+const normalizedCourses = computed(() => {
   if (authStore.user?.role === 'student') {
     const data = dashboardStore.studentData?.sections || [];
-    data.forEach(sec => {
-      const sectionName = sec.section_name || sec.name || 'General';
-      if (!groups[sectionName]) groups[sectionName] = [];
-      groups[sectionName].push({
-        id: sec.id,
-        code: sec.course_code || 'Unknown Course',
-        title: sec.course || 'Unknown Course',
-        room: sec.room || 'TBA',
-      });
-    });
+    return data.map(sec => ({
+      id: sec.id,
+      code: sec.course_code || 'General',
+      title: sec.course || sec.name || 'Unknown Course',
+      room: sec.room || 'TBA',
+    }));
   } else {
-    const data = dashboardStore.sections || [];
-    data.forEach(sec => {
-      const sectionName = sec.section?.name || 'General';
-      if (!groups[sectionName]) groups[sectionName] = [];
-      groups[sectionName].push({
-        id: sec.id,
-        code: sec.course?.course_code || 'Unknown Course',
-        title: sec.course?.title || 'Unknown Course',
-        room: sec.room || 'TBA',
-      });
-    });
+    const data = dashboardStore.teacherSections || dashboardStore.sections || [];
+    return data.map(sec => ({
+      id: sec.id,
+      code: sec.course?.course_code || 'General',
+      title: sec.course?.title || 'Unknown Course',
+      room: sec.room || 'TBA',
+    }));
   }
-  
-  return Object.keys(groups).map(name => ({
-    name,
-    subjects: groups[name]
-  }));
 });
 
 const goToCourse = (sectionId) => {
@@ -175,6 +162,8 @@ const goToMasterCourse = (courseId) => {
 onMounted(async () => {
   if (authStore.user?.role === 'student') {
     await dashboardStore.fetchStudentDashboard();
+  } else if (authStore.user?.role === 'teacher') {
+    await dashboardStore.fetchTeacherDashboard();
   } else {
     await dashboardStore.fetchSections();
   }
@@ -190,16 +179,5 @@ onMounted(async () => {
 .course-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 30px rgba(0,0,0,0.08);
-}
-.subject-list-item {
-  border-radius: 8px;
-  background: rgba(0,0,0,0.02);
-  transition: all 0.2s ease;
-  border: 1px solid rgba(0,0,0,0.05);
-}
-.subject-list-item:hover {
-  background: rgba(0,122,255,0.05);
-  border-color: rgba(0,122,255,0.2);
-  transform: translateX(4px);
 }
 </style>
