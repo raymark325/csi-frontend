@@ -98,14 +98,9 @@ watch(() => props.initialCode, (newVal) => {
   }
 });
 
-let typingTimer = null;
+// Emit change for autosave/cloud sync — do NOT auto-execute on typing
 watch(query, (newVal) => {
   emit('change', newVal);
-  
-  if (typingTimer) clearTimeout(typingTimer);
-  typingTimer = setTimeout(() => {
-    runQuery();
-  }, 500);
 });
 
 const preventAction = () => {
@@ -117,6 +112,129 @@ const preventAction = () => {
   });
 };
 
+/**
+ * Translate MySQL-flavoured SQL to SQLite-compatible SQL.
+ * Handles statement-by-statement so multi-statement scripts work correctly.
+ */
+const translateToSQLite = (input) => {
+  // Split on semicolons but keep structure; handle each statement
+  const statements = input
+    .split(/;/)
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+
+  const translated = statements.map(stmt => {
+    const upper = stmt.toUpperCase().replace(/\s+/g, ' ').trim();
+
+    // ── SHOW TABLES ──────────────────────────────────────────────────────────
+    if (/^SHOW TABLES/.test(upper)) {
+      return "SELECT name AS 'Tables' FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name";
+    }
+
+    // ── SHOW DATABASES / SHOW SCHEMAS ────────────────────────────────────────
+    if (/^SHOW (DATABASES|SCHEMAS)/.test(upper)) {
+      return "SELECT 'main' AS 'Database'";
+    }
+
+    // ── SHOW FULL TABLES ─────────────────────────────────────────────────────
+    if (/^SHOW FULL TABLES/.test(upper)) {
+      return "SELECT name AS 'Tables', 'BASE TABLE' AS 'Table_type' FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name";
+    }
+
+    // ── DESCRIBE / DESC tablename ─────────────────────────────────────────────
+    const descMatch = stmt.match(/^(?:DESC(?:RIBE)?)\s+(\S+)/i);
+    if (descMatch) {
+      const tbl = descMatch[1].replace(/[`'"]/g, '');
+      return `PRAGMA table_info(${tbl})`;
+    }
+
+    // ── SHOW COLUMNS FROM tablename ───────────────────────────────────────────
+    const showColMatch = stmt.match(/^SHOW (?:FULL )?COLUMNS FROM\s+(\S+)/i);
+    if (showColMatch) {
+      const tbl = showColMatch[1].replace(/[`'"]/g, '');
+      return `PRAGMA table_info(${tbl})`;
+    }
+
+    // ── SHOW INDEX FROM / SHOW INDEXES FROM ──────────────────────────────────
+    const showIdxMatch = stmt.match(/^SHOW (?:INDEX|INDEXES|KEYS) FROM\s+(\S+)/i);
+    if (showIdxMatch) {
+      const tbl = showIdxMatch[1].replace(/[`'"]/g, '');
+      return `PRAGMA index_list(${tbl})`;
+    }
+
+    // ── SHOW CREATE TABLE ─────────────────────────────────────────────────────
+    const showCreateMatch = stmt.match(/^SHOW CREATE TABLE\s+(\S+)/i);
+    if (showCreateMatch) {
+      const tbl = showCreateMatch[1].replace(/[`'"]/g, '');
+      return `SELECT sql AS 'Create Table' FROM sqlite_master WHERE type='table' AND name='${tbl}'`;
+    }
+
+    // ── SHOW TABLE STATUS ─────────────────────────────────────────────────────
+    if (/^SHOW TABLE STATUS/.test(upper)) {
+      return "SELECT name AS 'Name', 'InnoDB' AS 'Engine', 'Dynamic' AS 'Row_format' FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'";
+    }
+
+    // ── USE database ──────────────────────────────────────────────────────────
+    if (/^USE\s+/.test(upper)) {
+      return "SELECT 'Database changed (note: SQLite is single-file, USE is a no-op)' AS Info";
+    }
+
+    // ── SELECT DATABASE() ─────────────────────────────────────────────────────
+    if (/^SELECT DATABASE\(\)/.test(upper)) {
+      return "SELECT 'main' AS 'database()'";
+    }
+
+    // ── SELECT VERSION() ─────────────────────────────────────────────────────
+    if (/^SELECT VERSION\(\)/.test(upper)) {
+      return "SELECT sqlite_version() AS 'version()'";
+    }
+
+    // ── SHOW VARIABLES / SHOW STATUS ─────────────────────────────────────────
+    if (/^SHOW (VARIABLES|STATUS|GLOBAL|SESSION)/.test(upper)) {
+      return "SELECT 'SQLite does not have SHOW VARIABLES. Use PRAGMA statements instead.' AS Note";
+    }
+
+    // ── Structural DDL: strip MySQL-specific clauses ──────────────────────────
+    let out = stmt;
+
+    // Remove AUTO_INCREMENT=N table option
+    out = out.replace(/\bAUTO_INCREMENT\s*=\s*\d+/gi, '');
+    // Replace AUTO_INCREMENT column attribute with nothing (SQLite uses AUTOINCREMENT)
+    out = out.replace(/\bAUTO_INCREMENT\b/gi, 'AUTOINCREMENT');
+    // Remove ENGINE=InnoDB / ENGINE=MyISAM etc.
+    out = out.replace(/\bENGINE\s*=\s*\w+/gi, '');
+    // Remove DEFAULT CHARSET / CHARACTER SET / COLLATE
+    out = out.replace(/\bDEFAULT\s+CHARSET\s*=\s*\w+/gi, '');
+    out = out.replace(/\bCHARACTER\s+SET\s+\w+/gi, '');
+    out = out.replace(/\bCHARSET\s*=\s*\w+/gi, '');
+    out = out.replace(/\bCOLLATE\s*=?\s*[\w_]+/gi, '');
+    // Remove ROW_FORMAT
+    out = out.replace(/\bROW_FORMAT\s*=\s*\w+/gi, '');
+    // Remove UNSIGNED (SQLite has no unsigned concept but accepts it; just strip to be safe)
+    out = out.replace(/\bUNSIGNED\b/gi, '');
+    // Replace MySQL INT types that SQLite doesn't know about
+    out = out.replace(/\bTINYINT\b/gi, 'INTEGER');
+    out = out.replace(/\bSMALLINT\b/gi, 'INTEGER');
+    out = out.replace(/\bMEDIUMINT\b/gi, 'INTEGER');
+    out = out.replace(/\bBIGINT\b/gi, 'INTEGER');
+    out = out.replace(/\bDOUBLE\b/gi, 'REAL');
+    out = out.replace(/\bFLOAT\b/gi, 'REAL');
+    // Replace DATETIME/TIMESTAMP with TEXT (SQLite stores as text)
+    out = out.replace(/\bDATETIME\b/gi, 'TEXT');
+    out = out.replace(/\bTIMESTAMP\b/gi, 'TEXT');
+    // Remove backtick quoting (replace with nothing — SQLite supports it but let's normalize)
+    // Keep backticks actually — SQLite does support them
+    // Remove trailing commas before closing paren (from removed clauses)
+    out = out.replace(/,\s*\)/g, ')');
+    // Clean up multiple spaces
+    out = out.replace(/\s{2,}/g, ' ').trim();
+
+    return out;
+  });
+
+  return translated.join(';\n');
+};
+
 const runQuery = () => {
   if (!db) {
     $q.notify({ type: 'warning', message: 'Database is initializing...' });
@@ -125,7 +243,8 @@ const runQuery = () => {
 
   isRunning.value = true;
   try {
-    const res = db.exec(query.value);
+    const translatedQuery = translateToSQLite(query.value);
+    const res = db.exec(translatedQuery);
     if (res && res.length > 0) {
       const columns = res[0].columns;
       const values = res[0].values;
@@ -137,7 +256,7 @@ const runQuery = () => {
         return obj;
       });
     } else {
-      results.value = []; // Empty set (for CREATE/INSERT/UPDATE)
+      results.value = []; // Empty set (for CREATE/INSERT/UPDATE/DDL)
     }
   } catch (err) {
     results.value = [{ Error: err.message }];
