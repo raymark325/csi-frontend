@@ -67,7 +67,7 @@
               <span>Notifications</span>
               <q-btn flat dense round icon="close" size="xs" @click="notifPanelOpen = false" style="color: var(--text-secondary);" />
             </div>
-            <div v-if="notifStore.unreadAssignmentCount === 0 && notifStore.unreadAnnouncementCount === 0" class="notif-empty">
+            <div v-if="notifStore.unreadAssignmentCount === 0 && notifStore.unreadAnnouncementCount === 0 && notifStore.unreadModuleCount === 0" class="notif-empty">
               <q-icon name="check_circle" size="28px" color="positive" />
               <p>You're all caught up!</p>
             </div>
@@ -87,6 +87,21 @@
                 <q-icon name="chevron_right" size="16px" style="color: var(--text-muted); margin-left: auto;" />
               </div>
 
+              <!-- New Lessons / Modules -->
+              <div
+                v-for="modId in notifStore.newModuleIds"
+                :key="'mod-' + modId"
+                class="notif-item"
+                @click="goToModules"
+              >
+                <div class="notif-dot" style="background: #f59e0b; box-shadow: 0 0 8px rgba(245,158,11,0.6);" />
+                <div>
+                  <p class="notif-title">{{ getModuleTitle(modId) }}</p>
+                  <p class="notif-sub">New lesson uploaded — tap to view</p>
+                </div>
+                <q-icon name="chevron_right" size="16px" style="color: var(--text-muted); margin-left: auto;" />
+              </div>
+
               <!-- New Assignments -->
               <div
                 v-for="aId in notifStore.newAssignmentIds"
@@ -102,7 +117,7 @@
                 <q-icon name="chevron_right" size="16px" style="color: var(--text-muted); margin-left: auto;" />
               </div>
             </div>
-            <div v-if="notifStore.unreadAssignmentCount > 0 || notifStore.unreadAnnouncementCount > 0" class="notif-footer">
+            <div v-if="notifStore.unreadAssignmentCount > 0 || notifStore.unreadAnnouncementCount > 0 || notifStore.unreadModuleCount > 0" class="notif-footer">
               <q-btn flat dense label="Mark all as read" size="sm" color="primary" @click="markAllRead" />
             </div>
           </div>
@@ -233,6 +248,11 @@ const getAnnouncementTitle = (id) => {
   return found?.title || `Announcement #${id}`;
 };
 
+const getModuleTitle = (id) => {
+  const found = notifStore.latestModules.find(m => m.id === id);
+  return found?.title || `New Lesson #${id}`;
+};
+
 const goToAssignments = () => {
   notifPanelOpen.value = false;
   router.push('/assignments');
@@ -243,12 +263,20 @@ const goToAnnouncements = () => {
   router.push('/announcements');
 };
 
+const goToModules = () => {
+  notifPanelOpen.value = false;
+  router.push('/lms');
+};
+
 const markAllRead = () => {
   if (notifStore.newAssignmentIds.length > 0) {
     notifStore.markAssignmentsRead(notifStore.newAssignmentIds);
   }
   if (notifStore.newAnnouncementIds.length > 0) {
     notifStore.markAnnouncementsRead(notifStore.newAnnouncementIds);
+  }
+  if (notifStore.newModuleIds.length > 0) {
+    notifStore.markModulesRead(notifStore.newModuleIds);
   }
   notifPanelOpen.value = false;
 };
@@ -314,9 +342,34 @@ const handleNewAnnouncements = (newOnes) => {
   });
 };
 
+// Notification handler: fires only when NEW modules (lessons) appear after initial load
+const handleNewModules = (newOnes) => {
+  const count = newOnes.length;
+  const firstTitle = newOnes[0]?.title || 'New lesson';
+
+  $q.notify({
+    group: 'new-module',
+    color: 'warning',
+    icon: 'menu_book',
+    message: count === 1
+      ? `📖 New lesson uploaded: "${firstTitle}"`
+      : `📖 ${count} new lessons uploaded!`,
+    caption: 'Click to view your modules',
+    position: 'top-right',
+    timeout: 6000,
+    actions: [
+      {
+        label: 'View',
+        color: 'white',
+        handler: () => router.push('/lms'),
+      },
+    ],
+  });
+};
+
 // Badge counts
 const studentBellCount = computed(() =>
-  notifStore.unreadAssignmentCount + notifStore.unreadAnnouncementCount + notifStore.pendingSubmissionCount
+  notifStore.unreadAssignmentCount + notifStore.unreadAnnouncementCount + notifStore.unreadModuleCount + notifStore.pendingSubmissionCount
 );
 
 // Nav items — pass correct badge count per role
@@ -327,7 +380,7 @@ const navItems = computed(() => {
     return [
       { icon: 'dashboard',  label: 'Dashboard',     to: '/dashboard',            badge: 0 },
       { icon: 'campaign',   label: 'Announcements', to: '/announcements',        badge: notifStore.unreadAnnouncementCount },
-      { icon: 'menu_book',  label: 'My Modules',    to: '/lms',                  badge: 0 },
+      { icon: 'menu_book',  label: 'My Modules',    to: '/lms',                  badge: notifStore.unreadModuleCount },
       { icon: 'assignment', label: 'My Assignments', to: '/assignments',          badge: notifStore.pendingSubmissionCount },
       { icon: 'code',       label: 'Coding Lab',    to: '/lms/lab',              badge: 0 },
       { icon: 'how_to_reg', label: 'Attendance',    to: '/attendance',            badge: 0 },
@@ -367,6 +420,7 @@ watch(() => authStore.userRole, async (newRole) => {
     notifStore.startPolling(
       newRole === 'student' ? handleNewAssignments : null,
       newRole === 'student' ? handleNewAnnouncements : null,
+      newRole === 'student' ? handleNewModules : null,
       30000
     );
 

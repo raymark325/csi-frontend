@@ -178,7 +178,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useLmsStore } from '../../stores/LMS/lmsStore';
 import { useAuthStore } from '../../stores/auth';
-import lmsService from '../../services/LMS/lmsService';
+import lmsService, { sqlSandboxService } from '../../services/LMS/lmsService';
 import API from '../../services/api';
 import { bufferToBase64, base64ToBuffer } from '../../utils/base64';
 import JavaEditor from '../../components/LMS/Editors/JavaEditor.vue';
@@ -340,6 +340,10 @@ const addSqlFile = () => {
     sqlFiles.value.push({ name: name.endsWith('.db') || name.endsWith('.sqlite') ? name : name + '.db', code: '', buffer: null });
     activeSqlFileIndex.value = sqlFiles.value.length - 1;
     saveCode(JSON.stringify(sqlFiles.value.map(f => ({ name: f.name, code: f.code }))), 'sql');
+    // Silently push the new database list to cloud
+    if (!assignmentId.value) {
+      scheduleSilentCloudSync();
+    }
   }
 };
 
@@ -415,6 +419,10 @@ const handleSqlChange = (newCode) => {
   if (currentFile && currentFile.code !== newCode) {
     currentFile.code = newCode;
     saveCode(JSON.stringify(sqlFiles.value.map(f => ({ name: f.name, code: f.code }))), 'sql');
+    // Silently sync to cloud (only free-play, not assignment mode)
+    if (!assignmentId.value) {
+      scheduleSilentCloudSync();
+    }
   }
 };
 
@@ -510,8 +518,92 @@ const updateOnlineStatus = () => {
   isOnline.value = navigator.onLine;
   if (isOnline.value) {
     syncPendingDrafts();
+    // When coming back online in SQL free-play, push any buffered changes
+    if (!assignmentId.value) {
+      scheduleSilentCloudSync();
+    }
   } else {
     saveStatus.value = 'Offline - saving changes locally';
+  }
+};
+
+// ── Silent SQL Cloud Sync ──────────────────────────────────────────────────
+// Operates only in free-play mode (no assignment). Debounced 3 s to batch changes.
+let cloudSyncTimer = null;
+
+/**
+ * Export all current sql.js databases and push them to the cloud silently.
+ * Errors are swallowed — local copy is always the source of truth.
+ */
+const silentCloudSync = async () => {
+  if (!isOnline.value || assignmentId.value) return;
+  try {
+    // First export the active database binary
+    if (sqlEditorRef.value) {
+      const dbBuffer = sqlEditorRef.value.exportDatabase();
+      if (dbBuffer) {
+        sqlFiles.value[activeSqlFileIndex.value].buffer = dbBuffer;
+      }
+    }
+    const payload = sqlFiles.value.map(f => ({
+      db_name:  f.name,
+      db_data:  f.buffer ? bufferToBase64(f.buffer) : null,
+      sql_code: f.code || '',
+    }));
+    await sqlSandboxService.syncAll(payload);
+  } catch {
+    // Silent fail — user doesn't see this
+  }
+};
+
+const scheduleSilentCloudSync = () => {
+  if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = setTimeout(silentCloudSync, 3000);
+};
+
+/**
+ * On first load (free-play, online), fetch cloud databases and merge with local.
+ * Cloud wins for databases NOT present locally; local wins otherwise.
+ */
+const loadFromCloud = async () => {
+  if (!isOnline.value || assignmentId.value) return;
+  try {
+    const cloudDbs = await sqlSandboxService.fetchAll();
+    if (!cloudDbs || cloudDbs.length === 0) return;
+
+    // Build a map of existing local file names
+    const localNames = new Set(sqlFiles.value.map(f => f.name));
+
+    // If local is completely empty (fresh install / new device), replace entirely
+    const localIsEmpty = sqlFiles.value.length === 1 &&
+      sqlFiles.value[0].name === 'main.db' &&
+      !sqlFiles.value[0].code &&
+      !sqlFiles.value[0].buffer;
+
+    if (localIsEmpty) {
+      // Replace with cloud data
+      sqlFiles.value = cloudDbs.map(db => ({
+        name:   db.db_name,
+        code:   db.sql_code || '',
+        buffer: db.db_data ? base64ToBuffer(db.db_data) : null,
+      }));
+      activeSqlFileIndex.value = 0;
+      saveStatus.value = 'Loaded from cloud ☁️';
+      setTimeout(() => { saveStatus.value = 'All changes saved'; }, 3000);
+    } else {
+      // Merge: add cloud databases that don't exist locally
+      cloudDbs.forEach(db => {
+        if (!localNames.has(db.db_name)) {
+          sqlFiles.value.push({
+            name:   db.db_name,
+            code:   db.sql_code || '',
+            buffer: db.db_data ? base64ToBuffer(db.db_data) : null,
+          });
+        }
+      });
+    }
+  } catch {
+    // Silent fail
   }
 };
 
@@ -751,6 +843,10 @@ const loadDraftsForCurrentUser = async () => {
       activeSqlFileIndex.value = 0;
     }
   }
+  // After local state is set, silently merge cloud SQL databases (free-play only)
+  if (!route.query.assignment_id) {
+    loadFromCloud();
+  }
 };
 
 // Watch for user changes to reset state and load the new user's drafts dynamically
@@ -781,6 +877,11 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('online', updateOnlineStatus);
   window.removeEventListener('offline', updateOnlineStatus);
+  // Flush any pending cloud sync immediately on unmount
+  if (cloudSyncTimer) {
+    clearTimeout(cloudSyncTimer);
+    silentCloudSync();
+  }
 });
 </script>
 

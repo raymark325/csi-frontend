@@ -116,3 +116,33 @@ export const lmsService = {
   }
 };
 export default lmsService;
+
+// ── SQL Sandbox Cloud Sync ──────────────────────────────────────────────────
+// Silently pushes/pulls raw sql.js SQLite binaries (base64) per user.
+// Does NOT touch phpMyAdmin or the app's MariaDB. Data is the sql.js export only.
+export const sqlSandboxService = {
+  /**
+   * Fetch all saved databases for the current user from the cloud.
+   * Returns an array of { db_name, db_data (base64), sql_code, updated_at }
+   */
+  fetchAll() {
+    return API.get('/sql-sandbox').then(res => res.data?.data || []);
+  },
+
+  /**
+   * Silently push all sql files to the cloud (upsert by db_name).
+   * @param {Array<{ db_name: string, db_data: string|null, sql_code: string }>} databases
+   */
+  syncAll(databases) {
+    return API.post('/sql-sandbox/sync', { databases });
+  },
+
+  /**
+   * Delete one named database from the cloud.
+   * @param {string} dbName
+   */
+  deleteDb(dbName) {
+    return API.delete(`/sql-sandbox/${encodeURIComponent(dbName)}`);
+  },
+};
+

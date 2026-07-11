@@ -7,6 +7,7 @@ import { useAuthStore } from './auth';
 
 const SEEN_KEY = 'sms_seen_assignment_ids';
 const SEEN_ANN_KEY = 'sms_seen_announcement_ids';
+const SEEN_MOD_KEY = 'sms_seen_module_ids';
 
 export const useNotificationStore = defineStore('notifications', () => {
   // ── Student state ─────────────────────────────────────
@@ -16,6 +17,9 @@ export const useNotificationStore = defineStore('notifications', () => {
 
   const newAnnouncementIds = ref([]);     // unseen new announcement IDs
   const latestAnnouncements = ref([]);    // all fetched announcements
+
+  const newModuleIds = ref([]);           // unseen new module IDs
+  const latestModules = ref([]);          // all fetched modules
 
   // ── Teacher state ─────────────────────────────────────
   const pendingGradingCount = ref(0);     // submissions awaiting grading
@@ -49,20 +53,34 @@ export const useNotificationStore = defineStore('notifications', () => {
     localStorage.setItem(SEEN_ANN_KEY, JSON.stringify([...idSet]));
   };
 
+  const getSeenModIds = () => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(SEEN_MOD_KEY) || '[]'));
+    } catch {
+      return new Set();
+    }
+  };
+
+  const saveSeenModIds = (idSet) => {
+    localStorage.setItem(SEEN_MOD_KEY, JSON.stringify([...idSet]));
+  };
+
   // --- Computed ---
   const unreadAssignmentCount = computed(() => newAssignmentIds.value.length);
   const unreadAnnouncementCount = computed(() => newAnnouncementIds.value.length);
+  const unreadModuleCount = computed(() => newModuleIds.value.length);
 
   // ─────────────────────────────────────────────────────
   // STUDENT: check for new assignments + pending submissions
   // ─────────────────────────────────────────────────────
-  const checkStudentNotifications = async (onNewAssignment, onNewAnnouncement) => {
+  const checkStudentNotifications = async (onNewAssignment, onNewAnnouncement, onNewModule) => {
     const authStore = useAuthStore();
     const sectionId = authStore.user?.profile?.section_id;
 
     try {
       const promises = [
         announcementService.getAnnouncements(),
+        lmsService.getModules(),
       ];
       if (sectionId) {
         promises.push(lmsService.getAssignments(sectionId));
@@ -84,10 +102,23 @@ export const useNotificationStore = defineStore('notifications', () => {
         onNewAnnouncement(unseenAnns);
       }
 
+      // Index 1 is always modules
+      const modRes = results[1];
+      const fetchedMods = modRes?.data?.data || modRes?.data || [];
+      latestModules.value = Array.isArray(fetchedMods) ? fetchedMods : [];
+
+      const seenModIds = getSeenModIds();
+      const unseenMods = latestModules.value.filter(m => !seenModIds.has(m.id));
+      newModuleIds.value = unseenMods.map(m => m.id);
+
+      if (unseenMods.length > 0 && seenModIds.size > 0 && onNewModule) {
+        onNewModule(unseenMods);
+      }
+
       // If we have section-specific data
-      if (sectionId && results.length > 2) {
-        const assignRes = results[1];
-        const subRes = results[2];
+      if (sectionId && results.length > 3) {
+        const assignRes = results[2];
+        const subRes = results[3];
 
         const fetchedAssigns = assignRes.data || [];
         const submissions = subRes.data || [];
@@ -132,7 +163,7 @@ export const useNotificationStore = defineStore('notifications', () => {
   // ─────────────────────────────────────────────────────
   // Unified polling starter
   // ─────────────────────────────────────────────────────
-  const startPolling = (onNewAssignment, onNewAnnouncement, intervalMs = 30000) => {
+  const startPolling = (onNewAssignment, onNewAnnouncement, onNewModule, intervalMs = 30000) => {
     if (pollInterval) return; // already running
     isPolling.value = true;
 
@@ -141,7 +172,7 @@ export const useNotificationStore = defineStore('notifications', () => {
     const tick = () => {
       const role = authStore.userRole;
       if (role === 'student') {
-        checkStudentNotifications(onNewAssignment, onNewAnnouncement);
+        checkStudentNotifications(onNewAssignment, onNewAnnouncement, onNewModule);
       } else if (role === 'teacher' || role === 'admin') {
         checkTeacherNotifications();
       }
@@ -174,14 +205,24 @@ export const useNotificationStore = defineStore('notifications', () => {
     newAnnouncementIds.value = [];
   };
 
+  const markModulesRead = (moduleIds) => {
+    const seenIds = getSeenModIds();
+    moduleIds.forEach(id => seenIds.add(id));
+    saveSeenModIds(seenIds);
+    newModuleIds.value = [];
+  };
+
   // Clear seen storage (e.g. on logout)
   const clearSeenStorage = () => {
     localStorage.removeItem(SEEN_KEY);
     localStorage.removeItem(SEEN_ANN_KEY);
+    localStorage.removeItem(SEEN_MOD_KEY);
     newAssignmentIds.value = [];
     latestAssignments.value = [];
     newAnnouncementIds.value = [];
     latestAnnouncements.value = [];
+    newModuleIds.value = [];
+    latestModules.value = [];
     pendingSubmissionCount.value = 0;
     pendingGradingCount.value = 0;
   };
@@ -195,6 +236,9 @@ export const useNotificationStore = defineStore('notifications', () => {
     newAnnouncementIds,
     latestAnnouncements,
     unreadAnnouncementCount,
+    newModuleIds,
+    latestModules,
+    unreadModuleCount,
     // Teacher
     pendingGradingCount,
     // Shared
@@ -203,6 +247,7 @@ export const useNotificationStore = defineStore('notifications', () => {
     stopPolling,
     markAssignmentsRead,
     markAnnouncementsRead,
+    markModulesRead,
     clearSeenStorage,
   };
 });
