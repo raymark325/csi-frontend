@@ -46,7 +46,7 @@
               </div>
 
               <h4 class="q-mt-none q-mb-xs" style="font-size: 18px; font-weight: 700; color: var(--text-primary);">
-                {{ section.course }}
+                {{ section.course?.title || section.course }}
               </h4>
               <p class="text-caption q-my-none text-muted" style="margin-bottom: 16px;">
                 <q-icon name="schedule" size="14px" class="q-mr-xs"/>{{ section.schedule || 'No Schedule' }}
@@ -144,7 +144,7 @@
                   class="full-width"
                   dense
                   rounded
-                  :to="`/lms?section_id=${section.id}`"
+                  :to="`/lms/course/${section.id}`"
                 />
               </div>
               <div class="col-4">
