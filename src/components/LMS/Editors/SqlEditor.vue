@@ -113,22 +113,157 @@ const preventAction = () => {
 };
 
 /**
+ * Split SQL input into individual statements respecting parentheses and quotes,
+ * so semicolons inside CREATE TABLE (...) or string literals are not used as splits.
+ */
+const splitStatements = (input) => {
+  const stmts = [];
+  let current = '';
+  let depth = 0;       // paren depth
+  let inStr = false;
+  let strChar = '';
+
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+
+    if (inStr) {
+      current += ch;
+      if (ch === strChar && input[i - 1] !== '\\') inStr = false;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      inStr = true;
+      strChar = ch;
+      current += ch;
+      continue;
+    }
+    if (ch === '(') { depth++; current += ch; continue; }
+    if (ch === ')') { depth--; current += ch; continue; }
+    if (ch === ';' && depth === 0) {
+      const s = current.trim();
+      if (s) stmts.push(s);
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+  const s = current.trim();
+  if (s) stmts.push(s);
+  return stmts;
+};
+
+/**
+ * Strip MariaDB/MySQL-specific table options that appear AFTER the closing paren
+ * of a CREATE TABLE statement, e.g.:
+ *   ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci AUTO_INCREMENT=1;
+ * These all live in the "table_options" tail, not inside the column list.
+ */
+const stripTableOptions = (stmt) => {
+  // Find the last closing paren — everything after it is table options
+  const lastParen = stmt.lastIndexOf(')');
+  if (lastParen === -1) return stmt;
+
+  const head = stmt.substring(0, lastParen + 1);
+  let tail = stmt.substring(lastParen + 1);
+
+  // Strip known MariaDB/MySQL table options from the tail only
+  tail = tail
+    .replace(/\bENGINE\s*=\s*\w+/gi, '')
+    .replace(/\bAUTO_INCREMENT\s*=\s*\d+/gi, '')
+    .replace(/\bDEFAULT\s+CHARSET\s*=\s*[\w_]+/gi, '')
+    .replace(/\bDEFAULT\s+CHARACTER\s+SET\s*=?\s*[\w_]+/gi, '')
+    .replace(/\bCHARACTER\s+SET\s*=?\s*[\w_]+/gi, '')
+    .replace(/\bCHARSET\s*=\s*[\w_]+/gi, '')
+    .replace(/\bCOLLATE\s*=?\s*[\w_]+/gi, '')
+    .replace(/\bROW_FORMAT\s*=\s*\w+/gi, '')
+    .replace(/\bCOMMENT\s*=\s*'[^']*'/gi, '')
+    .replace(/\bPACK_KEYS\s*=\s*\w+/gi, '')
+    .replace(/\bCHECKSUM\s*=\s*\w+/gi, '')
+    .replace(/\bDELAY_KEY_WRITE\s*=\s*\w+/gi, '')
+    .replace(/\bMIN_ROWS\s*=\s*\d+/gi, '')
+    .replace(/\bMAX_ROWS\s*=\s*\d+/gi, '')
+    .replace(/\bAVG_ROW_LENGTH\s*=\s*\d+/gi, '')
+    .replace(/\bKEY_BLOCK_SIZE\s*=\s*\d+/gi, '')
+    .replace(/\bSTATS_PERSISTENT\s*=\s*\w+/gi, '')
+    .replace(/\bDATA\s+DIRECTORY\s*=\s*'[^']*'/gi, '')
+    .replace(/\bINDEX\s+DIRECTORY\s*=\s*'[^']*'/gi, '')
+    .trim();
+
+  return head + (tail ? ' ' + tail : '');
+};
+
+/**
+ * Translate column-level MySQL type/attribute syntax to SQLite equivalents.
+ * Applied ONLY to the column definition portion (before the last closing paren).
+ */
+const translateColumnDefs = (stmt) => {
+  let out = stmt;
+
+  // AUTO_INCREMENT column attribute → AUTOINCREMENT (only inside column defs)
+  out = out.replace(/\bAUTO_INCREMENT\b/gi, 'AUTOINCREMENT');
+
+  // MySQL int aliases → INTEGER
+  out = out.replace(/\bTINYINT\s*(\(\d+\))?/gi, 'INTEGER');
+  out = out.replace(/\bSMALLINT\s*(\(\d+\))?/gi, 'INTEGER');
+  out = out.replace(/\bMEDIUMINT\s*(\(\d+\))?/gi, 'INTEGER');
+  out = out.replace(/\bBIGINT\s*(\(\d+\))?/gi, 'INTEGER');
+  out = out.replace(/\bINT\s*(\(\d+\))?/gi, 'INTEGER');
+
+  // Floating point
+  out = out.replace(/\bFLOAT\s*(\(\d+,\d+\))?/gi, 'REAL');
+  out = out.replace(/\bDOUBLE\s*(PRECISION)?\s*(\(\d+,\d+\))?/gi, 'REAL');
+  out = out.replace(/\bDECIMAL\s*(\(\d+,\d+\))?/gi, 'NUMERIC');
+
+  // Date/time types (SQLite stores as TEXT)
+  out = out.replace(/\bDATETIME\b/gi, 'TEXT');
+  out = out.replace(/\bTIMESTAMP\b/gi, 'TEXT');
+  out = out.replace(/\bDATE\b/gi, 'TEXT');
+  out = out.replace(/\bTIME\b/gi, 'TEXT');
+  out = out.replace(/\bYEAR\b/gi, 'INTEGER');
+
+  // String types — keep VARCHAR/CHAR as-is (SQLite accepts them), but normalize LONGTEXT etc.
+  out = out.replace(/\bTINYTEXT\b/gi, 'TEXT');
+  out = out.replace(/\bMEDIUMTEXT\b/gi, 'TEXT');
+  out = out.replace(/\bLONGTEXT\b/gi, 'TEXT');
+  out = out.replace(/\bTINYBLOB\b/gi, 'BLOB');
+  out = out.replace(/\bMEDIUMBLOB\b/gi, 'BLOB');
+  out = out.replace(/\bLONGBLOB\b/gi, 'BLOB');
+
+  // UNSIGNED — strip (SQLite has no unsigned, and the word causes parse errors)
+  out = out.replace(/\bUNSIGNED\b/gi, '');
+
+  // ZEROFILL — strip
+  out = out.replace(/\bZEROFILL\b/gi, '');
+
+  // Column-level CHARACTER SET / COLLATE (inside column def)
+  out = out.replace(/\bCHARACTER\s+SET\s+[\w_]+/gi, '');
+  out = out.replace(/\bCOLLATE\s+[\w_]+/gi, '');
+
+  // ON UPDATE CURRENT_TIMESTAMP — strip (no trigger equivalent in simple DDL)
+  out = out.replace(/\bON\s+UPDATE\s+CURRENT_TIMESTAMP(\(\))?\b/gi, '');
+
+  // Clean up multiple spaces left by removals
+  out = out.replace(/[ \t]{2,}/g, ' ');
+
+  return out;
+};
+
+/**
  * Translate MySQL-flavoured SQL to SQLite-compatible SQL.
- * Handles statement-by-statement so multi-statement scripts work correctly.
+ * Handles statement-by-statement using paren-aware splitting.
  */
 const translateToSQLite = (input) => {
-  // Split on semicolons but keep structure; handle each statement
-  const statements = input
-    .split(/;/)
-    .map(s => s.trim())
-    .filter(s => s.length > 0);
+  const statements = splitStatements(input);
 
   const translated = statements.map(stmt => {
     const upper = stmt.toUpperCase().replace(/\s+/g, ' ').trim();
 
     // ── SHOW TABLES ──────────────────────────────────────────────────────────
+    if (/^SHOW FULL TABLES/.test(upper)) {
+      return "SELECT name AS 'Tables', 'BASE TABLE' AS Table_type FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name";
+    }
     if (/^SHOW TABLES/.test(upper)) {
-      return "SELECT name AS 'Tables' FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name";
+      return "SELECT name AS Tables FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name";
     }
 
     // ── SHOW DATABASES / SHOW SCHEMAS ────────────────────────────────────────
@@ -136,104 +271,83 @@ const translateToSQLite = (input) => {
       return "SELECT 'main' AS 'Database'";
     }
 
-    // ── SHOW FULL TABLES ─────────────────────────────────────────────────────
-    if (/^SHOW FULL TABLES/.test(upper)) {
-      return "SELECT name AS 'Tables', 'BASE TABLE' AS 'Table_type' FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name";
-    }
-
     // ── DESCRIBE / DESC tablename ─────────────────────────────────────────────
-    const descMatch = stmt.match(/^(?:DESC(?:RIBE)?)\s+(\S+)/i);
+    const descMatch = stmt.match(/^DESC(?:RIBE)?\s+(`?[\w]+`?)/i);
     if (descMatch) {
-      const tbl = descMatch[1].replace(/[`'"]/g, '');
-      return `PRAGMA table_info(${tbl})`;
+      const tbl = descMatch[1].replace(/`/g, '');
+      return `PRAGMA table_info(\`${tbl}\`)`;
     }
 
     // ── SHOW COLUMNS FROM tablename ───────────────────────────────────────────
-    const showColMatch = stmt.match(/^SHOW (?:FULL )?COLUMNS FROM\s+(\S+)/i);
+    const showColMatch = stmt.match(/^SHOW (?:FULL )?COLUMNS FROM\s+(`?[\w]+`?)/i);
     if (showColMatch) {
-      const tbl = showColMatch[1].replace(/[`'"]/g, '');
-      return `PRAGMA table_info(${tbl})`;
+      const tbl = showColMatch[1].replace(/`/g, '');
+      return `PRAGMA table_info(\`${tbl}\`)`;
     }
 
-    // ── SHOW INDEX FROM / SHOW INDEXES FROM ──────────────────────────────────
-    const showIdxMatch = stmt.match(/^SHOW (?:INDEX|INDEXES|KEYS) FROM\s+(\S+)/i);
+    // ── SHOW INDEX / KEYS FROM tablename ─────────────────────────────────────
+    const showIdxMatch = stmt.match(/^SHOW (?:INDEX|INDEXES|KEYS) FROM\s+(`?[\w]+`?)/i);
     if (showIdxMatch) {
-      const tbl = showIdxMatch[1].replace(/[`'"]/g, '');
-      return `PRAGMA index_list(${tbl})`;
+      const tbl = showIdxMatch[1].replace(/`/g, '');
+      return `PRAGMA index_list(\`${tbl}\`)`;
     }
 
     // ── SHOW CREATE TABLE ─────────────────────────────────────────────────────
-    const showCreateMatch = stmt.match(/^SHOW CREATE TABLE\s+(\S+)/i);
+    const showCreateMatch = stmt.match(/^SHOW CREATE TABLE\s+(`?[\w]+`?)/i);
     if (showCreateMatch) {
-      const tbl = showCreateMatch[1].replace(/[`'"]/g, '');
+      const tbl = showCreateMatch[1].replace(/`/g, '');
       return `SELECT sql AS 'Create Table' FROM sqlite_master WHERE type='table' AND name='${tbl}'`;
     }
 
     // ── SHOW TABLE STATUS ─────────────────────────────────────────────────────
     if (/^SHOW TABLE STATUS/.test(upper)) {
-      return "SELECT name AS 'Name', 'InnoDB' AS 'Engine', 'Dynamic' AS 'Row_format' FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'";
+      return "SELECT name AS Name, 'InnoDB' AS Engine FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'";
     }
 
-    // ── USE database ──────────────────────────────────────────────────────────
+    // ── USE database ─────────────────────────────────────────────────────────
     if (/^USE\s+/.test(upper)) {
-      return "SELECT 'Database changed (note: SQLite is single-file, USE is a no-op)' AS Info";
+      return "SELECT 'SQLite is single-file. USE is not needed.' AS Info";
     }
 
-    // ── SELECT DATABASE() ─────────────────────────────────────────────────────
-    if (/^SELECT DATABASE\(\)/.test(upper)) {
+    // ── SELECT DATABASE() ────────────────────────────────────────────────────
+    if (/^SELECT\s+DATABASE\s*\(\s*\)/.test(upper)) {
       return "SELECT 'main' AS 'database()'";
     }
 
     // ── SELECT VERSION() ─────────────────────────────────────────────────────
-    if (/^SELECT VERSION\(\)/.test(upper)) {
+    if (/^SELECT\s+VERSION\s*\(\s*\)/.test(upper)) {
       return "SELECT sqlite_version() AS 'version()'";
     }
 
-    // ── SHOW VARIABLES / SHOW STATUS ─────────────────────────────────────────
+    // ── SHOW VARIABLES / STATUS ───────────────────────────────────────────────
     if (/^SHOW (VARIABLES|STATUS|GLOBAL|SESSION)/.test(upper)) {
-      return "SELECT 'SQLite does not have SHOW VARIABLES. Use PRAGMA statements instead.' AS Note";
+      return "SELECT 'Use PRAGMA statements in SQLite instead of SHOW VARIABLES.' AS Note";
     }
 
-    // ── Structural DDL: strip MySQL-specific clauses ──────────────────────────
-    let out = stmt;
+    // ── DDL: CREATE TABLE — strip table options, translate column types ───────
+    if (/^CREATE\s+(TEMPORARY\s+)?TABLE/.test(upper)) {
+      let out = stripTableOptions(stmt);
+      out = translateColumnDefs(out);
+      // Remove trailing commas left by removed lines (before closing paren)
+      out = out.replace(/,(\s*)\)/g, '$1)');
+      out = out.replace(/\s{2,}/g, ' ').trim();
+      return out;
+    }
 
-    // Remove AUTO_INCREMENT=N table option
-    out = out.replace(/\bAUTO_INCREMENT\s*=\s*\d+/gi, '');
-    // Replace AUTO_INCREMENT column attribute with nothing (SQLite uses AUTOINCREMENT)
-    out = out.replace(/\bAUTO_INCREMENT\b/gi, 'AUTOINCREMENT');
-    // Remove ENGINE=InnoDB / ENGINE=MyISAM etc.
-    out = out.replace(/\bENGINE\s*=\s*\w+/gi, '');
-    // Remove DEFAULT CHARSET / CHARACTER SET / COLLATE
-    out = out.replace(/\bDEFAULT\s+CHARSET\s*=\s*\w+/gi, '');
-    out = out.replace(/\bCHARACTER\s+SET\s+\w+/gi, '');
-    out = out.replace(/\bCHARSET\s*=\s*\w+/gi, '');
-    out = out.replace(/\bCOLLATE\s*=?\s*[\w_]+/gi, '');
-    // Remove ROW_FORMAT
-    out = out.replace(/\bROW_FORMAT\s*=\s*\w+/gi, '');
-    // Remove UNSIGNED (SQLite has no unsigned concept but accepts it; just strip to be safe)
-    out = out.replace(/\bUNSIGNED\b/gi, '');
-    // Replace MySQL INT types that SQLite doesn't know about
-    out = out.replace(/\bTINYINT\b/gi, 'INTEGER');
-    out = out.replace(/\bSMALLINT\b/gi, 'INTEGER');
-    out = out.replace(/\bMEDIUMINT\b/gi, 'INTEGER');
-    out = out.replace(/\bBIGINT\b/gi, 'INTEGER');
-    out = out.replace(/\bDOUBLE\b/gi, 'REAL');
-    out = out.replace(/\bFLOAT\b/gi, 'REAL');
-    // Replace DATETIME/TIMESTAMP with TEXT (SQLite stores as text)
-    out = out.replace(/\bDATETIME\b/gi, 'TEXT');
-    out = out.replace(/\bTIMESTAMP\b/gi, 'TEXT');
-    // Remove backtick quoting (replace with nothing — SQLite supports it but let's normalize)
-    // Keep backticks actually — SQLite does support them
-    // Remove trailing commas before closing paren (from removed clauses)
-    out = out.replace(/,\s*\)/g, ')');
-    // Clean up multiple spaces
-    out = out.replace(/\s{2,}/g, ' ').trim();
+    // ── ALTER TABLE — strip unsupported clauses ───────────────────────────────
+    if (/^ALTER\s+TABLE/.test(upper)) {
+      let out = translateColumnDefs(stmt);
+      out = out.replace(/\s{2,}/g, ' ').trim();
+      return out;
+    }
 
-    return out;
+    // ── All other statements — pass through with type translations only ────────
+    return translateColumnDefs(stmt);
   });
 
   return translated.join(';\n');
 };
+
 
 const runQuery = () => {
   if (!db) {
