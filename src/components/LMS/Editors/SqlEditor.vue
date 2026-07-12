@@ -207,16 +207,16 @@ const translateColumnDefs = (stmt) => {
   out = out.replace(/\bAUTO_INCREMENT\b/gi, 'AUTOINCREMENT'); // Fallback for any leftovers
 
   // MySQL int aliases → INTEGER
-  out = out.replace(/\bTINYINT\s*(\(\d+\))?/gi, 'INTEGER');
-  out = out.replace(/\bSMALLINT\s*(\(\d+\))?/gi, 'INTEGER');
-  out = out.replace(/\bMEDIUMINT\s*(\(\d+\))?/gi, 'INTEGER');
-  out = out.replace(/\bBIGINT\s*(\(\d+\))?/gi, 'INTEGER');
-  out = out.replace(/\bINT\s*(\(\d+\))?/gi, 'INTEGER');
+  out = out.replace(/\bTINYINT\b\s*(\(\d+\))?/gi, 'INTEGER');
+  out = out.replace(/\bSMALLINT\b\s*(\(\d+\))?/gi, 'INTEGER');
+  out = out.replace(/\bMEDIUMINT\b\s*(\(\d+\))?/gi, 'INTEGER');
+  out = out.replace(/\bBIGINT\b\s*(\(\d+\))?/gi, 'INTEGER');
+  out = out.replace(/\bINT\b\s*(\(\d+\))?/gi, 'INTEGER');
 
   // Floating point
-  out = out.replace(/\bFLOAT\s*(\(\d+,\d+\))?/gi, 'REAL');
-  out = out.replace(/\bDOUBLE\s*(PRECISION)?\s*(\(\d+,\d+\))?/gi, 'REAL');
-  out = out.replace(/\bDECIMAL\s*(\(\d+,\d+\))?/gi, 'NUMERIC');
+  out = out.replace(/\bFLOAT\b\s*(\(\d+,\d+\))?/gi, 'REAL');
+  out = out.replace(/\bDOUBLE\b\s*(PRECISION)?\s*(\(\d+,\d+\))?/gi, 'REAL');
+  out = out.replace(/\bDECIMAL\b\s*(\(\d+,\d+\))?/gi, 'NUMERIC');
 
   // Date/time types (SQLite stores as TEXT)
   out = out.replace(/\bDATETIME\b/gi, 'TEXT');
