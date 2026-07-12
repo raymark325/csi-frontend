@@ -199,52 +199,53 @@ const stripTableOptions = (stmt) => {
 const translateColumnDefs = (stmt) => {
   let out = stmt;
 
-  // AUTO_INCREMENT column attribute → AUTOINCREMENT (only inside column defs)
-  // SQLite strictly requires AUTOINCREMENT to be exactly on "INTEGER PRIMARY KEY".
-  // So if we see AUTO_INCREMENT, we force the type to INTEGER PRIMARY KEY AUTOINCREMENT
-  // and strip out other occurrences of PRIMARY KEY or INT types on that line.
-  out = out.replace(/(\w+)\s+(?:INT|TINYINT|SMALLINT|MEDIUMINT|BIGINT|INTEGER)?\s*(?:\(\d+\))?\s*(?:UNSIGNED\s*)?(?:PRIMARY\s+KEY\s*)?AUTO_INCREMENT(?:\s+PRIMARY\s+KEY)?/gi, '$1 INTEGER PRIMARY KEY AUTOINCREMENT');
-  out = out.replace(/\bAUTO_INCREMENT\b/gi, 'AUTOINCREMENT'); // Fallback for any leftovers
+  // ── Step 1: Normalize MySQL column types FIRST ────────────────────────────
+  // (must run before AUTO_INCREMENT so that INT→INTEGER doesn't corrupt AUTOINCREMENT)
 
-  // MySQL int aliases → INTEGER
-  out = out.replace(/\bTINYINT\b\s*(\(\d+\))?/gi, 'INTEGER');
-  out = out.replace(/\bSMALLINT\b\s*(\(\d+\))?/gi, 'INTEGER');
-  out = out.replace(/\bMEDIUMINT\b\s*(\(\d+\))?/gi, 'INTEGER');
-  out = out.replace(/\bBIGINT\b\s*(\(\d+\))?/gi, 'INTEGER');
-  out = out.replace(/\bINT\b\s*(\(\d+\))?/gi, 'INTEGER');
+  // Integer types → INTEGER  (capture trailing space to avoid "INTEGERNOT NULL" bugs)
+  out = out.replace(/\bTINYINT\b(\s*(\(\d+\))?)/gi, 'INTEGER$1');
+  out = out.replace(/\bSMALLINT\b(\s*(\(\d+\))?)/gi, 'INTEGER$1');
+  out = out.replace(/\bMEDIUMINT\b(\s*(\(\d+\))?)/gi, 'INTEGER$1');
+  out = out.replace(/\bBIGINT\b(\s*(\(\d+\))?)/gi, 'INTEGER$1');
+  out = out.replace(/\bINT\b(\s*(\(\d+\))?)/gi, 'INTEGER$1');
 
-  // Floating point
-  out = out.replace(/\bFLOAT\b\s*(\(\d+,\d+\))?/gi, 'REAL');
-  out = out.replace(/\bDOUBLE\b\s*(PRECISION)?\s*(\(\d+,\d+\))?/gi, 'REAL');
-  out = out.replace(/\bDECIMAL\b\s*(\(\d+,\d+\))?/gi, 'NUMERIC');
+  // Floating point  (preserve trailing space)
+  out = out.replace(/\bFLOAT\b(\s*(\(\d+,\d+\))?)/gi, 'REAL$1');
+  out = out.replace(/\bDOUBLE\b(\s*(PRECISION)?\s*(\(\d+,\d+\))?)/gi, 'REAL$1');
+  out = out.replace(/\bDECIMAL\b(\s*(\(\d+,\d+\))?)/gi, 'NUMERIC$1');
 
-  // Date/time types (SQLite stores as TEXT)
-  out = out.replace(/\bDATETIME\b/gi, 'TEXT');
-  out = out.replace(/\bTIMESTAMP\b/gi, 'TEXT');
-  out = out.replace(/\bDATE\b/gi, 'TEXT');
-  out = out.replace(/\bTIME\b/gi, 'TEXT');
-  out = out.replace(/\bYEAR\b/gi, 'INTEGER');
+  // Date/time types  (preserve trailing space)
+  out = out.replace(/\bDATETIME\b(\s*)/gi, 'TEXT$1');
+  out = out.replace(/\bTIMESTAMP\b(\s*)/gi, 'TEXT$1');
+  out = out.replace(/\bDATE\b(\s*)/gi, 'TEXT$1');
+  out = out.replace(/\bTIME\b(\s*)/gi, 'TEXT$1');
+  out = out.replace(/\bYEAR\b(\s*)/gi, 'INTEGER$1');
 
-  // String types — keep VARCHAR/CHAR as-is (SQLite accepts them), but normalize LONGTEXT etc.
-  out = out.replace(/\bTINYTEXT\b/gi, 'TEXT');
-  out = out.replace(/\bMEDIUMTEXT\b/gi, 'TEXT');
-  out = out.replace(/\bLONGTEXT\b/gi, 'TEXT');
-  out = out.replace(/\bTINYBLOB\b/gi, 'BLOB');
-  out = out.replace(/\bMEDIUMBLOB\b/gi, 'BLOB');
-  out = out.replace(/\bLONGBLOB\b/gi, 'BLOB');
+  // String type aliases  (preserve trailing space)
+  out = out.replace(/\bTINYTEXT\b(\s*)/gi, 'TEXT$1');
+  out = out.replace(/\bMEDIUMTEXT\b(\s*)/gi, 'TEXT$1');
+  out = out.replace(/\bLONGTEXT\b(\s*)/gi, 'TEXT$1');
+  out = out.replace(/\bTINYBLOB\b(\s*)/gi, 'BLOB$1');
+  out = out.replace(/\bMEDIUMBLOB\b(\s*)/gi, 'BLOB$1');
+  out = out.replace(/\bLONGBLOB\b(\s*)/gi, 'BLOB$1');
 
-  // UNSIGNED — strip (SQLite has no unsigned, and the word causes parse errors)
+  // Remove MySQL-only column modifiers
   out = out.replace(/\bUNSIGNED\b/gi, '');
-
-  // ZEROFILL — strip
   out = out.replace(/\bZEROFILL\b/gi, '');
-
-  // Column-level CHARACTER SET / COLLATE (inside column def)
   out = out.replace(/\bCHARACTER\s+SET\s+[\w_]+/gi, '');
   out = out.replace(/\bCOLLATE\s+[\w_]+/gi, '');
-
-  // ON UPDATE CURRENT_TIMESTAMP — strip (no trigger equivalent in simple DDL)
   out = out.replace(/\bON\s+UPDATE\s+CURRENT_TIMESTAMP(\(\))?\b/gi, '');
+
+  // ── Step 2: Handle AUTO_INCREMENT AFTER types are already normalized ───────
+  // At this point INT/TINYINT/etc. have already been replaced with INTEGER,
+  // so the regex below safely matches "col_name INTEGER ... AUTO_INCREMENT ..."
+  // and collapses it into the only form SQLite accepts: INTEGER PRIMARY KEY AUTOINCREMENT.
+  out = out.replace(
+    /(\w+)\s+INTEGER\s*(?:UNSIGNED\s*)?(?:PRIMARY\s+KEY\s*)?AUTO_INCREMENT(?:\s+PRIMARY\s+KEY)?/gi,
+    '$1 INTEGER PRIMARY KEY AUTOINCREMENT'
+  );
+  // Fallback: bare AUTO_INCREMENT that wasn't matched above (e.g. already had PRIMARY KEY before it)
+  out = out.replace(/\bAUTO_INCREMENT\b/gi, 'AUTOINCREMENT');
 
   // Clean up multiple spaces left by removals
   out = out.replace(/[ \t]{2,}/g, ' ');
