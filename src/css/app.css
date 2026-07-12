@@ -372,7 +372,7 @@ body {
 }
 
 .q-card.glass-q-card {
-  background: var(--glass-bg) !important;
+  background: var(--surface-bg) !important;
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border) !important;
