@@ -10,13 +10,13 @@
       </div>
       <!-- Teacher only action -->
       <q-btn
-        v-if="authStore.user?.role === 'teacher' || authStore.user?.role === 'admin'"
+        v-if="isTeacherOrAdmin"
         color="primary"
         icon="add"
-        label="Create Module"
+        label="Upload Lesson"
         rounded
         unelevated
-        @click="showCreateDialog = true"
+        @click="openCreateDialog"
       />
     </div>
 
@@ -27,12 +27,12 @@
 
     <div v-else class="q-gutter-y-xl">
       <div v-if="filteredModules.length === 0" class="text-center text-muted q-py-xl glass-card">
-        No modules have been posted for this subject yet.
+        No lessons have been posted for this subject yet.
       </div>
-      
+
       <div class="row q-col-gutter-lg">
         <div v-for="mod in filteredModules" :key="mod.id" class="col-12 col-md-6 col-lg-4">
-          <div class="glass-card q-pa-xl announcement-card" style="height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+          <div class="glass-card q-pa-xl lesson-card" style="height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
             <div>
               <div class="row justify-between items-center q-mb-md">
                 <div class="row q-gutter-xs">
@@ -43,38 +43,68 @@
                 </div>
                 <span class="text-caption text-muted">{{ formatDate(mod.created_at) }}</span>
               </div>
+
               <h3 class="q-mt-none q-mb-sm" style="font-size: 18px; font-weight: 700; color: var(--text-primary);">
                 {{ mod.title }}
               </h3>
-              <p class="text-body text-secondary q-mb-lg" style="font-size: 14px; line-height: 1.5;">
+              <p class="text-body text-secondary q-mb-md" style="font-size: 14px; line-height: 1.5;">
                 {{ mod.description || 'No description provided.' }}
               </p>
+
+              <!-- Section visibility badges (teacher view) -->
+              <div v-if="isTeacherOrAdmin && mod.visible_section_ids?.length" class="q-mb-md">
+                <p class="text-label q-mb-xs" style="font-size: 11px; opacity: 0.7;">VISIBLE TO SECTIONS</p>
+                <div class="row q-gutter-xs flex-wrap">
+                  <span
+                    v-for="ssId in mod.visible_section_ids"
+                    :key="ssId"
+                    class="badge badge-green"
+                    style="font-size: 11px;"
+                  >
+                    {{ getSectionName(ssId) }}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <q-btn
-              color="primary"
-              label="Open Module"
-              class="full-width"
-              rounded
-              unelevated
-              :to="`/lms/modules/${mod.id}`"
-            />
+            <div class="row q-gutter-sm">
+              <q-btn
+                color="primary"
+                label="Open Lesson"
+                class="col-grow"
+                rounded
+                unelevated
+                :to="`/lms/modules/${mod.id}`"
+              />
+              <!-- Teacher: edit visibility -->
+              <q-btn
+                v-if="isTeacherOrAdmin"
+                icon="visibility"
+                flat
+                round
+                color="primary"
+                @click="openVisibilityDialog(mod)"
+              >
+                <q-tooltip>Manage Section Visibility</q-tooltip>
+              </q-btn>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Create Module Dialog -->
+    <!-- ── Create Lesson Dialog ─────────────────────────────────────────── -->
     <q-dialog v-model="showCreateDialog" persistent>
-      <q-card class="glass-q-card" style="width: 500px; max-width: 90vw;">
+      <q-card class="glass-q-card" style="width: 560px; max-width: 95vw;">
         <q-card-section>
-          <div class="text-h6 text-primary font-weight-bold">Create New Module</div>
+          <div class="text-h6 text-primary font-weight-bold">Upload New Lesson</div>
+          <div class="text-caption text-muted">Choose which sections can see this lesson.</div>
         </q-card-section>
 
         <q-card-section class="q-pt-none">
           <div class="row q-col-gutter-sm q-mb-md">
             <div class="col-8">
-              <p class="text-label q-mb-xs">Module Title</p>
+              <p class="text-label q-mb-xs">Lesson Title</p>
               <input v-model="newModule.title" class="input-glass" type="text" placeholder="e.g. Module 1: Java Classes"/>
             </div>
             <div class="col-4">
@@ -91,7 +121,7 @@
 
           <div class="q-mb-md">
             <p class="text-label q-mb-xs">Brief Description</p>
-            <textarea v-model="newModule.description" class="input-glass" rows="2" placeholder="Summary of this module..."></textarea>
+            <textarea v-model="newModule.description" class="input-glass" rows="2" placeholder="Summary of this lesson..."></textarea>
           </div>
 
           <div class="q-mb-md">
@@ -99,22 +129,33 @@
             <textarea v-model="newModule.content" class="input-glass" rows="5" placeholder="<h3>Title</h3><p>Content...</p>"></textarea>
           </div>
 
+          <!-- Section visibility selector -->
           <div class="q-mb-md">
-            <p class="text-label q-mb-xs">Post to Additional Sections (Optional)</p>
-            <q-select
-              v-model="selectedAdditionalSections"
-              :options="availableOtherSections"
-              option-value="id"
-              :option-label="opt => `${opt.section?.name || opt.name} - ${opt.course?.title || opt.course_code}`"
-              multiple
-              use-chips
-              filled
-              dense
-              class="glass-q-select"
-              label="Select other sections"
-              emit-value
-              map-options
-            />
+            <p class="text-label q-mb-xs">
+              Visible to Sections
+              <span class="text-negative q-ml-xs">*</span>
+            </p>
+            <div v-if="sectionOptions.length === 0" class="text-caption text-muted q-pa-sm">
+              Loading sections...
+            </div>
+            <div v-else class="section-checkboxes">
+              <label
+                v-for="sec in sectionOptions"
+                :key="sec.id"
+                class="section-checkbox-row"
+                :class="{ selected: newModule.section_subject_ids.includes(sec.id) }"
+              >
+                <input
+                  type="checkbox"
+                  :value="sec.id"
+                  v-model="newModule.section_subject_ids"
+                />
+                <span class="section-label">{{ sec.label }}</span>
+              </label>
+            </div>
+            <div v-if="newModule.section_subject_ids.length === 0" class="text-caption text-negative q-mt-xs">
+              Please select at least one section.
+            </div>
           </div>
 
           <div class="q-mb-md">
@@ -125,17 +166,71 @@
 
         <q-card-actions align="right" class="q-pb-md q-pr-md">
           <q-btn label="Cancel" flat rounded v-close-popup />
-          <q-btn label="Create" color="primary" rounded unelevated @click="handleCreateModule" :loading="isSubmitting" />
+          <q-btn
+            label="Upload Lesson"
+            color="primary"
+            rounded
+            unelevated
+            @click="handleCreateModule"
+            :loading="isSubmitting"
+            :disable="newModule.section_subject_ids.length === 0 || !newModule.title"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
+    <!-- ── Section Visibility Dialog (edit existing) ───────────────────── -->
+    <q-dialog v-model="showVisibilityDialog" persistent>
+      <q-card class="glass-q-card" style="width: 460px; max-width: 95vw;">
+        <q-card-section>
+          <div class="text-h6 text-primary font-weight-bold">Section Visibility</div>
+          <div class="text-caption text-muted">
+            Choose which sections can see <strong>{{ editingModule?.title }}</strong>.
+          </div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <div class="section-checkboxes">
+            <label
+              v-for="sec in sectionOptions"
+              :key="sec.id"
+              class="section-checkbox-row"
+              :class="{ selected: editSectionIds.includes(sec.id) }"
+            >
+              <input
+                type="checkbox"
+                :value="sec.id"
+                v-model="editSectionIds"
+              />
+              <span class="section-label">{{ sec.label }}</span>
+            </label>
+          </div>
+          <div v-if="editSectionIds.length === 0" class="text-caption text-negative q-mt-sm">
+            At least one section must be selected.
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pb-md q-pr-md">
+          <q-btn label="Cancel" flat rounded v-close-popup />
+          <q-btn
+            label="Save Visibility"
+            color="primary"
+            rounded
+            unelevated
+            @click="saveVisibility"
+            :loading="isSavingVisibility"
+            :disable="editSectionIds.length === 0"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { useQuasar } from 'quasar';
 import { useAuthStore } from '../../stores/auth';
 import { useLmsStore } from '../../stores/LMS/lmsStore';
 import { useDashboardStore } from '../../stores/dashboardStore';
@@ -144,53 +239,110 @@ const route = useRoute();
 const authStore = useAuthStore();
 const lmsStore = useLmsStore();
 const dashboardStore = useDashboardStore();
+const $q = useQuasar();
 
 const showCreateDialog = ref(false);
+const showVisibilityDialog = ref(false);
 const isSubmitting = ref(false);
+const isSavingVisibility = ref(false);
+const editingModule = ref(null);
+const editSectionIds = ref([]);
 
 const currentSectionSubjectId = computed(() => Number(route.params.id));
+const isTeacherOrAdmin = computed(() => ['teacher', 'admin'].includes(authStore.user?.role));
+
+// ── Section options for the current subject ────────────────────────────────
+// All section_subjects that teach the same course as the current one
+const sectionOptions = computed(() => {
+  const allSections = authStore.userRole === 'teacher'
+    ? dashboardStore.teacherSections
+    : (dashboardStore.sections || []);
+
+  // Find the course of the current section_subject
+  const currentSection = allSections.find(s => s.id === currentSectionSubjectId.value);
+  const currentCourseId = currentSection?.course_id;
+
+  if (!currentCourseId) {
+    // Fallback: just show all sections the teacher handles
+    return allSections.map(s => ({
+      id: s.id,
+      label: `${s.section?.name || s.name} — ${s.course?.title || s.course_code || ''}`,
+    }));
+  }
+
+  // Filter to only sections teaching the same course
+  return allSections
+    .filter(s => s.course_id === currentCourseId)
+    .map(s => ({
+      id: s.id,
+      label: `${s.section?.name || s.name}`,
+    }));
+});
+
+// Mapping of section_subject_id → human label for badges
+const getSectionName = (ssId) => {
+  const sec = sectionOptions.value.find(s => s.id === ssId);
+  return sec?.label ?? `Section #${ssId}`;
+};
 
 const newModule = ref({
-  section_subject_id: currentSectionSubjectId.value,
   title: '',
   category: 'Lecture',
   description: '',
   content: '',
+  section_subject_ids: [],
 });
 
-const selectedAdditionalSections = ref([]);
-
-const availableOtherSections = computed(() => {
-  if (authStore.userRole === 'teacher') {
-    return dashboardStore.teacherSections.filter(s => s.id !== currentSectionSubjectId.value);
-  } else if (authStore.userRole === 'admin') {
-    return dashboardStore.sections.filter(s => s.id !== currentSectionSubjectId.value);
+// Auto-select the current section when dialog opens
+const openCreateDialog = async () => {
+  if (isTeacherOrAdmin.value && dashboardStore.teacherSections.length === 0) {
+    await dashboardStore.fetchTeacherDashboard();
+  } else if (authStore.userRole === 'admin' && (!dashboardStore.sections || dashboardStore.sections.length === 0)) {
+    await dashboardStore.fetchSections();
   }
-  return [];
-});
+  newModule.value = {
+    title: '',
+    category: 'Lecture',
+    description: '',
+    content: '',
+    section_subject_ids: [currentSectionSubjectId.value],
+  };
+  showCreateDialog.value = true;
+};
 
-watch(showCreateDialog, async (val) => {
-  if (val) {
-    if (authStore.userRole === 'teacher' && dashboardStore.teacherSections.length === 0) {
-      await dashboardStore.fetchTeacherDashboard();
-    } else if (authStore.userRole === 'admin' && dashboardStore.sections.length === 0) {
-      await dashboardStore.fetchSections();
-    }
+const openVisibilityDialog = async (mod) => {
+  if (isTeacherOrAdmin.value && dashboardStore.teacherSections.length === 0) {
+    await dashboardStore.fetchTeacherDashboard();
   }
-});
+  editingModule.value = mod;
+  editSectionIds.value = [...(mod.visible_section_ids || [])];
+  showVisibilityDialog.value = true;
+};
 
 let selectedFile = null;
 
 const filteredModules = computed(() => {
-  return lmsStore.modules.filter(m => m.section_subject_id === currentSectionSubjectId.value);
+  // Show modules that are visible to the current section_subject
+  return lmsStore.modules.filter(m => {
+    if (m.course_id) return false; // skip master templates
+    const visibleIds = m.visible_section_ids || (m.section_subject_id ? [m.section_subject_id] : []);
+    return visibleIds.includes(currentSectionSubjectId.value);
+  });
 });
 
 const courseName = computed(() => {
+  const allSections = authStore.userRole === 'teacher'
+    ? dashboardStore.teacherSections
+    : (dashboardStore.sections || []);
+  const sec = allSections.find(s => s.id === currentSectionSubjectId.value);
+  if (sec) {
+    return `${sec.course?.course_code || ''} — ${sec.course?.title || 'Course'}`;
+  }
   if (filteredModules.value.length > 0) {
     const mod = filteredModules.value[0];
     const code = mod.sectionSubject?.course?.course_code || 'General';
     const title = mod.sectionSubject?.course?.title || 'Course';
-    return `${code} - ${title}`;
+    return `${code} — ${title}`;
   }
   return 'Course Modules';
 });
@@ -202,64 +354,108 @@ const formatDate = (dateStr) => {
 
 const handleFileUpload = (event) => {
   const file = event.target.files[0];
-  if (file) {
-    selectedFile = file;
-  } else {
-    selectedFile = null;
-  }
+  selectedFile = file || null;
 };
 
 const handleCreateModule = async () => {
-  if (!newModule.value.title) return;
-  
-  const payload = { ...newModule.value };
-  if (selectedFile) {
-    payload.file = selectedFile;
-  }
-  
-  // Prepare an array of IDs: the current one PLUS any additional selected ones
-  const allIds = [currentSectionSubjectId.value, ...selectedAdditionalSections.value];
+  if (!newModule.value.title || newModule.value.section_subject_ids.length === 0) return;
 
-  // If using FormData (because of file), the API expects arrays.
-  // We can pass them as a JSON string and decode on the backend, or pass multiple fields.
-  // Wait, backend expects an array. Let's send them individually as section_subject_ids[]
-  
-  // The lmsService uses FormData if file is present. We will handle the array properly by adding it directly to payload if it's JSON, but FormData will serialize it strangely.
-  
+  const payload = { ...newModule.value };
+  if (selectedFile) payload.file = selectedFile;
+
   isSubmitting.value = true;
   try {
-    // If not file, it's easy. If file, we should modify lmsService or just pass it as JSON string and let backend decode. 
-    // Wait, axios handles arrays by default in JSON. In FormData, we need to append each element.
-    // Let's modify lmsService slightly to handle arrays, but for now we can just do:
-    payload.section_subject_ids = allIds;
-    
     await lmsStore.createModule(payload);
+    // Re-fetch to get the new visible_section_ids
+    await lmsStore.fetchModules(true);
     showCreateDialog.value = false;
-    newModule.value = { section_subject_id: currentSectionSubjectId.value, title: '', category: 'Lecture', description: '', content: '' };
-    selectedAdditionalSections.value = [];
     selectedFile = null;
+    $q.notify({ type: 'positive', message: 'Lesson uploaded successfully.' });
   } catch (err) {
+    $q.notify({ type: 'negative', message: 'Failed to upload lesson.' });
     console.error(err);
   } finally {
     isSubmitting.value = false;
   }
 };
 
+const saveVisibility = async () => {
+  if (!editingModule.value || editSectionIds.value.length === 0) return;
+  isSavingVisibility.value = true;
+  try {
+    await lmsStore.updateModuleSections(editingModule.value.id, editSectionIds.value);
+    showVisibilityDialog.value = false;
+    $q.notify({ type: 'positive', message: 'Section visibility updated.' });
+  } catch (err) {
+    $q.notify({ type: 'negative', message: 'Failed to update visibility.' });
+    console.error(err);
+  } finally {
+    isSavingVisibility.value = false;
+  }
+};
+
 onMounted(async () => {
+  if (isTeacherOrAdmin.value && dashboardStore.teacherSections.length === 0) {
+    await dashboardStore.fetchTeacherDashboard();
+  }
   lmsStore.fetchModules();
 });
 </script>
 
 <style scoped>
-.full-width {
-  width: 100%;
-}
-.announcement-card {
+.lesson-card {
   transition: transform 0.2s, box-shadow 0.2s;
   border-left: 4px solid var(--sms-blue);
 }
-.announcement-card:hover {
+.lesson-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+/* Section checkbox list */
+.section-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+.section-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.section-checkbox-row:hover {
+  background: rgba(255,255,255,0.07);
+}
+.section-checkbox-row.selected {
+  background: rgba(66, 135, 245, 0.15);
+  border-color: rgba(66, 135, 245, 0.4);
+}
+.section-checkbox-row input[type="checkbox"] {
+  accent-color: var(--sms-blue);
+  width: 16px;
+  height: 16px;
+}
+.section-label {
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.badge-green {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
 }
 </style>

@@ -2,8 +2,9 @@ import axios from 'axios';
 import API from '../api';
 
 export const lmsService = {
-  getModules() {
-    return API.get('/lms/modules');
+  getModules(sectionSubjectId = null) {
+    const params = sectionSubjectId ? { section_subject_id: sectionSubjectId } : {};
+    return API.get('/lms/modules', { params });
   },
 
   getMasterModules(courseId) {
@@ -15,32 +16,34 @@ export const lmsService = {
   },
 
   createModule(data) {
-    console.log("lmsService.createModule data:", data);
     if (data.file) {
-      console.log("lmsService: Found file, using FormData");
+      // File upload: use FormData, send arrays as repeated keys (section_subject_ids[])
       const formData = new FormData();
       Object.keys(data).forEach(key => {
-        if (data[key] !== null && data[key] !== undefined) {
-          if (Array.isArray(data[key])) {
-            data[key].forEach(val => {
-              formData.append(`${key}[]`, val);
-            });
-          } else {
-            formData.append(key, data[key]);
-          }
+        if (data[key] === null || data[key] === undefined) return;
+        if (key === 'section_subject_ids' && Array.isArray(data[key])) {
+          data[key].forEach(val => formData.append('section_subject_ids[]', val));
+        } else if (Array.isArray(data[key])) {
+          data[key].forEach(val => formData.append(`${key}[]`, val));
+        } else {
+          formData.append(key, data[key]);
         }
       });
-      
       const token = localStorage.getItem('auth_token');
-      const baseURL = API.defaults.baseURL;
-      
-      return axios.post(`${baseURL}/lms/modules`, formData, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      return axios.post(`${API.defaults.baseURL}/lms/modules`, formData, {
+        headers: { 'Authorization': `Bearer ${token}` }
       }).then(res => res.data);
     }
     return API.post('/lms/modules', data);
+  },
+
+  /**
+   * Update which sections can see a module (without changing other fields).
+   * @param {number} id  - module ID
+   * @param {number[]} sectionSubjectIds  - array of section_subject IDs
+   */
+  updateModuleSections(id, sectionSubjectIds) {
+    return API.patch(`/lms/modules/${id}/sections`, { section_subject_ids: sectionSubjectIds });
   },
 
   duplicateModule(id, sectionIds) {

@@ -109,6 +109,29 @@ export const useLmsStore = defineStore('lms', () => {
     }
   };
 
+  /**
+   * Update which sections can see a module (lesson_sections pivot).
+   * Does NOT change title, content, or file — only visibility.
+   */
+  const updateModuleSections = async (id, sectionSubjectIds) => {
+    try {
+      const response = await lmsService.updateModuleSections(id, sectionSubjectIds);
+      // Update local state
+      const idx = modules.value.findIndex(m => m.id === id);
+      if (idx !== -1) {
+        modules.value[idx].visible_section_ids = sectionSubjectIds;
+      }
+      if (activeModule.value?.id === id) {
+        activeModule.value.visible_section_ids = sectionSubjectIds;
+      }
+      _modulesFetchedAt.value = 0; // invalidate list cache
+      return response.data;
+    } catch (err) {
+      error.value = err.message || 'Failed to update section visibility';
+      throw err;
+    }
+  };
+
   const fetchAssignments = async (sectionId, force = false) => {
     if (
       !force &&
@@ -277,6 +300,7 @@ export const useLmsStore = defineStore('lms', () => {
     fetchModuleDetail,
     createModule,
     duplicateModule,
+    updateModuleSections,
     fetchAssignments,
     createAssignment,
     updateAssignment,
