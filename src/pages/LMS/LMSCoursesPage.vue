@@ -39,7 +39,7 @@
         <!-- One block per subject -->
         <div v-for="course in uniqueCourses" :key="course.id" class="q-mb-xl">
           <!-- Subject Header -->
-          <div class="glass-card q-pa-lg q-mb-md subject-header-card">
+          <div class="glass-card q-pa-lg q-mb-md subject-header-card cursor-pointer" @click="toggleCourse(course.id)">
             <div class="row items-center justify-between">
               <div class="row items-center q-gutter-md">
                 <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(0,122,255,0.15); display: flex; align-items: center; justify-content: center;">
@@ -59,85 +59,95 @@
                   rounded
                   unelevated
                   size="sm"
-                  @click="openCreateDialog(course)"
+                  @click.stop="openCreateDialog(course)"
+                />
+                <q-icon
+                  :name="expandedCourses[course.id] !== false ? 'expand_less' : 'expand_more'"
+                  size="24px"
+                  color="grey-6"
+                  class="q-ml-sm"
                 />
               </div>
             </div>
           </div>
 
           <!-- Lessons List -->
-          <div v-if="getLessons(course.id).length === 0" class="text-center text-muted q-py-lg q-mb-md" style="background: rgba(0,0,0,0.02); border-radius: 12px; border: 1px dashed rgba(0,0,0,0.1);">
-            No lessons yet. Click "Add Lesson" to create one.
-          </div>
+          <q-slide-transition>
+            <div v-show="expandedCourses[course.id] !== false">
+              <div v-if="getLessons(course.id).length === 0" class="text-center text-muted q-py-lg q-mb-md" style="background: rgba(0,0,0,0.02); border-radius: 12px; border: 1px dashed rgba(0,0,0,0.1);">
+                No lessons yet. Click "Add Lesson" to create one.
+              </div>
 
-          <div v-else class="row q-col-gutter-md">
-            <div v-for="mod in getLessons(course.id)" :key="mod.id" class="col-12 col-md-6 col-lg-4">
-              <div class="glass-card lesson-card q-pa-lg" style="height: 100%; display: flex; flex-direction: column;">
-                <!-- Top bar -->
-                <div class="row justify-between items-start q-mb-sm">
-                  <span class="badge badge-blue">
-                    <q-icon name="category" size="11px" class="q-mr-xs"/>
-                    {{ mod.category || 'Lecture' }}
-                  </span>
-                  <span class="text-caption text-muted">{{ formatDate(mod.created_at) }}</span>
-                </div>
+              <div v-else class="row q-col-gutter-md">
+                <div v-for="mod in getLessons(course.id)" :key="mod.id" class="col-12 col-md-6 col-lg-4">
+                  <div class="glass-card lesson-card q-pa-lg" style="height: 100%; display: flex; flex-direction: column;">
+                    <!-- Top bar -->
+                    <div class="row justify-between items-start q-mb-sm">
+                      <span class="badge badge-blue">
+                        <q-icon name="category" size="11px" class="q-mr-xs"/>
+                        {{ mod.category || 'Lecture' }}
+                      </span>
+                      <span class="text-caption text-muted">{{ formatDate(mod.created_at) }}</span>
+                    </div>
 
-                <!-- Title -->
-                <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">{{ mod.title }}</div>
-                <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; flex: 1; margin-bottom: 12px;">
-                  {{ mod.description || 'No description.' }}
-                </div>
+                    <!-- Title -->
+                    <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">{{ mod.title }}</div>
+                    <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; flex: 1; margin-bottom: 12px;">
+                      {{ mod.description || 'No description.' }}
+                    </div>
 
-                <!-- Deployment status chips -->
-                <div class="q-mb-md">
-                  <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 6px;">
-                    Posted to:
+                    <!-- Deployment status chips -->
+                    <div class="q-mb-md">
+                      <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 6px;">
+                        Posted to:
+                      </div>
+                      <div v-if="!mod.deployed_to || mod.deployed_to.length === 0">
+                        <q-chip dense outline color="grey" icon="warning" label="Not posted yet" size="sm" />
+                      </div>
+                      <div v-else class="row q-gutter-xs">
+                        <q-chip
+                          v-for="dep in mod.deployed_to"
+                          :key="dep.section_subject_id"
+                          dense
+                          color="positive"
+                          text-color="white"
+                          icon="check_circle"
+                          :label="dep.section_name"
+                          size="sm"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="row q-gutter-sm">
+                      <q-btn
+                        flat
+                        dense
+                        rounded
+                        color="primary"
+                        icon="open_in_new"
+                        label="View"
+                        size="sm"
+                        :to="`/lms/master-modules/${mod.id}`"
+                        class="col"
+                      />
+                      <q-btn
+                        unelevated
+                        dense
+                        rounded
+                        color="primary"
+                        icon="send"
+                        label="Post to Section"
+                        size="sm"
+                        @click="openPostDialog(mod, course)"
+                        class="col"
+                      />
+                    </div>
                   </div>
-                  <div v-if="!mod.deployed_to || mod.deployed_to.length === 0">
-                    <q-chip dense outline color="grey" icon="warning" label="Not posted yet" size="sm" />
-                  </div>
-                  <div v-else class="row q-gutter-xs">
-                    <q-chip
-                      v-for="dep in mod.deployed_to"
-                      :key="dep.section_subject_id"
-                      dense
-                      color="positive"
-                      text-color="white"
-                      icon="check_circle"
-                      :label="dep.section_name"
-                      size="sm"
-                    />
-                  </div>
-                </div>
-
-                <!-- Actions -->
-                <div class="row q-gutter-sm">
-                  <q-btn
-                    flat
-                    dense
-                    rounded
-                    color="primary"
-                    icon="open_in_new"
-                    label="View"
-                    size="sm"
-                    :to="`/lms/master-modules/${mod.id}`"
-                    class="col"
-                  />
-                  <q-btn
-                    unelevated
-                    dense
-                    rounded
-                    color="primary"
-                    icon="send"
-                    label="Post to Section"
-                    size="sm"
-                    @click="openPostDialog(mod, course)"
-                    class="col"
-                  />
                 </div>
               </div>
             </div>
-          </div>
+          </q-slide-transition>
         </div>
       </q-tab-panel>
 
@@ -311,8 +321,22 @@ const uniqueSections = computed(() => {
   return Array.from(map.values());
 });
 
+// ---- Expanded Courses State ----
+const expandedCourses = ref({});
+
+const toggleCourse = (courseId) => {
+  if (expandedCourses.value[courseId] === undefined) {
+    expandedCourses.value[courseId] = false;
+  } else {
+    expandedCourses.value[courseId] = !expandedCourses.value[courseId];
+  }
+};
+
 // ---- Helper: get lessons for a given course ----
-const getLessons = (courseId) => masterLessonsMap.value[courseId] || [];
+const getLessons = (courseId) => {
+  const lessons = masterLessonsMap.value[courseId] || [];
+  return [...lessons].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+};
 
 // ---- Helper: get section_subject rows for a given course ----
 const sectionsForCourse = computed(() => {
