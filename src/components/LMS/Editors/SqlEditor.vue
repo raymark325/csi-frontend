@@ -200,7 +200,11 @@ const translateColumnDefs = (stmt) => {
   let out = stmt;
 
   // AUTO_INCREMENT column attribute → AUTOINCREMENT (only inside column defs)
-  out = out.replace(/\bAUTO_INCREMENT\b/gi, 'AUTOINCREMENT');
+  // SQLite strictly requires AUTOINCREMENT to be exactly on "INTEGER PRIMARY KEY".
+  // So if we see AUTO_INCREMENT, we force the type to INTEGER PRIMARY KEY AUTOINCREMENT
+  // and strip out other occurrences of PRIMARY KEY or INT types on that line.
+  out = out.replace(/(\w+)\s+(?:INT|TINYINT|SMALLINT|MEDIUMINT|BIGINT|INTEGER)?\s*(?:\(\d+\))?\s*(?:UNSIGNED\s*)?(?:PRIMARY\s+KEY\s*)?AUTO_INCREMENT(?:\s+PRIMARY\s+KEY)?/gi, '$1 INTEGER PRIMARY KEY AUTOINCREMENT');
+  out = out.replace(/\bAUTO_INCREMENT\b/gi, 'AUTOINCREMENT'); // Fallback for any leftovers
 
   // MySQL int aliases → INTEGER
   out = out.replace(/\bTINYINT\s*(\(\d+\))?/gi, 'INTEGER');
