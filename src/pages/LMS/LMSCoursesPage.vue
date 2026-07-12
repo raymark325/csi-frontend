@@ -335,7 +335,7 @@ const toggleCourse = (courseId) => {
 // ---- Helper: get lessons for a given course ----
 const getLessons = (courseId) => {
   const lessons = masterLessonsMap.value[courseId] || [];
-  return [...lessons].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  return [...lessons].sort((a, b) => b.id - a.id);
 };
 
 // ---- Helper: get section_subject rows for a given course ----
