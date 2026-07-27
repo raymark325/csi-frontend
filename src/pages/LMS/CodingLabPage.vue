@@ -98,26 +98,144 @@
       <!-- Coding Playgrounds -->
       <template v-else>
         <div v-show="activeTab === 'java'">
-          <div class="row q-gutter-sm q-mb-md items-center">
-            <q-btn
-              v-for="(f, idx) in javaFiles"
-              :key="'java-'+idx"
-              :flat="activeJavaFileIndex !== idx"
-              :color="activeJavaFileIndex === idx ? 'primary' : 'grey-7'"
-              :label="f.name"
-              size="sm"
-              rounded
-              @click="activeJavaFileIndex = idx"
-            />
-            <q-btn flat round size="sm" icon="add" color="primary" @click="addJavaFile" :disable="isReadOnly"/>
+          <!-- If no project is loaded/named, show the project creation wizard -->
+          <div v-if="!projectName" class="glass-card q-pa-xl text-center shadow-lg" style="max-width: 600px; margin: 40px auto;">
+            <q-icon name="coffee" size="56px" color="primary" class="q-mb-md" />
+            <h2 class="text-h5 text-white font-weight-bold q-my-none">Create New Java Project</h2>
+            <p class="text-body2 text-grey-4 q-mt-sm q-mb-lg">Specify your project details and select an OOP template to begin.</p>
+            
+            <q-input v-model="wizardProjName" label="Project Name" dark color="primary" class="q-mb-md" outlined placeholder="e.g. MyOOPApplication" />
+            <q-input v-model="wizardBasePkg" label="Base Package" dark color="primary" class="q-mb-lg" outlined placeholder="e.g. com.example.app" />
+            
+            <div class="text-subtitle2 text-left text-grey-4 q-mb-sm">Choose Project Template</div>
+            <div class="row q-col-gutter-sm q-mb-lg">
+              <div class="col-6">
+                <div 
+                  class="template-card" 
+                  :class="{ active: selectedTemplate === 'blank' }" 
+                  @click="selectedTemplate = 'blank'"
+                >
+                  <div class="text-h6">📄</div>
+                  <div class="text-weight-bold text-white">Blank Project</div>
+                  <div class="text-caption text-grey-5">Empty project with Main.java</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div 
+                  class="template-card" 
+                  :class="{ active: selectedTemplate === 'oop' }" 
+                  @click="selectedTemplate = 'oop'"
+                >
+                  <div class="text-h6">🏗️</div>
+                  <div class="text-weight-bold text-white">OOP Starter</div>
+                  <div class="text-caption text-grey-5">Polymorphism (Main, Animal, Dog)</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div 
+                  class="template-card" 
+                  :class="{ active: selectedTemplate === 'ds' }" 
+                  @click="selectedTemplate = 'ds'"
+                >
+                  <div class="text-h6">🗃️</div>
+                  <div class="text-weight-bold text-white">Data Structures</div>
+                  <div class="text-caption text-grey-5">Stack, Queue, ArrayList demo</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div 
+                  class="template-card" 
+                  :class="{ active: selectedTemplate === 'design' }" 
+                  @click="selectedTemplate = 'design'"
+                >
+                  <div class="text-h6">🎨</div>
+                  <div class="text-weight-bold text-white">Design Patterns</div>
+                  <div class="text-caption text-grey-5">Singleton & Factory patterns</div>
+                </div>
+              </div>
+            </div>
+            
+            <q-btn color="primary" label="Create Project" rounded unelevated @click="initJavaProject" class="full-width q-py-sm" />
           </div>
-          <JavaEditor 
-            ref="javaEditorRef" 
-            :initial-code="javaFiles[activeJavaFileIndex]?.code || ''" 
-            :all-files="javaFiles"
-            :disabled="isReadOnly" 
-            @change="handleJavaChange" 
-          />
+
+          <!-- Otherwise, show the full Eclipse/NetBeans style IDE layout -->
+          <div v-else class="row no-wrap q-col-gutter-md">
+            <!-- Sidebar: Project Explorer (Eclipse/NetBeans Style) -->
+            <div class="col-3">
+              <div class="glass-card q-pa-md height-100 flex flex-column" style="min-height: 500px; display: flex; flex-direction: column;">
+                <div class="row justify-between items-center q-mb-md border-bottom q-pb-sm">
+                  <span class="text-caption text-weight-bold text-grey-4">PROJECT EXPLORER</span>
+                  <div class="row q-gutter-xs">
+                    <q-btn flat round dense size="sm" icon="add" color="primary" @click="openNewClassDialog" :disable="isReadOnly">
+                      <q-tooltip>New Class</q-tooltip>
+                    </q-btn>
+                    <q-btn flat round dense size="sm" icon="refresh" color="grey-4" @click="resetJavaProject" :disable="isReadOnly">
+                      <q-tooltip>Reset Project</q-tooltip>
+                    </q-btn>
+                  </div>
+                </div>
+                
+                <!-- Project Tree list -->
+                <div class="project-tree-container scroll" style="flex: 1; max-height: 400px; overflow-y: auto;">
+                  <!-- Project Node -->
+                  <div class="project-node q-py-xs">
+                    <div class="row items-center q-gutter-xs text-weight-bold text-white">
+                      <q-icon name="folder" color="amber" size="20px" />
+                      <span>{{ projectName }}</span>
+                    </div>
+                    
+                    <!-- Package structure -->
+                    <div class="package-nodes q-ml-md q-pl-xs border-left-dashed">
+                      <div v-for="(pkgGroup, pkgName) in groupedJavaFiles" :key="pkgName" class="q-py-xs">
+                        <div class="row items-center q-gutter-xs text-grey-4 text-weight-medium">
+                          <q-icon name="inventory_2" color="blue-grey-3" size="16px" />
+                          <span>{{ pkgName }}</span>
+                        </div>
+                        
+                        <!-- Files under package -->
+                        <div class="file-nodes q-ml-md">
+                          <div 
+                            v-for="file in pkgGroup" 
+                            :key="file.name" 
+                            class="file-node-row row justify-between items-center q-px-sm q-py-xs rounded-borders cursor-pointer q-mb-xs"
+                            :style="{ background: activeJavaFileIndex === getJavaFileIndex(file.name) ? 'rgba(99, 102, 241, 0.15)' : 'transparent', color: activeJavaFileIndex === getJavaFileIndex(file.name) ? '#818cf8' : '#9aa3c4' }"
+                            @click="activeJavaFileIndex = getJavaFileIndex(file.name)"
+                          >
+                            <div class="row items-center q-gutter-xs">
+                              <q-icon 
+                                :name="file.type === 'interface' ? 'star_border' : file.type === 'abstract' ? 'architecture' : 'code'" 
+                                :color="file.type === 'interface' ? 'cyan' : file.type === 'abstract' ? 'orange' : 'primary'" 
+                                size="14px" 
+                              />
+                              <span class="text-caption">{{ file.name }}</span>
+                            </div>
+                            <q-btn 
+                              v-if="file.name !== 'Main.java' && !isReadOnly" 
+                              flat round dense size="xs" 
+                              icon="close" 
+                              color="negative" 
+                              @click.stop="deleteJavaFile(file.name)"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Right Column: Code Editor & Output Console -->
+            <div class="col-9">
+              <JavaEditor 
+                ref="javaEditorRef" 
+                :initial-code="javaFiles[activeJavaFileIndex]?.code || ''" 
+                :all-files="javaFiles"
+                :disabled="isReadOnly" 
+                @change="handleJavaChange" 
+              />
+            </div>
+          </div>
         </div>
         <div v-show="activeTab === 'sql'">
           <div class="row q-gutter-sm q-mb-md items-center">
@@ -168,8 +286,45 @@
           />
         </div>
       </template>
-    </div>
+    <!-- New Class Dialog Modal -->
+    <q-dialog v-model="showNewClassDialog" persistent>
+      <q-card dark class="glass-card" style="min-width: 400px; border: 1px solid rgba(255,255,255,0.1); background: #181d28;">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="text-h6 font-weight-bold text-white">New Java Class</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <q-card-section class="q-gutter-md q-pt-md">
+          <q-input v-model="newClassName" label="Class Name" dark color="primary" outlined placeholder="e.g. Dog" />
+          <q-input v-model="newClassPkg" label="Package" dark color="primary" outlined placeholder="e.g. com.example.app" />
+          
+          <div class="text-caption text-grey-4">Class Type</div>
+          <div class="row q-gutter-sm">
+            <q-radio v-model="newClassType" val="class" label="Class" dark color="primary" />
+            <q-radio v-model="newClassType" val="abstract" label="Abstract Class" dark color="primary" />
+            <q-radio v-model="newClassType" val="interface" label="Interface" dark color="primary" />
+            <q-radio v-model="newClassType" val="enum" label="Enum" dark color="primary" />
+          </div>
+
+          <q-input v-model="newClassExtends" label="Extends (optional)" dark color="primary" outlined placeholder="e.g. Animal" v-if="newClassType === 'class' || newClassType === 'abstract'" />
+          <q-input v-model="newClassImplements" label="Implements (optional)" dark color="primary" outlined placeholder="e.g. Serializable" v-if="newClassType === 'class' || newClassType === 'abstract'" />
+
+          <div class="q-gutter-xs" v-if="newClassType === 'class'">
+            <q-checkbox v-model="genCtor" label="Generate Constructor" dark color="primary" />
+            <q-checkbox v-model="genMain" label="Generate main() method" dark color="primary" />
+            <q-checkbox v-model="genToString" label="Generate toString()" dark color="primary" />
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancel" color="grey-4" v-close-popup />
+          <q-btn label="Create Class" color="primary" rounded unelevated @click="createNewJavaClass" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
+</div>
 </template>
 
 <script setup>
@@ -211,10 +366,26 @@ const maxScore = ref(0);
 const isSubmitting = ref(false);
 
 // Isolated initial code states to prevent tab contamination
-const javaFiles = ref([{ name: 'Main.java', code: '' }]);
+const javaFiles = ref([{ name: 'Main.java', code: '', pkg: 'com.myapp', type: 'class' }]);
 const htmlFiles = ref([{ name: 'index.html', code: '' }]);
 const activeJavaFileIndex = ref(0);
 const activeHtmlFileIndex = ref(0);
+
+const projectName = ref('');
+const wizardProjName = ref('');
+const wizardBasePkg = ref('com.myapp');
+const selectedTemplate = ref('blank');
+
+// New Class dialog state
+const showNewClassDialog = ref(false);
+const newClassName = ref('');
+const newClassPkg = ref('com.myapp');
+const newClassType = ref('class');
+const newClassExtends = ref('');
+const newClassImplements = ref('');
+const genMain = ref(false);
+const genCtor = ref(true);
+const genToString = ref(false);
 
 const sqlFiles = ref([{ name: 'main.db', code: '', buffer: null }]);
 const activeSqlFileIndex = ref(0);
@@ -310,14 +481,287 @@ const getAssignmentLanguage = (codeVal) => {
 // Save handlers
 let saveTimeout = null;
 
-const addJavaFile = () => {
-  const name = prompt('Enter new Java file name (e.g. Helper.java)');
-  if (name) {
-    javaFiles.value.push({ name: name.endsWith('.java') ? name : name + '.java', code: '' });
-    activeJavaFileIndex.value = javaFiles.value.length - 1;
-    saveCode(JSON.stringify(javaFiles.value), 'java');
+const groupedJavaFiles = computed(() => {
+  const groups = {};
+  javaFiles.value.forEach(file => {
+    const pkg = file.pkg || '(default)';
+    if (!groups[pkg]) groups[pkg] = [];
+    groups[pkg].push(file);
+  });
+  return groups;
+});
+
+const getJavaFileIndex = (name) => {
+  return javaFiles.value.findIndex(f => f.name === name);
+};
+
+const deleteJavaFile = (name) => {
+  if (confirm(`Are you sure you want to delete ${name}?`)) {
+    const idx = getJavaFileIndex(name);
+    if (idx !== -1) {
+      javaFiles.value.splice(idx, 1);
+      if (activeJavaFileIndex.value >= javaFiles.value.length) {
+        activeJavaFileIndex.value = 0;
+      }
+      saveCode(JSON.stringify({ projectName: projectName.value, files: javaFiles.value }), 'java');
+    }
   }
 };
+
+const resetJavaProject = () => {
+  if (confirm('Are you sure you want to reset the current Java project? This will delete all custom files.')) {
+    projectName.value = '';
+    wizardProjName.value = '';
+    wizardBasePkg.value = 'com.myapp';
+    javaFiles.value = [{ name: 'Main.java', code: '', pkg: 'com.myapp', type: 'class' }];
+    activeJavaFileIndex.value = 0;
+    saveCode(JSON.stringify({ projectName: '', files: javaFiles.value }), 'java');
+  }
+};
+
+const openNewClassDialog = () => {
+  newClassName.value = '';
+  newClassPkg.value = wizardBasePkg.value || 'com.myapp';
+  newClassType.value = 'class';
+  newClassExtends.value = '';
+  newClassImplements.value = '';
+  genMain.value = false;
+  genCtor.value = true;
+  genToString.value = false;
+  showNewClassDialog.value = true;
+};
+
+const createNewJavaClass = () => {
+  const name = newClassName.value.trim();
+  if (!name || !/^[A-Z][a-zA-Z0-9_]*$/.test(name)) {
+    $q.notify({ type: 'negative', message: 'Class name must start with uppercase and contain only letters/numbers/underscores.' });
+    return;
+  }
+  
+  const pkg = newClassPkg.value.trim() || 'com.myapp';
+  const fileName = name + '.java';
+  
+  if (javaFiles.value.some(f => f.name.toLowerCase() === fileName.toLowerCase())) {
+    $q.notify({ type: 'negative', message: `File "${fileName}" already exists.` });
+    return;
+  }
+  
+  const newClass = {
+    name: fileName,
+    pkg: pkg,
+    type: newClassType.value,
+    code: generateClassContent(
+      name,
+      pkg,
+      newClassType.value,
+      newClassExtends.value.trim(),
+      newClassImplements.value.trim(),
+      genMain.value,
+      genCtor.value,
+      genToString.value
+    )
+  };
+  
+  javaFiles.value.push(newClass);
+  activeJavaFileIndex.value = javaFiles.value.length - 1;
+  saveCode(JSON.stringify({ projectName: projectName.value, files: javaFiles.value }), 'java');
+  showNewClassDialog.value = false;
+  
+  $q.notify({ type: 'positive', message: `Created class ${name}` });
+};
+
+const initJavaProject = () => {
+  const name = wizardProjName.value.trim();
+  const pkg = wizardBasePkg.value.trim() || 'com.myapp';
+  if (!name) {
+    $q.notify({ type: 'negative', message: 'Project Name is required.' });
+    return;
+  }
+  
+  projectName.value = name;
+  wizardProjName.value = name;
+  wizardBasePkg.value = pkg;
+  
+  const files = [];
+  if (selectedTemplate.value === 'oop') {
+    files.push(
+      { name: 'Animal.java', pkg, type: 'class', code: OOP_ANIMAL_TEMPLATE(pkg) },
+      { name: 'Dog.java', pkg, type: 'class', code: OOP_DOG_TEMPLATE(pkg) },
+      { name: 'Main.java', pkg, type: 'class', code: OOP_MAIN_TEMPLATE(pkg) }
+    );
+  } else if (selectedTemplate.value === 'ds') {
+    files.push({ name: 'Main.java', pkg, type: 'class', code: DS_TEMPLATE(pkg) });
+  } else if (selectedTemplate.value === 'design') {
+    files.push({ name: 'Main.java', pkg, type: 'class', code: DESIGN_TEMPLATE(pkg) });
+  } else {
+    files.push({ name: 'Main.java', pkg, type: 'class', code: generateClassContent('Main', pkg, 'class', '', '', true, false, false) });
+  }
+  
+  javaFiles.value = files;
+  activeJavaFileIndex.value = files.findIndex(f => f.name === 'Main.java');
+  if (activeJavaFileIndex.value === -1) activeJavaFileIndex.value = 0;
+  
+  saveCode(JSON.stringify({ projectName: projectName.value, files: javaFiles.value }), 'java');
+};
+
+const generateClassContent = (name, pkg, type, ext, impl, hasMain, hasCtor, hasToStr) => {
+  let lines = [];
+  if (pkg) lines.push(`package ${pkg};`, '');
+  const impls = impl ? ` implements ${impl}` : '';
+  const exts  = ext  ? ` extends ${ext}`    : '';
+
+  if (type === 'interface') {
+    lines.push(`public interface ${name}${impls} {`, '    ', '}');
+  } else if (type === 'enum') {
+    lines.push(`public enum ${name} {`, '    VALUE1, VALUE2, VALUE3;', '    ', '}');
+  } else if (type === 'abstract') {
+    lines.push(`public abstract class ${name}${exts}${impls} {`, '    ');
+    if (hasCtor) lines.push(`    public ${name}() {\n    }\n    `);
+    lines.push(`    public abstract void abstractMethod();`, '    ', '}');
+  } else {
+    lines.push(`public class ${name}${exts}${impls} {`, '    ');
+    if (hasCtor) lines.push(`    public ${name}() {\n        // Constructor\n    }\n    `);
+    if (hasMain) lines.push(`    public static void main(String[] args) {\n        System.out.println("Hello from ${name}!");\n    }\n    `);
+    if (hasToStr) lines.push(`    @Override\n    public String toString() {\n        return "${name}{}";\n    }\n    `);
+    lines.push('}');
+  }
+  return lines.join('\n');
+};
+
+// ── OOP Starter Templates ──
+const OOP_ANIMAL_TEMPLATE = pkg => `package ${pkg};
+
+public abstract class Animal {
+    private String name;
+    private int age;
+
+    public Animal(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    public abstract void makeSound();
+
+    public void eat() {
+        System.out.println(name + " is eating.");
+    }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public int getAge() { return age; }
+    public void setAge(int age) { this.age = age; }
+
+    @Override
+    public String toString() {
+        return "Animal{name='" + name + "', age=" + age + "}";
+    }
+}`;
+
+const OOP_DOG_TEMPLATE = pkg => `package ${pkg};
+
+public class Dog extends Animal {
+    private String breed;
+
+    public Dog(String name, int age, String breed) {
+        super(name, age);
+        this.breed = breed;
+    }
+
+    @Override
+    public void makeSound() {
+        System.out.println(getName() + " says: Woof!");
+    }
+
+    public void fetch() {
+        System.out.println(getName() + " is fetching the ball!");
+    }
+
+    public String getBreed() { return breed; }
+
+    @Override
+    public String toString() {
+        return "Dog{name='" + getName() + "', breed='" + breed + "'}";
+    }
+}`;
+
+const OOP_MAIN_TEMPLATE = pkg => `package ${pkg};
+
+public class Main {
+    public static void main(String[] args) {
+        Animal myDog = new Dog("Buddy", 3, "Labrador");
+
+        System.out.println("=== OOP Demo ===");
+        System.out.println(myDog);
+        myDog.makeSound();
+        myDog.eat();
+
+        Dog dog = (Dog) myDog;
+        dog.fetch();
+
+        System.out.println("\\nDone!");
+    }
+}`;
+
+const DS_TEMPLATE = pkg => `package ${pkg};
+
+import java.util.Stack;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.ArrayList;
+
+public class Main {
+    public static void main(String[] args) {
+        Stack<Integer> stack = new Stack<>();
+        stack.push(1); stack.push(2); stack.push(3);
+        System.out.println("Stack top: " + stack.peek());
+
+        Queue<String> queue = new LinkedList<>();
+        queue.offer("first"); queue.offer("second");
+        System.out.println("Queue head: " + queue.poll());
+
+        ArrayList<String> list = new ArrayList<>();
+        list.add("Java"); list.add("OOP");
+        for (String item : list) System.out.println("  - " + item);
+    }
+}`;
+
+const DESIGN_TEMPLATE = pkg => `package ${pkg};
+
+class DatabaseConnection {
+    private static DatabaseConnection instance;
+    private String url;
+
+    private DatabaseConnection() { this.url = "jdbc:mysql://localhost/mydb"; }
+
+    public static DatabaseConnection getInstance() {
+        if (instance == null) instance = new DatabaseConnection();
+        return instance;
+    }
+    public String getUrl() { return url; }
+}
+
+interface Shape { void draw(); }
+class Circle implements Shape { public void draw() { System.out.println("Drawing Circle"); } }
+class Square implements Shape { public void draw() { System.out.println("Drawing Square"); } }
+
+class ShapeFactory {
+    public static Shape create(String type) {
+        if ("circle".equalsIgnoreCase(type)) return new Circle();
+        if ("square".equalsIgnoreCase(type)) return new Square();
+        throw new IllegalArgumentException("Unknown shape: " + type);
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        DatabaseConnection db1 = DatabaseConnection.getInstance();
+        DatabaseConnection db2 = DatabaseConnection.getInstance();
+        System.out.println("Same DB instance? " + (db1 == db2));
+
+        Shape s1 = ShapeFactory.create("circle");
+        s1.draw();
+    }
+}`;
 
 const addHtmlFile = () => {
   const name = prompt('Enter new file name (e.g. style.css, script.js, about.html)');
@@ -902,5 +1346,39 @@ onUnmounted(() => {
   padding: 16px;
   outline: none;
   line-height: 1.5;
+}
+
+/* Java Project Explorer Styles */
+.border-left-dashed {
+  border-left: 1.5px dashed rgba(255, 255, 255, 0.12);
+  margin-left: 10px;
+}
+.file-node-row {
+  transition: all 0.2s ease;
+  border-radius: 4px;
+}
+.file-node-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.template-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+.template-card:hover {
+  border-color: var(--q-primary, #6366f1);
+  background: rgba(255, 255, 255, 0.08);
+}
+.template-card.active {
+  border-color: var(--q-primary, #6366f1);
+  background: rgba(99, 102, 241, 0.12);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+}
+.border-bottom {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 </style>

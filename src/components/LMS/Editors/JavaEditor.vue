@@ -442,6 +442,8 @@ const transpileMethodBody = (body, currentClass) => {
 const transpileJava = (rawSrc) => {
   let src = stripComments(rawSrc);
   src = stripImports(src);
+  // Strip annotations (e.g., @Override) so they don't break method parsing
+  src = src.replace(/@\w+\b/g, '');
 
   // Find all top-level class declarations
   const classRegex = /\b(?:public\s+|private\s+|protected\s+|abstract\s+|final\s+)*class\s+(\w+)(?:\s+extends\s+(\w+))?(?:\s+implements\s+[\w,\s]+)?\s*\{/g;
