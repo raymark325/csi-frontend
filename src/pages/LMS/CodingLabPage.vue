@@ -99,15 +99,41 @@
       <template v-else>
         <div v-show="activeTab === 'java'">
           <!-- If no project is loaded/named, show the project creation wizard -->
-          <div v-if="!projectName" class="glass-card q-pa-xl text-center shadow-lg" style="max-width: 600px; margin: 40px auto;">
-            <q-icon name="coffee" size="56px" color="primary" class="q-mb-md" />
-            <h2 class="text-h5 text-white font-weight-bold q-my-none">Create New Java Project</h2>
-            <p class="text-body2 text-grey-4 q-mt-sm q-mb-lg">Specify your project details and select an OOP template to begin.</p>
+          <div v-if="!projectName" class="glass-card q-pa-xl text-center shadow-lg rounded-borders" style="max-width: 620px; margin: 40px auto; background: rgba(18, 24, 38, 0.95); border: 1px solid rgba(99, 102, 241, 0.3); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6); backdrop-filter: blur(12px);">
+            <div class="q-mb-md flex flex-center">
+              <div class="q-pa-md rounded-circle" style="background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3);">
+                <q-icon name="coffee" size="48px" color="indigo-4" />
+              </div>
+            </div>
+            <h2 class="text-h5 text-white text-weight-bold q-my-none">Create New Java Project</h2>
+            <p class="text-body2 text-grey-4 q-mt-sm q-mb-lg">Specify your project details and select an OOP starter template to begin.</p>
             
-            <q-input v-model="wizardProjName" label="Project Name" dark color="primary" class="q-mb-md" outlined placeholder="e.g. MyOOPApplication" />
-            <q-input v-model="wizardBasePkg" label="Base Package" dark color="primary" class="q-mb-lg" outlined placeholder="e.g. com.example.app" />
+            <q-input 
+              v-model="wizardProjName" 
+              label="Project Name" 
+              dark 
+              color="indigo-4" 
+              label-color="indigo-3"
+              input-class="text-white text-weight-medium"
+              class="q-mb-md" 
+              outlined 
+              placeholder="e.g. MyOOPApplication" 
+              style="background: rgba(15, 23, 42, 0.7); border-radius: 8px;"
+            />
+            <q-input 
+              v-model="wizardBasePkg" 
+              label="Base Package" 
+              dark 
+              color="indigo-4" 
+              label-color="indigo-3"
+              input-class="text-white text-weight-medium"
+              class="q-mb-lg" 
+              outlined 
+              placeholder="e.g. com.example.app" 
+              style="background: rgba(15, 23, 42, 0.7); border-radius: 8px;"
+            />
             
-            <div class="text-subtitle2 text-left text-grey-4 q-mb-sm">Choose Project Template</div>
+            <div class="text-subtitle2 text-left text-grey-3 text-weight-bold q-mb-sm">Choose Project Template</div>
             <div class="row q-col-gutter-sm q-mb-lg">
               <div class="col-6">
                 <div 
@@ -115,9 +141,9 @@
                   :class="{ active: selectedTemplate === 'blank' }" 
                   @click="selectedTemplate = 'blank'"
                 >
-                  <div class="text-h6">📄</div>
+                  <div class="text-h6 q-mb-xs">📄</div>
                   <div class="text-weight-bold text-white">Blank Project</div>
-                  <div class="text-caption text-grey-5">Empty project with Main.java</div>
+                  <div class="text-caption text-grey-4">Empty project with Main.java</div>
                 </div>
               </div>
               <div class="col-6">
@@ -126,9 +152,9 @@
                   :class="{ active: selectedTemplate === 'oop' }" 
                   @click="selectedTemplate = 'oop'"
                 >
-                  <div class="text-h6">🏗️</div>
+                  <div class="text-h6 q-mb-xs">🏗️</div>
                   <div class="text-weight-bold text-white">OOP Starter</div>
-                  <div class="text-caption text-grey-5">Polymorphism (Main, Animal, Dog)</div>
+                  <div class="text-caption text-grey-4">Polymorphism (Main, Animal, Dog)</div>
                 </div>
               </div>
               <div class="col-6">
@@ -137,9 +163,9 @@
                   :class="{ active: selectedTemplate === 'ds' }" 
                   @click="selectedTemplate = 'ds'"
                 >
-                  <div class="text-h6">🗃️</div>
+                  <div class="text-h6 q-mb-xs">🗃️</div>
                   <div class="text-weight-bold text-white">Data Structures</div>
-                  <div class="text-caption text-grey-5">Stack, Queue, ArrayList demo</div>
+                  <div class="text-caption text-grey-4">Stack, Queue, ArrayList demo</div>
                 </div>
               </div>
               <div class="col-6">
@@ -148,14 +174,22 @@
                   :class="{ active: selectedTemplate === 'design' }" 
                   @click="selectedTemplate = 'design'"
                 >
-                  <div class="text-h6">🎨</div>
+                  <div class="text-h6 q-mb-xs">🎨</div>
                   <div class="text-weight-bold text-white">Design Patterns</div>
-                  <div class="text-caption text-grey-5">Singleton & Factory patterns</div>
+                  <div class="text-caption text-grey-4">Singleton & Factory patterns</div>
                 </div>
               </div>
             </div>
             
-            <q-btn color="primary" label="Create Project" rounded unelevated @click="initJavaProject" class="full-width q-py-sm" />
+            <q-btn 
+              color="indigo-6" 
+              label="Create Java Project" 
+              rounded 
+              unelevated 
+              @click="initJavaProject" 
+              class="full-width q-py-sm text-weight-bold text-subtitle2" 
+              style="background: linear-gradient(135deg, #6366f1, #4f46e5); box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);"
+            />
           </div>
 
           <!-- Otherwise, show the full Eclipse/NetBeans style IDE layout -->
@@ -263,30 +297,180 @@
           />
         </div>
         <div v-show="activeTab === 'html'">
-          <div class="row q-gutter-sm q-mb-md items-center">
-            <q-btn
-              v-for="(f, idx) in htmlFiles"
-              :key="'html-'+idx"
-              :flat="activeHtmlFileIndex !== idx"
-              :color="activeHtmlFileIndex === idx ? 'positive' : 'grey-7'"
-              :label="f.name"
-              size="sm"
-              rounded
-              @click="activeHtmlFileIndex = idx"
-            />
-            <q-btn flat round size="sm" icon="add" color="positive" @click="addHtmlFile" :disable="isReadOnly"/>
+          <!-- If no HTML project is created yet, show Project Creation Wizard -->
+          <div v-if="!htmlProjectName" class="glass-card q-pa-xl text-center shadow-lg" style="max-width: 650px; margin: 40px auto;">
+            <q-icon name="web" size="56px" color="positive" class="q-mb-md" />
+            <h2 class="text-h5 text-white font-weight-bold q-my-none">Create New HTML/CSS Web Project</h2>
+            <p class="text-body2 text-grey-4 q-mt-sm q-mb-lg">Build responsive websites with HTML, CSS, JavaScript, and Image assets.</p>
+
+            <q-input v-model="htmlWizardProjName" label="Project Name" dark color="positive" class="q-mb-lg" outlined placeholder="e.g. MyWebPortfolio" />
+
+            <div class="text-subtitle2 text-left text-grey-4 q-mb-sm">Choose Web Project Template</div>
+            <div class="row q-col-gutter-sm q-mb-lg">
+              <div class="col-6">
+                <div 
+                  class="template-card" 
+                  :class="{ active: htmlSelectedTemplate === 'blank' }" 
+                  @click="htmlSelectedTemplate = 'blank'"
+                >
+                  <div class="text-h6">📄</div>
+                  <div class="text-weight-bold text-white">Blank Web Page</div>
+                  <div class="text-caption text-grey-5">index.html, style.css, script.js</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div 
+                  class="template-card" 
+                  :class="{ active: htmlSelectedTemplate === 'landing' }" 
+                  @click="htmlSelectedTemplate = 'landing'"
+                >
+                  <div class="text-h6">🎨</div>
+                  <div class="text-weight-bold text-white">Landing Page</div>
+                  <div class="text-caption text-grey-5">Hero section, CSS grid & flex styling</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div 
+                  class="template-card" 
+                  :class="{ active: htmlSelectedTemplate === 'gallery' }" 
+                  @click="htmlSelectedTemplate = 'gallery'"
+                >
+                  <div class="text-h6">🖼️</div>
+                  <div class="text-weight-bold text-white">Image Gallery</div>
+                  <div class="text-caption text-grey-5">HTML + CSS grid & pre-seeded images</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div 
+                  class="template-card" 
+                  :class="{ active: htmlSelectedTemplate === 'app' }" 
+                  @click="htmlSelectedTemplate = 'app'"
+                >
+                  <div class="text-h6">⚡</div>
+                  <div class="text-weight-bold text-white">Interactive App</div>
+                  <div class="text-caption text-grey-5">HTML UI + JS DOM manipulation demo</div>
+                </div>
+              </div>
+            </div>
+
+            <q-btn color="positive" label="Create Web Project" rounded unelevated @click="initHtmlProject" class="full-width q-py-sm" />
           </div>
-          <HtmlEditor 
-            ref="htmlEditorRef" 
-            :initial-code="htmlFiles[activeHtmlFileIndex]?.code || ''" 
-            :all-files="htmlFiles"
-            :active-file-name="htmlFiles[activeHtmlFileIndex]?.name || ''"
-            :disabled="isReadOnly" 
-            @change="handleHtmlChange" 
-          />
+
+          <!-- HTML Project Explorer & Editor Layout -->
+          <div v-else class="row no-wrap q-col-gutter-md">
+            <!-- Sidebar: HTML Project Explorer -->
+            <div class="col-3">
+              <div class="glass-card q-pa-md height-100 flex flex-column" style="min-height: 520px; display: flex; flex-direction: column;">
+                <div class="row justify-between items-center q-mb-md border-bottom q-pb-sm">
+                  <span class="text-caption text-weight-bold text-grey-4">WEB EXPLORER</span>
+                  <div class="row q-gutter-xs">
+                    <q-btn flat round dense size="sm" icon="note_add" color="positive" @click="openNewHtmlFileDialog" :disable="isReadOnly">
+                      <q-tooltip>New File (.html, .css, .js)</q-tooltip>
+                    </q-btn>
+                    <q-btn flat round dense size="sm" icon="add_photo_alternate" color="info" @click="triggerImageUpload" :disable="isReadOnly">
+                      <q-tooltip>Upload Image Asset</q-tooltip>
+                    </q-btn>
+                    <q-btn flat round dense size="sm" icon="refresh" color="grey-4" @click="resetHtmlProject" :disable="isReadOnly">
+                      <q-tooltip>Reset Project</q-tooltip>
+                    </q-btn>
+                  </div>
+                </div>
+
+                <!-- Hidden file input for images -->
+                <input ref="imageFileInput" type="file" accept="image/*" style="display: none;" @change="uploadHtmlImage" />
+
+                <!-- Scrollable Tree & Assets -->
+                <div class="project-tree-container scroll" style="flex: 1; max-height: 440px; overflow-y: auto;">
+                  <!-- Project Title Node -->
+                  <div class="project-node q-py-xs">
+                    <div class="row items-center q-gutter-xs text-weight-bold text-white q-mb-sm">
+                      <q-icon name="folder_zip" color="positive" size="20px" />
+                      <span>{{ htmlProjectName }}</span>
+                    </div>
+
+                    <!-- Code Files Section -->
+                    <div class="q-ml-sm q-mb-md">
+                      <div class="row items-center justify-between text-caption text-weight-bold text-grey-5 q-mb-xs">
+                        <span>CODE FILES ({{ htmlFiles.length }})</span>
+                      </div>
+                      <div 
+                        v-for="(file, idx) in htmlFiles" 
+                        :key="'html-file-'+idx"
+                        class="file-node-row row justify-between items-center q-px-sm q-py-xs rounded-borders cursor-pointer q-mb-xs"
+                        :style="{ background: activeHtmlFileIndex === idx ? 'rgba(74, 222, 128, 0.15)' : 'transparent', color: activeHtmlFileIndex === idx ? '#4ade80' : '#9aa3c4' }"
+                        @click="activeHtmlFileIndex = idx"
+                      >
+                        <div class="row items-center q-gutter-xs overflow-hidden">
+                          <q-icon 
+                            :name="file.name.endsWith('.html') ? 'html' : file.name.endsWith('.css') ? 'palette' : 'javascript'" 
+                            :color="file.name.endsWith('.html') ? 'orange' : file.name.endsWith('.css') ? 'cyan' : 'yellow-8'" 
+                            size="16px" 
+                          />
+                          <span class="text-caption text-weight-medium ellipsis" style="max-width: 110px;">{{ file.name }}</span>
+                        </div>
+                        <q-btn 
+                          v-if="file.name !== 'index.html' && !isReadOnly" 
+                          flat round dense size="xs" 
+                          icon="close" 
+                          color="negative" 
+                          @click.stop="deleteHtmlFile(idx)"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Images & Assets Section -->
+                    <div class="q-ml-sm">
+                      <div class="row items-center justify-between text-caption text-weight-bold text-grey-5 q-mb-xs">
+                        <span>IMAGES & ASSETS ({{ htmlImages.length }})</span>
+                        <q-btn flat dense size="xs" color="info" label="+ Add URL" @click="showAddImageUrlDialog = true" :disable="isReadOnly" />
+                      </div>
+
+                      <div v-if="htmlImages.length === 0" class="text-caption text-grey-6 italic q-pa-xs">
+                        No images uploaded yet.
+                      </div>
+
+                      <div 
+                        v-for="(img, imgIdx) in htmlImages" 
+                        :key="'html-img-'+imgIdx"
+                        class="file-node-row row justify-between items-center q-px-sm q-py-xs rounded-borders cursor-pointer q-mb-xs"
+                        style="background: rgba(255, 255, 255, 0.03);"
+                      >
+                        <div class="row items-center q-gutter-xs overflow-hidden" @click="viewImageDetail(img)">
+                          <q-avatar size="20px" square rounded>
+                            <img :src="img.url" alt="preview" style="object-fit: cover;" />
+                          </q-avatar>
+                          <span class="text-caption text-grey-3 ellipsis" style="max-width: 100px;">{{ img.name }}</span>
+                        </div>
+                        <div class="row q-gutter-none">
+                          <q-btn flat round dense size="xs" icon="content_copy" color="info" @click.stop="copyImgTag(img.name)">
+                            <q-tooltip>Copy &lt;img src="{{ img.name }}"&gt;</q-tooltip>
+                          </q-btn>
+                          <q-btn v-if="!isReadOnly" flat round dense size="xs" icon="close" color="negative" @click.stop="deleteHtmlImage(imgIdx)" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Main Editor Column -->
+            <div class="col-9">
+              <HtmlEditor 
+                ref="htmlEditorRef" 
+                :initial-code="htmlFiles[activeHtmlFileIndex]?.code || ''" 
+                :all-files="htmlFiles"
+                :all-images="htmlImages"
+                :active-file-name="htmlFiles[activeHtmlFileIndex]?.name || ''"
+                :disabled="isReadOnly" 
+                @change="handleHtmlChange" 
+              />
+            </div>
+          </div>
         </div>
       </template>
-    <!-- New Class Dialog Modal -->
+
+    <!-- New Java Class Dialog Modal -->
     <q-dialog v-model="showNewClassDialog" persistent>
       <q-card dark class="glass-card" style="min-width: 400px; border: 1px solid rgba(255,255,255,0.1); background: #181d28;">
         <q-card-section class="row items-center q-pb-none">
@@ -320,6 +504,80 @@
         <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="Cancel" color="grey-4" v-close-popup />
           <q-btn label="Create Class" color="primary" rounded unelevated @click="createNewJavaClass" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- New HTML / Web File Dialog Modal -->
+    <q-dialog v-model="showNewHtmlFileDialog" persistent>
+      <q-card dark class="glass-card" style="min-width: 400px; border: 1px solid rgba(255,255,255,0.1); background: #181d28;">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="text-h6 font-weight-bold text-white">New Web File</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <q-card-section class="q-gutter-md q-pt-md">
+          <q-input v-model="newHtmlFileName" label="File Name" dark color="positive" outlined placeholder="e.g. about.html, style.css, script.js" />
+          
+          <div class="text-caption text-grey-4">File Extension / Type</div>
+          <div class="row q-gutter-sm">
+            <q-radio v-model="newHtmlFileType" val="html" label="HTML (.html)" dark color="positive" />
+            <q-radio v-model="newHtmlFileType" val="css" label="CSS (.css)" dark color="positive" />
+            <q-radio v-model="newHtmlFileType" val="js" label="JS (.js)" dark color="positive" />
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancel" color="grey-4" v-close-popup />
+          <q-btn label="Create File" color="positive" rounded unelevated @click="createNewHtmlFile" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- View Image Modal -->
+    <q-dialog v-model="showImageModal">
+      <q-card dark class="glass-card" style="min-width: 420px; border: 1px solid rgba(255,255,255,0.1); background: #181d28;">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="text-h6 font-weight-bold text-white">{{ selectedImageForView?.name || 'Image Preview' }}</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <q-card-section class="text-center q-pa-md">
+          <img :src="selectedImageForView?.url" style="max-width: 100%; max-height: 300px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);" />
+          <div class="text-caption text-grey-4 q-mt-sm" v-if="selectedImageForView?.size">Size: {{ selectedImageForView.size }}</div>
+          <div class="q-mt-md">
+            <code style="background: rgba(0,0,0,0.5); padding: 6px 12px; border-radius: 6px; color: #4ade80;" class="text-caption">
+              &lt;img src="{{ selectedImageForView?.name }}" alt="{{ selectedImageForView?.name }}"&gt;
+            </code>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Copy HTML Tag" color="positive" @click="copyImgTag(selectedImageForView?.name)" />
+          <q-btn flat label="Close" color="grey-4" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Add Image URL Dialog -->
+    <q-dialog v-model="showAddImageUrlDialog" persistent>
+      <q-card dark class="glass-card" style="min-width: 400px; border: 1px solid rgba(255,255,255,0.1); background: #181d28;">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="text-h6 font-weight-bold text-white">Add Image by URL</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <q-card-section class="q-gutter-md q-pt-md">
+          <q-input v-model="newImageUrlName" label="Asset Name in HTML" dark color="info" outlined placeholder="e.g. hero-banner.jpg" />
+          <q-input v-model="newImageUrlSrc" label="Image Web URL" dark color="info" outlined placeholder="e.g. https://images.unsplash.com/photo-..." />
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn flat label="Cancel" color="grey-4" v-close-popup />
+          <q-btn label="Add Image Asset" color="info" rounded unelevated @click="addHtmlImageByUrl" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -375,6 +633,25 @@ const projectName = ref('');
 const wizardProjName = ref('');
 const wizardBasePkg = ref('com.myapp');
 const selectedTemplate = ref('blank');
+
+// HTML Project state
+const htmlProjectName = ref('');
+const htmlWizardProjName = ref('');
+const htmlSelectedTemplate = ref('blank');
+const htmlImages = ref([]);
+const imageFileInput = ref(null);
+
+// HTML Dialog state
+const showNewHtmlFileDialog = ref(false);
+const newHtmlFileName = ref('');
+const newHtmlFileType = ref('html');
+
+const showImageModal = ref(false);
+const selectedImageForView = ref(null);
+
+const showAddImageUrlDialog = ref(false);
+const newImageUrlName = ref('');
+const newImageUrlSrc = ref('');
 
 // New Class dialog state
 const showNewClassDialog = ref(false);
@@ -432,7 +709,11 @@ const getActiveCode = () => {
     return JSON.stringify(sqlFiles.value.map(f => ({ name: f.name, code: f.code })));
   }
   if (activeTab.value === 'html') {
-    return JSON.stringify(htmlFiles.value);
+    return JSON.stringify({
+      projectName: htmlProjectName.value,
+      files: htmlFiles.value,
+      images: htmlImages.value
+    });
   }
   return '';
 };
@@ -763,13 +1044,390 @@ public class Main {
     }
 }`;
 
-const addHtmlFile = () => {
-  const name = prompt('Enter new file name (e.g. style.css, script.js, about.html)');
-  if (name) {
-    htmlFiles.value.push({ name, code: '' });
-    activeHtmlFileIndex.value = htmlFiles.value.length - 1;
-    saveCode(JSON.stringify(htmlFiles.value), 'html');
+// ── HTML Web Project Templates & Helper Functions ─────────────────────────────────
+const HTML_BLANK_INDEX = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Web Page</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Hello, World!</h1>
+    <p>Welcome to your live HTML/CSS Code Lab project!</p>
+  </div>
+  <script src="script.js"><\/script>
+</body>
+</html>`;
+
+const HTML_BLANK_CSS = `body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #111827;
+  color: #f9fafb;
+  margin: 0;
+  padding: 40px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.container {
+  background: #1f2937;
+  padding: 32px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  text-align: center;
+  max-width: 500px;
+}
+
+h1 {
+  color: #4ade80;
+  margin-top: 0;
+}`;
+
+const HTML_BLANK_JS = `console.log("HTML Project Initialized!");`;
+
+const HTML_LANDING_INDEX = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Modern Web App</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo">🚀 AppCraft</div>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#about">About</a></li>
+    </ul>
+  </nav>
+
+  <header class="hero">
+    <h1>Build Beautiful Web Interfaces</h1>
+    <p>Empower your development with live code editing and instant previews.</p>
+    <button id="cta-btn" class="btn">Get Started</button>
+  </header>
+
+  <section id="features" class="grid">
+    <div class="card">
+      <h3>⚡ Realtime Live Sync</h3>
+      <p>Instant HTML, CSS, and JS updates render automatically.</p>
+    </div>
+    <div class="card">
+      <h3>🖼️ Integrated Assets</h3>
+      <p>Upload image assets directly into your project workspace.</p>
+    </div>
+  </section>
+
+  <script src="script.js"><\/script>
+</body>
+</html>`;
+
+const HTML_LANDING_CSS = `* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: sans-serif; background: #0f172a; color: #e2e8f0; line-height: 1.6; }
+
+.navbar { display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); }
+.logo { font-size: 1.5rem; font-weight: bold; color: #38bdf8; }
+.nav-links { display: flex; list-style: none; gap: 20px; }
+.nav-links a { color: #94a3b8; text-decoration: none; font-weight: 500; }
+
+.hero { text-align: center; padding: 80px 20px; }
+.hero h1 { font-size: 2.5rem; color: #f8fafc; margin-bottom: 16px; }
+.hero p { font-size: 1.1rem; color: #94a3b8; max-width: 600px; margin: 0 auto 24px; }
+
+.btn { background: #38bdf8; color: #0f172a; border: none; padding: 12px 28px; font-size: 1rem; font-weight: bold; border-radius: 25px; cursor: pointer; transition: transform 0.2s; }
+.btn:hover { transform: scale(1.05); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+.card { background: #1e293b; padding: 24px; border-radius: 12px; border: 1px solid #334155; }
+.card h3 { color: #38bdf8; margin-bottom: 8px; }`;
+
+const HTML_LANDING_JS = `document.getElementById('cta-btn')?.addEventListener('click', () => {
+  alert('Welcome to Modern Web App!');
+});`;
+
+const HTML_GALLERY_INDEX = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Photo Portfolio</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>📸 Digital Showcase</h1>
+    <p>Explore creative projects and image assets in Code Lab.</p>
+  </header>
+
+  <main class="gallery-grid">
+    <div class="gallery-card">
+      <img src="sample1.png" alt="Sample 1">
+      <div class="card-caption">
+        <h4>Creative Concept</h4>
+        <p>Vector Art Concept</p>
+      </div>
+    </div>
+    <div class="gallery-card">
+      <img src="sample2.png" alt="Sample 2">
+      <div class="card-caption">
+        <h4>UI Mockup</h4>
+        <p>Design Layout</p>
+      </div>
+    </div>
+  </main>
+  <script src="script.js"><\/script>
+</body>
+</html>`;
+
+const HTML_GALLERY_CSS = `body { font-family: 'Segoe UI', sans-serif; background: #121827; color: #fff; margin: 0; padding: 40px; }
+header { text-align: center; margin-bottom: 40px; }
+header h1 { color: #a855f7; }
+header p { color: #9ca3af; }
+
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; max-width: 800px; margin: 0 auto; }
+.gallery-card { background: #1f2937; border-radius: 12px; overflow: hidden; border: 1px solid #374151; transition: transform 0.3s ease; }
+.gallery-card:hover { transform: translateY(-5px); }
+.gallery-card img { width: 100%; height: 180px; object-fit: cover; display: block; }
+.card-caption { padding: 16px; }
+.card-caption h4 { margin: 0 0 4px 0; color: #e5e7eb; }
+.card-caption p { margin: 0; color: #9ca3af; font-size: 0.85rem; }`;
+
+const HTML_GALLERY_JS = `console.log("Gallery Loaded");`;
+
+const HTML_APP_INDEX = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Interactive JS App</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-card">
+    <h2>Interactive Counter</h2>
+    <div class="counter-display" id="count">0</div>
+    <div class="btn-group">
+      <button class="btn btn-sub" id="btn-dec">-</button>
+      <button class="btn btn-reset" id="btn-reset">Reset</button>
+      <button class="btn btn-add" id="btn-inc">+</button>
+    </div>
+  </div>
+  <script src="script.js"><\/script>
+</body>
+</html>`;
+
+const HTML_APP_CSS = `body { font-family: sans-serif; background: #090d16; color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+.app-card { background: #151c2c; padding: 40px; border-radius: 16px; text-align: center; border: 1px solid rgba(255,255,255,0.1); width: 320px; }
+.counter-display { font-size: 4rem; font-weight: bold; color: #60a5fa; margin: 20px 0; }
+.btn-group { display: flex; gap: 10px; justify-content: center; }
+.btn { border: none; padding: 10px 20px; font-size: 1.2rem; border-radius: 8px; cursor: pointer; color: white; }
+.btn-sub { background: #ef4444; }
+.btn-reset { background: #6b7280; font-size: 0.9rem; }
+.btn-add { background: #10b981; }`;
+
+const HTML_APP_JS = `let count = 0;
+const countEl = document.getElementById('count');
+document.getElementById('btn-inc')?.addEventListener('click', () => { count++; if(countEl) countEl.innerText = count; });
+document.getElementById('btn-dec')?.addEventListener('click', () => { count--; if(countEl) countEl.innerText = count; });
+document.getElementById('btn-reset')?.addEventListener('click', () => { count = 0; if(countEl) countEl.innerText = count; });`;
+
+const SAMPLE_SVG_IMAGE_1 = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'><rect width='400' height='300' fill='%236366f1'/><circle cx='200' cy='150' r='80' fill='%23818cf8'/><text x='50%' y='50%' fill='white' font-family='sans-serif' font-size='24' text-anchor='middle' dy='.3em'>Creative Concept</text></svg>";
+
+const SAMPLE_SVG_IMAGE_2 = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'><rect width='400' height='300' fill='%23ec4899'/><polygon points='200,50 320,250 80,250' fill='%23f472b6'/><text x='50%' y='65%' fill='white' font-family='sans-serif' font-size='24' text-anchor='middle' dy='.3em'>UI Mockup</text></svg>";
+
+const initHtmlProject = () => {
+  const name = htmlWizardProjName.value.trim();
+  if (!name) {
+    $q.notify({ type: 'negative', message: 'Project Name is required.' });
+    return;
   }
+
+  htmlProjectName.value = name;
+  htmlWizardProjName.value = name;
+
+  const files = [];
+  const images = [];
+
+  if (htmlSelectedTemplate.value === 'landing') {
+    files.push(
+      { name: 'index.html', code: HTML_LANDING_INDEX },
+      { name: 'style.css', code: HTML_LANDING_CSS },
+      { name: 'script.js', code: HTML_LANDING_JS }
+    );
+  } else if (htmlSelectedTemplate.value === 'gallery') {
+    files.push(
+      { name: 'index.html', code: HTML_GALLERY_INDEX },
+      { name: 'style.css', code: HTML_GALLERY_CSS },
+      { name: 'script.js', code: HTML_GALLERY_JS }
+    );
+    images.push(
+      { name: 'sample1.png', url: SAMPLE_SVG_IMAGE_1, size: '2 KB', type: 'image/svg+xml' },
+      { name: 'sample2.png', url: SAMPLE_SVG_IMAGE_2, size: '2 KB', type: 'image/svg+xml' }
+    );
+  } else if (htmlSelectedTemplate.value === 'app') {
+    files.push(
+      { name: 'index.html', code: HTML_APP_INDEX },
+      { name: 'style.css', code: HTML_APP_CSS },
+      { name: 'script.js', code: HTML_APP_JS }
+    );
+  } else {
+    // Blank template
+    files.push(
+      { name: 'index.html', code: HTML_BLANK_INDEX },
+      { name: 'style.css', code: HTML_BLANK_CSS },
+      { name: 'script.js', code: HTML_BLANK_JS }
+    );
+  }
+
+  htmlFiles.value = files;
+  htmlImages.value = images;
+  activeHtmlFileIndex.value = 0;
+
+  saveCode(JSON.stringify({ projectName: htmlProjectName.value, files: htmlFiles.value, images: htmlImages.value }), 'html');
+};
+
+const resetHtmlProject = () => {
+  if (confirm('Are you sure you want to reset the current HTML project? This will delete all custom files and uploaded images.')) {
+    htmlProjectName.value = '';
+    htmlWizardProjName.value = '';
+    htmlFiles.value = [{ name: 'index.html', code: '' }];
+    htmlImages.value = [];
+    activeHtmlFileIndex.value = 0;
+    saveCode(JSON.stringify({ projectName: '', files: htmlFiles.value, images: [] }), 'html');
+  }
+};
+
+const openNewHtmlFileDialog = () => {
+  newHtmlFileName.value = '';
+  newHtmlFileType.value = 'html';
+  showNewHtmlFileDialog.value = true;
+};
+
+const createNewHtmlFile = () => {
+  let name = newHtmlFileName.value.trim();
+  if (!name) {
+    $q.notify({ type: 'negative', message: 'File name is required.' });
+    return;
+  }
+  const ext = '.' + newHtmlFileType.value;
+  if (!name.toLowerCase().endsWith(ext)) {
+    name += ext;
+  }
+  if (htmlFiles.value.some(f => f.name.toLowerCase() === name.toLowerCase())) {
+    $q.notify({ type: 'negative', message: `File "${name}" already exists.` });
+    return;
+  }
+  
+  htmlFiles.value.push({ name, code: '' });
+  activeHtmlFileIndex.value = htmlFiles.value.length - 1;
+  saveCode(JSON.stringify({ projectName: htmlProjectName.value, files: htmlFiles.value, images: htmlImages.value }), 'html');
+  showNewHtmlFileDialog.value = false;
+  $q.notify({ type: 'positive', message: `Created file ${name}` });
+};
+
+const deleteHtmlFile = (idx) => {
+  const file = htmlFiles.value[idx];
+  if (file && confirm(`Are you sure you want to delete ${file.name}?`)) {
+    htmlFiles.value.splice(idx, 1);
+    if (activeHtmlFileIndex.value >= htmlFiles.value.length) {
+      activeHtmlFileIndex.value = 0;
+    }
+    saveCode(JSON.stringify({ projectName: htmlProjectName.value, files: htmlFiles.value, images: htmlImages.value }), 'html');
+  }
+};
+
+const triggerImageUpload = () => {
+  if (imageFileInput.value) {
+    imageFileInput.value.click();
+  }
+};
+
+const uploadHtmlImage = (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  if (file.size > 5 * 1024 * 1024) {
+    $q.notify({ type: 'negative', message: 'Image size exceeds 5MB limit.' });
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    const dataUrl = evt.target.result;
+    const name = file.name;
+    const formattedSize = (file.size / 1024).toFixed(1) + ' KB';
+
+    const existingIdx = htmlImages.value.findIndex(img => img.name.toLowerCase() === name.toLowerCase());
+    if (existingIdx !== -1) {
+      htmlImages.value.splice(existingIdx, 1);
+    }
+
+    htmlImages.value.push({
+      name,
+      url: dataUrl,
+      size: formattedSize,
+      type: file.type
+    });
+
+    saveCode(JSON.stringify({ projectName: htmlProjectName.value, files: htmlFiles.value, images: htmlImages.value }), 'html');
+    $q.notify({ type: 'positive', message: `Uploaded image ${name}` });
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+};
+
+const addHtmlImageByUrl = () => {
+  const name = newImageUrlName.value.trim();
+  const url = newImageUrlSrc.value.trim();
+
+  if (!name || !url) {
+    $q.notify({ type: 'negative', message: 'Image name and URL are required.' });
+    return;
+  }
+
+  const existingIdx = htmlImages.value.findIndex(img => img.name.toLowerCase() === name.toLowerCase());
+  if (existingIdx !== -1) {
+    htmlImages.value.splice(existingIdx, 1);
+  }
+
+  htmlImages.value.push({
+    name,
+    url,
+    size: 'Remote URL',
+    type: 'image/external'
+  });
+
+  saveCode(JSON.stringify({ projectName: htmlProjectName.value, files: htmlFiles.value, images: htmlImages.value }), 'html');
+  showAddImageUrlDialog.value = false;
+  newImageUrlName.value = '';
+  newImageUrlSrc.value = '';
+  $q.notify({ type: 'positive', message: `Added image asset ${name}` });
+};
+
+const copyImgTag = (imgName) => {
+  if (!imgName) return;
+  const tag = `<img src="${imgName}" alt="${imgName.split('.')[0]}">`;
+  navigator.clipboard.writeText(tag).then(() => {
+    $q.notify({ type: 'positive', icon: 'content_copy', message: `Copied ${tag} to clipboard!`, position: 'top', timeout: 2000 });
+  }).catch(() => {
+    $q.notify({ type: 'negative', message: 'Failed to copy to clipboard' });
+  });
+};
+
+const deleteHtmlImage = (idx) => {
+  const img = htmlImages.value[idx];
+  if (img && confirm(`Delete image ${img.name}?`)) {
+    htmlImages.value.splice(idx, 1);
+    saveCode(JSON.stringify({ projectName: htmlProjectName.value, files: htmlFiles.value, images: htmlImages.value }), 'html');
+  }
+};
+
+const viewImageDetail = (img) => {
+  selectedImageForView.value = img;
+  showImageModal.value = true;
 };
 
 const addSqlFile = () => {
@@ -782,9 +1440,8 @@ const addSqlFile = () => {
       }
     }
     sqlFiles.value.push({ name: name.endsWith('.db') || name.endsWith('.sqlite') ? name : name + '.db', code: '', buffer: null });
-    activeSqlFileIndex.value = sqlFiles.value.length - 1;
+    activeSqlFileIndex.value = activeSqlFileIndex.value = sqlFiles.value.length - 1;
     saveCode(JSON.stringify(sqlFiles.value.map(f => ({ name: f.name, code: f.code }))), 'sql');
-    // Silently push the new database list to cloud
     if (!assignmentId.value) {
       scheduleSilentCloudSync();
     }
@@ -792,7 +1449,6 @@ const addSqlFile = () => {
 };
 
 const downloadSqlFile = () => {
-  // Grab the latest code from the active file
   const currentFile = sqlFiles.value[activeSqlFileIndex.value];
   const code = currentFile?.code?.trim() || '';
 
@@ -802,7 +1458,6 @@ const downloadSqlFile = () => {
   const now         = new Date().toLocaleString();
   const assignTitle = assignment.value?.title || 'Free Play';
 
-  // Build SQL file content with student identity header
   const header = [
     `-- ============================================================`,
     `-- Student Name : ${studentName}`,
@@ -853,7 +1508,11 @@ const handleHtmlChange = (newCode) => {
   const currentFile = htmlFiles.value[activeHtmlFileIndex.value];
   if (currentFile && currentFile.code !== newCode) {
     currentFile.code = newCode;
-    saveCode(JSON.stringify(htmlFiles.value), 'html');
+    saveCode(JSON.stringify({
+      projectName: htmlProjectName.value,
+      files: htmlFiles.value,
+      images: htmlImages.value
+    }), 'html');
   }
 };
 
@@ -1077,6 +1736,27 @@ const handleSubmitCode = async () => {
   }
 };
 
+const parseHtmlPayload = (codeVal) => {
+  if (!codeVal) {
+    return { projectName: '', files: [{ name: 'index.html', code: '' }], images: [] };
+  }
+  try {
+    const parsed = JSON.parse(codeVal);
+    if (Array.isArray(parsed)) {
+      return { projectName: 'My Web Project', files: parsed, images: [] };
+    } else if (parsed && typeof parsed === 'object') {
+      return {
+        projectName: parsed.projectName || 'My Web Project',
+        files: parsed.files || [{ name: 'index.html', code: '' }],
+        images: parsed.images || []
+      };
+    }
+  } catch {
+    return { projectName: 'My Web Project', files: [{ name: 'index.html', code: codeVal }], images: [] };
+  }
+  return { projectName: '', files: [{ name: 'index.html', code: '' }], images: [] };
+};
+
 // Sync written changes if needed
 watch(writtenResponse, (newVal) => {
   if (assignmentType.value === 'written') {
@@ -1090,7 +1770,10 @@ watch(activeTab, (newTab) => {
     const draft = localStorage.getItem(getStorageKey(`sms_lab_freeplay_${newTab}`));
     if (draft) {
       if (newTab === 'html') {
-        try { htmlFiles.value = JSON.parse(draft); } catch { htmlFiles.value = [{ name: 'index.html', code: draft }]; }
+        const payload = parseHtmlPayload(draft);
+        htmlProjectName.value = payload.projectName;
+        htmlFiles.value = payload.files;
+        htmlImages.value = payload.images;
         activeHtmlFileIndex.value = 0;
       } else if (newTab === 'java') {
         try { javaFiles.value = JSON.parse(draft); } catch { javaFiles.value = [{ name: 'Main.java', code: draft }]; }
@@ -1106,7 +1789,10 @@ const resetState = () => {
   assignmentId.value = null;
   maxScore.value = 0;
   javaFiles.value = [{ name: 'Main.java', code: '' }];
+  htmlProjectName.value = '';
+  htmlWizardProjName.value = '';
   htmlFiles.value = [{ name: 'index.html', code: '' }];
+  htmlImages.value = [];
   sqlFiles.value = [{ name: 'main.db', code: '', buffer: null }];
   activeJavaFileIndex.value = 0;
   activeHtmlFileIndex.value = 0;
@@ -1142,13 +1828,10 @@ const loadDraftsForCurrentUser = async () => {
     const setCodeByLanguage = (codeVal) => {
       const lang = getAssignmentLanguage(codeVal);
       if (lang === 'html') {
-        try {
-          const parsed = JSON.parse(codeVal);
-          if (Array.isArray(parsed)) htmlFiles.value = parsed;
-          else throw new Error();
-        } catch {
-          htmlFiles.value = [{ name: 'index.html', code: codeVal || '' }];
-        }
+        const payload = parseHtmlPayload(codeVal);
+        htmlProjectName.value = payload.projectName;
+        htmlFiles.value = payload.files;
+        htmlImages.value = payload.images;
         javaFiles.value = [{ name: 'Main.java', code: '' }];
         activeHtmlFileIndex.value = 0;
         activeTab.value = getFallbackTab('html');
@@ -1161,7 +1844,9 @@ const loadDraftsForCurrentUser = async () => {
           sqlFiles.value = [{ name: 'main.db', code: codeVal || '', buffer: null }];
         }
         javaFiles.value = [{ name: 'Main.java', code: '' }];
+        htmlProjectName.value = '';
         htmlFiles.value = [{ name: 'index.html', code: '' }];
+        htmlImages.value = [];
         activeSqlFileIndex.value = 0;
         activeTab.value = getFallbackTab('sql');
       } else {
@@ -1172,7 +1857,9 @@ const loadDraftsForCurrentUser = async () => {
         } catch {
           javaFiles.value = [{ name: 'Main.java', code: codeVal || '' }];
         }
+        htmlProjectName.value = '';
         htmlFiles.value = [{ name: 'index.html', code: '' }];
+        htmlImages.value = [];
         activeJavaFileIndex.value = 0;
         activeTab.value = getFallbackTab('java');
       }
@@ -1260,7 +1947,10 @@ const loadDraftsForCurrentUser = async () => {
     const draft = localStorage.getItem(getStorageKey(`sms_lab_freeplay_${activeTab.value}`));
     if (draft) {
       if (activeTab.value === 'html') {
-        try { htmlFiles.value = JSON.parse(draft); } catch { htmlFiles.value = [{ name: 'index.html', code: draft }]; }
+        const payload = parseHtmlPayload(draft);
+        htmlProjectName.value = payload.projectName;
+        htmlFiles.value = payload.files;
+        htmlImages.value = payload.images;
         javaFiles.value = [{ name: 'Main.java', code: '' }];
         sqlFiles.value = [{ name: 'main.db', code: '', buffer: null }];
         activeHtmlFileIndex.value = 0;
@@ -1269,17 +1959,23 @@ const loadDraftsForCurrentUser = async () => {
           const parsed = JSON.parse(draft);
           sqlFiles.value = parsed.map(f => ({ ...f, buffer: null }));
         } catch { sqlFiles.value = [{ name: 'main.db', code: draft, buffer: null }]; }
+        htmlProjectName.value = '';
         htmlFiles.value = [{ name: 'index.html', code: '' }];
+        htmlImages.value = [];
         javaFiles.value = [{ name: 'Main.java', code: '' }];
         activeSqlFileIndex.value = 0;
       } else {
         try { javaFiles.value = JSON.parse(draft); } catch { javaFiles.value = [{ name: 'Main.java', code: draft }]; }
+        htmlProjectName.value = '';
         htmlFiles.value = [{ name: 'index.html', code: '' }];
+        htmlImages.value = [];
         sqlFiles.value = [{ name: 'main.db', code: '', buffer: null }];
         activeJavaFileIndex.value = 0;
       }
     } else {
+      htmlProjectName.value = '';
       htmlFiles.value = [{ name: 'index.html', code: '' }];
+      htmlImages.value = [];
       javaFiles.value = [{ name: 'Main.java', code: '' }];
       sqlFiles.value = [{ name: 'main.db', code: '', buffer: null }];
       activeJavaFileIndex.value = 0;
@@ -1361,22 +2057,23 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.08);
 }
 .template-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1.5px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 16px;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 16px 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   text-align: center;
 }
 .template-card:hover {
-  border-color: var(--q-primary, #6366f1);
-  background: rgba(255, 255, 255, 0.08);
+  border-color: #818cf8;
+  background: rgba(99, 102, 241, 0.15);
+  transform: translateY(-2px);
 }
 .template-card.active {
-  border-color: var(--q-primary, #6366f1);
-  background: rgba(99, 102, 241, 0.12);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+  border-color: #818cf8;
+  background: rgba(99, 102, 241, 0.25);
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.4), inset 0 0 0 1px rgba(129, 140, 248, 0.5);
 }
 .border-bottom {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
