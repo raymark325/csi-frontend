@@ -775,6 +775,15 @@ const transpileMethodBody = (body, currentClass, opts = {}) => {
   codeVal = translateBuiltins(codeVal);
   codeVal = translateTypes(codeVal);
 
+  // ── String-literal protection ─────────────────────────────────────────────
+  // Replace all string literals with safe placeholders so regex substitutions
+  // (this-prefix, await injection) never touch the text inside "..." or '...'
+  const strLiterals = [];
+  codeVal = codeVal.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, (match) => {
+    strLiterals.push(match);
+    return `__STRLIT_${strLiterals.length - 1}__`;
+  });
+
   // For instance methods: add this. prefix to bare field/method references
   if (!isStatic && (instanceFields.length > 0 || instanceMethods.length > 0)) {
     // Collect locally declared variable names to avoid wrongly prefixing them
@@ -809,6 +818,11 @@ const transpileMethodBody = (body, currentClass, opts = {}) => {
     const re = new RegExp(`(?<!await\\s)\\b(\\w+)\\.(${method})\\s*\\(`, 'g');
     codeVal = codeVal.replace(re, 'await $1.$2(');
   }
+
+  // ── Restore string literals ───────────────────────────────────────────────
+  strLiterals.forEach((str, idx) => {
+    codeVal = codeVal.replace(`__STRLIT_${idx}__`, str);
+  });
 
   codeVal = codeVal.replace(/(\w+)\.equals\s*\(([^)]+)\)/g, '($1 === $2)');
   codeVal = codeVal.replace(/(\w+)\.equalsIgnoreCase\s*\(([^)]+)\)/g, '($1.toLowerCase() === $2.toLowerCase())');
