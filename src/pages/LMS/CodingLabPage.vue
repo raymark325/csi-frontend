@@ -715,7 +715,10 @@ const getActiveCode = () => {
     return writtenResponse.value;
   }
   if (activeTab.value === 'java') {
-    return JSON.stringify(javaFiles.value);
+    return JSON.stringify({
+      projectName: projectName.value,
+      files: javaFiles.value
+    });
   }
   if (activeTab.value === 'sql') {
     return JSON.stringify(sqlFiles.value.map(f => ({ name: f.name, code: f.code })));
@@ -1511,7 +1514,10 @@ const handleJavaChange = (newCode) => {
   const currentFile = javaFiles.value[activeJavaFileIndex.value];
   if (currentFile && currentFile.code !== newCode) {
     currentFile.code = newCode;
-    saveCode(JSON.stringify(javaFiles.value), 'java');
+    saveCode(JSON.stringify({
+      projectName: projectName.value,
+      files: javaFiles.value
+    }), 'java');
   }
 };
 
@@ -1769,6 +1775,26 @@ const parseHtmlPayload = (codeVal) => {
   return { projectName: '', files: [{ name: 'index.html', code: '' }], images: [] };
 };
 
+const parseJavaPayload = (codeVal) => {
+  if (!codeVal) {
+    return { projectName: '', files: [{ name: 'Main.java', code: '', pkg: 'com.myapp', type: 'class' }] };
+  }
+  try {
+    const parsed = JSON.parse(codeVal);
+    if (Array.isArray(parsed)) {
+      return { projectName: 'My Java Project', files: parsed };
+    } else if (parsed && typeof parsed === 'object') {
+      return {
+        projectName: parsed.projectName || 'My Java Project',
+        files: parsed.files || [{ name: 'Main.java', code: '', pkg: 'com.myapp', type: 'class' }]
+      };
+    }
+  } catch {
+    return { projectName: 'My Java Project', files: [{ name: 'Main.java', code: codeVal, pkg: 'com.myapp', type: 'class' }] };
+  }
+  return { projectName: '', files: [{ name: 'Main.java', code: '', pkg: 'com.myapp', type: 'class' }] };
+};
+
 // Sync written changes if needed
 watch(writtenResponse, (newVal) => {
   if (assignmentType.value === 'written') {
@@ -1788,7 +1814,9 @@ watch(activeTab, (newTab) => {
         htmlImages.value = payload.images;
         activeHtmlFileIndex.value = 0;
       } else if (newTab === 'java') {
-        try { javaFiles.value = JSON.parse(draft); } catch { javaFiles.value = [{ name: 'Main.java', code: draft }]; }
+        const payload = parseJavaPayload(draft);
+        projectName.value = payload.projectName;
+        javaFiles.value = payload.files;
         activeJavaFileIndex.value = 0;
       }
     }
@@ -1800,6 +1828,8 @@ watch(activeTab, (newTab) => {
 const resetState = () => {
   assignmentId.value = null;
   maxScore.value = 0;
+  projectName.value = '';
+  wizardProjName.value = '';
   javaFiles.value = [{ name: 'Main.java', code: '' }];
   htmlProjectName.value = '';
   htmlWizardProjName.value = '';
@@ -1844,6 +1874,7 @@ const loadDraftsForCurrentUser = async () => {
         htmlProjectName.value = payload.projectName;
         htmlFiles.value = payload.files;
         htmlImages.value = payload.images;
+        projectName.value = '';
         javaFiles.value = [{ name: 'Main.java', code: '' }];
         activeHtmlFileIndex.value = 0;
         activeTab.value = getFallbackTab('html');
@@ -1855,6 +1886,7 @@ const loadDraftsForCurrentUser = async () => {
         } catch {
           sqlFiles.value = [{ name: 'main.db', code: codeVal || '', buffer: null }];
         }
+        projectName.value = '';
         javaFiles.value = [{ name: 'Main.java', code: '' }];
         htmlProjectName.value = '';
         htmlFiles.value = [{ name: 'index.html', code: '' }];
@@ -1862,13 +1894,9 @@ const loadDraftsForCurrentUser = async () => {
         activeSqlFileIndex.value = 0;
         activeTab.value = getFallbackTab('sql');
       } else {
-        try {
-          const parsed = JSON.parse(codeVal);
-          if (Array.isArray(parsed)) javaFiles.value = parsed;
-          else throw new Error();
-        } catch {
-          javaFiles.value = [{ name: 'Main.java', code: codeVal || '' }];
-        }
+        const payload = parseJavaPayload(codeVal);
+        projectName.value = payload.projectName;
+        javaFiles.value = payload.files;
         htmlProjectName.value = '';
         htmlFiles.value = [{ name: 'index.html', code: '' }];
         htmlImages.value = [];
@@ -1963,6 +1991,7 @@ const loadDraftsForCurrentUser = async () => {
         htmlProjectName.value = payload.projectName;
         htmlFiles.value = payload.files;
         htmlImages.value = payload.images;
+        projectName.value = '';
         javaFiles.value = [{ name: 'Main.java', code: '' }];
         sqlFiles.value = [{ name: 'main.db', code: '', buffer: null }];
         activeHtmlFileIndex.value = 0;
@@ -1971,13 +2000,16 @@ const loadDraftsForCurrentUser = async () => {
           const parsed = JSON.parse(draft);
           sqlFiles.value = parsed.map(f => ({ ...f, buffer: null }));
         } catch { sqlFiles.value = [{ name: 'main.db', code: draft, buffer: null }]; }
+        projectName.value = '';
         htmlProjectName.value = '';
         htmlFiles.value = [{ name: 'index.html', code: '' }];
         htmlImages.value = [];
         javaFiles.value = [{ name: 'Main.java', code: '' }];
         activeSqlFileIndex.value = 0;
       } else {
-        try { javaFiles.value = JSON.parse(draft); } catch { javaFiles.value = [{ name: 'Main.java', code: draft }]; }
+        const payload = parseJavaPayload(draft);
+        projectName.value = payload.projectName;
+        javaFiles.value = payload.files;
         htmlProjectName.value = '';
         htmlFiles.value = [{ name: 'index.html', code: '' }];
         htmlImages.value = [];
@@ -1985,6 +2017,7 @@ const loadDraftsForCurrentUser = async () => {
         activeJavaFileIndex.value = 0;
       }
     } else {
+      projectName.value = '';
       htmlProjectName.value = '';
       htmlFiles.value = [{ name: 'index.html', code: '' }];
       htmlImages.value = [];
