@@ -104,40 +104,20 @@
       
       <!-- Console Content -->
       <div v-show="activeBottomTab === 'console'" class="console-content" @click="focusConsole" style="position: relative;">
-        <pre class="console-text"><span>{{ output || 'Console ready. Click Run Code to execute.' }}</span><span class="user-typed-input">{{ currentInput }}</span><span v-if="consoleFocused && isWaitingForInput" class="console-cursor">_</span></pre>
-
-        <!-- Visible Scanner Input Row -->
-        <transition name="slide-input">
-          <div v-if="isWaitingForInput" class="scanner-input-row" @click.stop>
-            <span class="scanner-label">
-              <q-icon name="keyboard" size="14px" class="q-mr-xs" />
-              Enter input:
-            </span>
-            <input
-              ref="consoleInputRef"
-              v-model="currentInput"
-              type="text"
-              class="scanner-input-field"
-              placeholder="Type here and press Enter..."
-              @keydown.enter.prevent="submitMobileInput"
-              @focus="consoleFocused = true"
-              @blur="consoleFocused = false"
-              autocapitalize="off"
-              autocomplete="off"
-              spellcheck="false"
-              autofocus
-            />
-            <q-btn
-              flat
-              dense
-              color="positive"
-              icon="send"
-              label="Send"
-              class="scanner-send-btn"
-              @click.stop="submitMobileInput"
-            />
-          </div>
-        </transition>
+        <pre class="console-text"><span>{{ output || 'Console ready. Click Run Code to execute.' }}</span><span class="user-typed-input">{{ currentInput }}</span><span v-if="isWaitingForInput" class="console-cursor">█</span></pre>
+        <!-- Transparent inline input — types directly into console like a real terminal -->
+        <input
+          ref="consoleInputRef"
+          v-model="currentInput"
+          type="text"
+          class="console-inline-input"
+          @keydown.enter.prevent="submitMobileInput"
+          @focus="consoleFocused = true"
+          @blur="consoleFocused = false"
+          autocapitalize="off"
+          autocomplete="off"
+          spellcheck="false"
+        />
       </div>
 
       <!-- Error Finder Content (Eclipse / NetBeans Style) -->
@@ -227,7 +207,7 @@ const activeBottomTab = ref('console'); // 'console' | 'problems'
 const problems = ref([]);
 
 const focusConsole = () => {
-  if (isWaitingForInput.value && consoleInputRef.value) {
+  if (consoleInputRef.value) {
     consoleInputRef.value.focus();
   }
 };
@@ -1089,66 +1069,29 @@ watch(() => props.initialCode, (newVal) => {
   50% { color: #5af78e }
 }
 
-/* Scanner Input Row */
-.scanner-input-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  background: rgba(15, 23, 42, 0.85);
-  border-top: 2px solid rgba(99, 102, 241, 0.5);
-  border-radius: 0 0 8px 8px;
-  backdrop-filter: blur(8px);
-}
-
-.scanner-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: #a5b4fc;
-  font-family: monospace;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.scanner-input-field {
-  flex: 1;
-  background: rgba(30, 41, 59, 0.9);
-  border: 1px solid rgba(99, 102, 241, 0.5);
-  border-radius: 6px;
-  color: #f8fafc;
-  font-family: 'Fira Code', 'Courier New', monospace;
-  font-size: 13px;
-  padding: 6px 10px;
+/* Transparent inline console input — overlays the full console area */
+.console-inline-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  color: transparent;
+  caret-color: transparent;
+  font-size: 14px;
+  cursor: text;
+  z-index: 10;
+  padding: 0;
+  margin: 0;
+  resize: none;
 }
 
-.scanner-input-field::placeholder {
-  color: rgba(148, 163, 184, 0.5);
-}
-
-.scanner-input-field:focus {
-  border-color: #818cf8;
-  box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.25);
-}
-
-.scanner-send-btn {
-  font-size: 12px;
-  font-weight: 700;
-  min-width: 70px;
-}
-
-/* Slide-in animation for input row */
-.slide-input-enter-active {
-  animation: slideInputIn 0.25s ease;
-}
-.slide-input-leave-active {
-  animation: slideInputIn 0.2s ease reverse;
-}
-@keyframes slideInputIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+.console-cursor {
+  animation: blink 0.8s step-end infinite;
+  color: #5af78e;
+  font-weight: bold;
 }
 </style>
