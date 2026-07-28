@@ -577,7 +577,65 @@ const translateBuiltins = (codeVal) => {
   return codeVal;
 };
 
-const transpileClassBody = (className, body, superClass) => {
+// ── Quick first-pass parser: collect field/method names from a class body ──────
+const parseClassMemberInfo = (body, className) => {
+  const modifiers = /\b(public|private|protected|static|final|synchronized|abstract|native|transient|volatile)\b\s*/g;
+  const instanceFields = [];
+  const instanceMethods = [];
+  const asyncInstanceMethods = new Set();
+
+  // Reuse the same member-splitting logic
+  const members = [];
+  let i = 0;
+  while (i < body.length) {
+    if (/[\s;]/.test(body[i])) { i++; continue; }
+    let j = i, depth = 0, inStr = false, strCh = '';
+    while (j < body.length) {
+      const ch = body[j];
+      if (inStr) { if (ch === strCh && body[j-1] !== '\\') inStr = false; j++; continue; }
+      if (ch === '"' || ch === "'") { inStr = true; strCh = ch; j++; continue; }
+      if (ch === '{') depth++;
+      if (ch === '}') { depth--; if (depth === 0) { j++; break; } }
+      if (ch === ';' && depth === 0) { j++; break; }
+      j++;
+    }
+    members.push(body.substring(i, j).trim());
+    i = j;
+  }
+
+  for (const member of members) {
+    if (!member || member === '}') continue;
+    const isStatic = /\bstatic\b/.test(member);
+    const stripped = member.replace(new RegExp(modifiers.source, 'g'), '');
+
+    // Constructor?
+    const ctorMatch = stripped.match(new RegExp(`^${className}\\s*\\(([^)]*)\\)\\s*\\{([\\s\\S]*)\\}\\s*$`));
+    if (ctorMatch) continue;
+
+    // Method?
+    const methodMatch = stripped.match(/^[\w<>\[\],\s]+?\s+(\w+)\s*\([^)]*\)\s*\{([\s\S]*)\}\s*$/);
+    if (methodMatch) {
+      const mName = methodMatch[1];
+      const mBody = methodMatch[2];
+      if (!isStatic) {
+        instanceMethods.push(mName);
+        const translated = translateBuiltins(mBody);
+        if (translated.includes('await __readInput__')) asyncInstanceMethods.add(mName);
+      }
+      continue;
+    }
+
+    // Field?
+    const fieldMatch = stripped.match(/^[\w<>\[\],\s]+?\s+(\w+)\s*(?:=\s*[\s\S]+?)?\s*;?\s*$/);
+    if (fieldMatch && fieldMatch[1] !== className && !isStatic) {
+      instanceFields.push(fieldMatch[1]);
+    }
+  }
+
+  return { instanceFields, instanceMethods, asyncInstanceMethods };
+};
+
+const transpileClassBody = (className, body, superClass, inheritedFields = [], inheritedMethods = [], globalAsyncMethods = new Set()) => {
   const modifiers = /\b(public|private|protected|static|final|synchronized|abstract|native|transient|volatile)\b\s*/g;
 
   const members = [];
@@ -650,6 +708,17 @@ const transpileClassBody = (className, body, superClass) => {
     }
   }
 
+  // Combine inherited + own instance fields and methods
+  const allInstanceFields = [...inheritedFields, ...fields.map(f => f.name)];
+  const allInstanceMethods = [...inheritedMethods, ...methods.map(m => m.name)];
+
+  // Build the set of async methods for this class (inherited + own that use await)
+  const localAsyncMethods = new Set(globalAsyncMethods);
+  for (const m of [...methods, ...staticMethods]) {
+    const translated = translateBuiltins(m.body);
+    if (translated.includes('await __readInput__')) localAsyncMethods.add(m.name);
+  }
+
   const defaultFieldInits = fields.map(f => `this.${f.name} = ${f.value === 'undefined' ? 'undefined' : f.value};`).join('\n    ');
 
   const ctorBodies = constructors.map(ctor => {
@@ -659,7 +728,7 @@ const transpileClassBody = (className, body, superClass) => {
           return parts[parts.length - 1];
         }).join(', ')
       : '';
-    const translatedBody = transpileMethodBody(ctor.body, className);
+    const translatedBody = transpileMethodBody(ctor.body, className, { instanceFields: allInstanceFields, instanceMethods: allInstanceMethods, asyncMethods: localAsyncMethods, isStatic: false });
     return `  constructor(${paramList}) {\n    ${superClass ? 'super();' : ''}\n    ${defaultFieldInits}\n    ${translatedBody}\n  }`;
   });
 
@@ -671,16 +740,18 @@ const transpileClassBody = (className, body, superClass) => {
     const paramList = m.params
       ? m.params.split(',').map(p => { const parts = p.trim().split(/\s+/); return parts[parts.length - 1]; }).join(', ')
       : '';
-    const translatedBody = transpileMethodBody(m.body, className);
-    return `  async ${m.name}(${paramList}) {\n    ${translatedBody}\n  }`;
+    const translatedBody = transpileMethodBody(m.body, className, { instanceFields: allInstanceFields, instanceMethods: allInstanceMethods, asyncMethods: localAsyncMethods, isStatic: false });
+    const isAsync = translatedBody.includes('await ');
+    return `  ${isAsync ? 'async ' : ''}${m.name}(${paramList}) {\n    ${translatedBody}\n  }`;
   }).join('\n\n');
 
   const staticMethodSection = staticMethods.map(m => {
     const paramList = m.params
       ? m.params.split(',').map(p => { const parts = p.trim().split(/\s+/); return parts[parts.length - 1]; }).join(', ')
       : '';
-    const translatedBody = transpileMethodBody(m.body, className);
-    return `  static async ${m.name}(${paramList}) {\n    ${translatedBody}\n  }`;
+    const translatedBody = transpileMethodBody(m.body, className, { instanceFields: [], instanceMethods: [], asyncMethods: localAsyncMethods, isStatic: true });
+    const isAsync = translatedBody.includes('await ');
+    return `  static ${isAsync ? 'async ' : ''}${m.name}(${paramList}) {\n    ${translatedBody}\n  }`;
   }).join('\n\n');
 
   const staticFieldSection = staticFields.map(f => `${className}.${f.name} = ${f.value === 'undefined' ? 'undefined' : f.value};`).join('\n');
@@ -689,11 +760,48 @@ const transpileClassBody = (className, body, superClass) => {
   return `class ${className}${extendsClause} {\n${ctorSection}\n\n${methodSection}\n\n${staticMethodSection}\n}\n${staticFieldSection}`;
 };
 
-const transpileMethodBody = (body, currentClass) => {
+const transpileMethodBody = (body, currentClass, opts = {}) => {
+  const { instanceFields = [], instanceMethods = [], asyncMethods = new Set(), isStatic = false } = opts;
+
   let codeVal = body;
   codeVal = codeVal.replace(/\b(public|private|protected)\b\s*/g, '');
   codeVal = translateBuiltins(codeVal);
   codeVal = translateTypes(codeVal);
+
+  // For instance methods: add this. prefix to bare field/method references
+  if (!isStatic && (instanceFields.length > 0 || instanceMethods.length > 0)) {
+    // Collect locally declared variable names to avoid wrongly prefixing them
+    const localVars = new Set();
+    const lvRe = /\b(?:let|var|const)\s+(\w+)/g;
+    let lm;
+    while ((lm = lvRe.exec(codeVal)) !== null) localVars.add(lm[1]);
+    // Also collect for-of loop variables
+    const foRe = /\bfor\s*\(\s*(?:let|var|const)?\s*(\w+)\s+of\b/g;
+    while ((lm = foRe.exec(codeVal)) !== null) localVars.add(lm[1]);
+
+    // Add this. to bare instance field reads/writes (not locally declared, not followed by '(')
+    for (const field of instanceFields) {
+      if (localVars.has(field)) continue;
+      const re = new RegExp(`(?<![\\w.])\\b${field}\\b(?![\\w(])`, 'g');
+      codeVal = codeVal.replace(re, `this.${field}`);
+    }
+
+    // Add this. (and await if async) to bare instance method calls
+    for (const method of instanceMethods) {
+      if (localVars.has(method)) continue;
+      const isAsync = asyncMethods.has(method);
+      const prefix = isAsync ? 'await this.' : 'this.';
+      const re = new RegExp(`(?<![\\w.])\\b${method}\\s*\\(`, 'g');
+      codeVal = codeVal.replace(re, `${prefix}${method}(`);
+    }
+  }
+
+  // Add await to object.method() calls for known async methods (both static and instance contexts)
+  for (const method of asyncMethods) {
+    // Match obj.method( not already preceded by 'await'
+    const re = new RegExp(`(?<!await\\s)\\b(\\w+)\\.(${method})\\s*\\(`, 'g');
+    codeVal = codeVal.replace(re, 'await $1.$2(');
+  }
 
   codeVal = codeVal.replace(/(\w+)\.equals\s*\(([^)]+)\)/g, '($1 === $2)');
   codeVal = codeVal.replace(/(\w+)\.equalsIgnoreCase\s*\(([^)]+)\)/g, '($1.toLowerCase() === $2.toLowerCase())');
@@ -724,10 +832,42 @@ const transpileJava = (rawSrc) => {
     return { error: 'No class definition found. Ensure your code defines a class (e.g. public class Main { ... }).' };
   }
 
-  const jsClasses = classes.map(cls => transpileClassBody(cls.name, cls.body, cls.superClass));
+  // First pass: collect all class member metadata
+  const classInfoMap = {};
+  for (const cls of classes) {
+    classInfoMap[cls.name] = parseClassMemberInfo(cls.body, cls.name);
+  }
+
+  // Aggregate all async instance methods from all classes
+  const globalAsyncMethods = new Set();
+  for (const info of Object.values(classInfoMap)) {
+    for (const m of info.asyncInstanceMethods) globalAsyncMethods.add(m);
+  }
+
+  // Recursively compute inherited fields and methods
+  const getInherited = (cls, visited = new Set()) => {
+    if (!cls.superClass || visited.has(cls.name) || !classInfoMap[cls.superClass]) {
+      return { fields: [], methods: [] };
+    }
+    visited.add(cls.name);
+    const parentCls = classes.find(c => c.name === cls.superClass);
+    const grandInherited = parentCls ? getInherited(parentCls, visited) : { fields: [], methods: [] };
+    const parentInfo = classInfoMap[cls.superClass];
+    return {
+      fields: [...grandInherited.fields, ...parentInfo.instanceFields],
+      methods: [...grandInherited.methods, ...parentInfo.instanceMethods],
+    };
+  };
+
+  // Second pass: transpile each class with full context
+  const jsClasses = classes.map(cls => {
+    const inherited = getInherited(cls);
+    return transpileClassBody(cls.name, cls.body, cls.superClass, inherited.fields, inherited.methods, globalAsyncMethods);
+  });
 
   let entryClass = classes.find(c => c.name === 'Main') || classes[0];
-  const mainRunner = `\n(async () => {\n  if (typeof ${entryClass.name} !== 'undefined' && typeof ${entryClass.name}.main === 'function') {\n    await ${entryClass.name}.main([]);\n  } else {\n    __print__("Notice: No static main() method found in ${entryClass.name}. Class loaded.");\n  }\n})();`;
+  // Direct await in the AsyncFunction body — no inner IIFE needed
+  const mainRunner = `\nif (typeof ${entryClass.name} !== 'undefined' && typeof ${entryClass.name}.main === 'function') {\n  await ${entryClass.name}.main([]);\n} else {\n  __print__("Notice: No static main() method found in ${entryClass.name}. Class loaded.");\n}`;
 
   return { js: jsClasses.join('\n\n') + '\n' + mainRunner };
 };
@@ -801,13 +941,11 @@ const runCode = (isAuto = false) => {
     };
 
     try {
-      console.log('[JavaEditor] Transpiled JS:\n', jsCode);
       const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
       const execFn = new AsyncFunction('__print__', '__printInline__', '__readInput__', jsCode);
       await execFn(__print__, __printInline__, __readInput__);
       output.value += '\nProcess finished with exit code 0';
     } catch (err) {
-      console.error('[JavaEditor] Runtime error:', err);
       output.value += '\nRuntime Error: ' + err.message;
     } finally {
       isRunning.value = false;
