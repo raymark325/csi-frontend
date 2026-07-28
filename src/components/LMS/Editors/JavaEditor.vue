@@ -672,7 +672,7 @@ const transpileClassBody = (className, body, superClass) => {
       ? m.params.split(',').map(p => { const parts = p.trim().split(/\s+/); return parts[parts.length - 1]; }).join(', ')
       : '';
     const translatedBody = transpileMethodBody(m.body, className);
-    return `  ${m.name}(${paramList}) {\n    ${translatedBody}\n  }`;
+    return `  async ${m.name}(${paramList}) {\n    ${translatedBody}\n  }`;
   }).join('\n\n');
 
   const staticMethodSection = staticMethods.map(m => {
@@ -680,7 +680,7 @@ const transpileClassBody = (className, body, superClass) => {
       ? m.params.split(',').map(p => { const parts = p.trim().split(/\s+/); return parts[parts.length - 1]; }).join(', ')
       : '';
     const translatedBody = transpileMethodBody(m.body, className);
-    return `  static ${m.name}(${paramList}) {\n    ${translatedBody}\n  }`;
+    return `  static async ${m.name}(${paramList}) {\n    ${translatedBody}\n  }`;
   }).join('\n\n');
 
   const staticFieldSection = staticFields.map(f => `${className}.${f.name} = ${f.value === 'undefined' ? 'undefined' : f.value};`).join('\n');
