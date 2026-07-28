@@ -4,13 +4,42 @@
       <div class="row items-center q-gutter-sm">
         <span class="badge badge-blue">Java Sandbox</span>
         <span class="text-caption text-red text-weight-bold">⚠️ Copy-Paste Disabled</span>
+        
+        <!-- Error Finder Badge -->
+        <span 
+          class="badge flex items-center q-px-sm cursor-pointer" 
+          :style="{
+            background: problems.length > 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(34, 197, 94, 0.15)',
+            color: problems.length > 0 ? '#ef4444' : '#22c55e',
+            border: `1px solid ${problems.length > 0 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`
+          }"
+          @click="activeBottomTab = 'problems'"
+        >
+          <q-icon :name="problems.length > 0 ? 'cancel' : 'check_circle'" size="14px" class="q-mr-xs" />
+          {{ problems.length }} {{ problems.length === 1 ? 'Problem' : 'Problems' }}
+        </span>
       </div>
-      <q-btn color="primary" icon="play_arrow" label="Run Code" rounded unelevated :loading="isRunning" @click="runCode(false)"/>
+
+      <div class="row q-gutter-xs">
+        <q-btn 
+          flat 
+          dense 
+          no-caps 
+          color="indigo-4" 
+          icon="bug_report" 
+          label="Check Errors" 
+          rounded 
+          class="q-px-sm" 
+          @click="activeBottomTab = 'problems'; runAnalyzer();" 
+        />
+        <q-btn color="primary" icon="play_arrow" label="Run Code" rounded unelevated :loading="isRunning" @click="runCode(false)"/>
+      </div>
     </div>
 
     <!-- Code Editor Box -->
     <div class="editor-container">
       <textarea
+        ref="textareaRef"
         v-model="code"
         class="code-textarea"
         placeholder="public class Main { ... }"
@@ -23,20 +52,59 @@
       ></textarea>
     </div>
 
-    <!-- Unified Console Box -->
+    <!-- Bottom Panel: Console & Error Finder (Eclipse / NetBeans Style) -->
     <div class="output-console q-mt-md">
-      <div class="row justify-between items-center q-mb-xs">
-        <p class="text-label text-white q-mb-none">CONSOLE</p>
-        <span v-if="isRunning && !isWaitingForInput" class="text-caption text-grey-4">Running...</span>
-        <span v-else-if="isWaitingForInput" class="text-caption text-amber text-weight-bold" style="font-size: 11px;">⚠️ (Program waiting for input. Click console below to type)</span>
-        <span v-else class="text-caption text-grey-5" style="font-size: 11px;">(Console output)</span>
+      <div class="row justify-between items-center q-mb-sm border-bottom-dark q-pb-xs">
+        <div class="row items-center q-gutter-sm">
+          <q-btn 
+            flat 
+            dense 
+            no-caps 
+            size="sm" 
+            :class="{ 'tab-btn-active': activeBottomTab === 'console' }"
+            class="text-weight-bold"
+            style="color: #94a3b8;"
+            @click="activeBottomTab = 'console'"
+          >
+            <q-icon name="terminal" size="16px" class="q-mr-xs" />
+            CONSOLE
+          </q-btn>
+
+          <q-btn 
+            flat 
+            dense 
+            no-caps 
+            size="sm" 
+            :class="{ 'tab-btn-active': activeBottomTab === 'problems' }"
+            class="text-weight-bold"
+            style="color: #94a3b8;"
+            @click="activeBottomTab = 'problems'"
+          >
+            <q-icon name="bug_report" size="16px" class="q-mr-xs" :color="problems.length > 0 ? 'negative' : 'positive'" />
+            ERROR FINDER
+            <q-badge 
+              :color="problems.length > 0 ? 'negative' : 'positive'" 
+              floating 
+              rounded 
+              style="top: -2px; right: -14px;"
+            >
+              {{ problems.length }}
+            </q-badge>
+          </q-btn>
+        </div>
+
+        <div>
+          <span v-if="activeBottomTab === 'console' && isRunning && !isWaitingForInput" class="text-caption text-grey-4">Compiling & Running...</span>
+          <span v-else-if="activeBottomTab === 'console' && isWaitingForInput" class="text-caption text-amber text-weight-bold" style="font-size: 11px;">⚠️ (Program waiting for input. Click console below to type)</span>
+          <span v-else-if="activeBottomTab === 'problems'" class="text-caption text-grey-4" style="font-size: 11px;">
+            {{ problems.length }} {{ problems.length === 1 ? 'issue' : 'issues' }} detected in {{ activeFileName }}
+          </span>
+        </div>
       </div>
       
       <!-- Console Content -->
-      <div class="console-content" @click="focusConsole" style="position: relative;">
-        <pre
-          class="console-text"
-        ><span>{{ output || 'Console ready. Click Run Code to execute.' }}</span><span class="user-typed-input">{{ currentInput }}</span><span v-if="consoleFocused && isWaitingForInput" class="console-cursor">_</span></pre>
+      <div v-show="activeBottomTab === 'console'" class="console-content" @click="focusConsole" style="position: relative;">
+        <pre class="console-text"><span>{{ output || 'Console ready. Click Run Code to execute.' }}</span><span class="user-typed-input">{{ currentInput }}</span><span v-if="consoleFocused && isWaitingForInput" class="console-cursor">_</span></pre>
         <input 
           v-show="isWaitingForInput"
           ref="consoleInputRef"
@@ -50,6 +118,43 @@
           autocomplete="off"
           spellcheck="false"
         />
+      </div>
+
+      <!-- Error Finder Content (Eclipse / NetBeans Style) -->
+      <div v-show="activeBottomTab === 'problems'" class="problems-content scroll" style="max-height: 250px; min-height: 100px; overflow-y: auto;">
+        <div v-if="problems.length === 0" class="flex flex-center q-pa-md text-center" style="min-height: 100px;">
+          <div>
+            <q-icon name="check_circle" size="36px" color="positive" class="q-mb-xs" />
+            <div class="text-subtitle2 text-positive text-weight-bold">No Errors Found!</div>
+            <div class="text-caption text-grey-4">Your Java code passed static syntax analysis cleanly.</div>
+          </div>
+        </div>
+
+        <div v-else class="q-gutter-xs">
+          <div 
+            v-for="(prob, idx) in problems" 
+            :key="'prob-'+idx" 
+            class="problem-item-card q-pa-sm rounded-borders cursor-pointer"
+            @click="jumpToLine(prob.line)"
+          >
+            <div class="row justify-between items-center q-mb-xs">
+              <div class="row items-center q-gutter-xs">
+                <q-icon :name="prob.type === 'error' ? 'cancel' : 'warning'" :color="prob.type === 'error' ? 'negative' : 'warning'" size="16px" />
+                <span class="text-caption text-weight-bold text-white">{{ prob.file }}: Line {{ prob.line }}</span>
+              </div>
+              <span class="jump-badge">Jump to Line {{ prob.line }} ↵</span>
+            </div>
+            <div class="text-caption text-weight-bold q-mb-xs" :class="prob.type === 'error' ? 'text-red-4' : 'text-amber-4'">
+              {{ prob.message }}
+            </div>
+            <div v-if="prob.snippet" class="code-snippet-box q-pa-xs q-mt-xs text-caption rounded-borders">
+              <code>{{ prob.snippet }}</code>
+            </div>
+            <div v-if="prob.quickFix" class="text-caption text-info text-weight-medium q-mt-xs">
+              💡 Quick Fix: {{ prob.quickFix }}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -67,6 +172,10 @@ const props = defineProps({
   allFiles: {
     type: Array,
     default: () => []
+  },
+  activeFileName: {
+    type: String,
+    default: 'Main.java'
   },
   disabled: {
     type: Boolean,
@@ -92,6 +201,10 @@ const currentInput = ref('');
 const consoleFocused = ref(false);
 const consoleInputRef = ref(null);
 const isWaitingForInput = ref(false);
+const textareaRef = ref(null);
+
+const activeBottomTab = ref('console'); // 'console' | 'problems'
+const problems = ref([]);
 
 const focusConsole = () => {
   if (isWaitingForInput.value && consoleInputRef.value) {
@@ -117,7 +230,7 @@ const insertTab = (e) => {
   code.value = code.value.substring(0, start) + "    " + code.value.substring(end);
   // Put cursor after tab
   setTimeout(() => {
-    e.target.selectionStart = e.target.selectionEnd = start + 4;
+    if (e.target) e.target.selectionStart = e.target.selectionEnd = start + 4;
   }, 0);
 };
 
@@ -130,167 +243,344 @@ const preventAction = (e) => {
   });
 };
 
-// ── Java → JavaScript Transpiler ─────────────────────────────────────────────
-// Translates Java OOP source code (classes, constructors, fields, this, methods)
-// into executable JavaScript that runs in a sandboxed async Function context.
-
 /**
- * Remove single-line and multi-line comments from Java source.
+ * Real-time & On-demand Java Syntax & Error Analyzer (Eclipse / NetBeans Style)
  */
+const analyzeJavaCode = (sourceCode, fileName = 'Main.java', filesList = []) => {
+  const resultProblems = [];
+  if (!sourceCode) return resultProblems;
+
+  const lines = sourceCode.split('\n');
+
+  // 1. Bracket & Parentheses Matching
+  const stack = [];
+
+  for (let lIdx = 0; lIdx < lines.length; lIdx++) {
+    const lineNum = lIdx + 1;
+    const lineText = lines[lIdx];
+
+    // Check for string literal unclosed on same line (unless escaped)
+    let inString = false;
+    let isEscaped = false;
+    for (let cIdx = 0; cIdx < lineText.length; cIdx++) {
+      const ch = lineText[cIdx];
+      if (ch === '\\' && !isEscaped) {
+        isEscaped = true;
+        continue;
+      }
+      if (ch === '"' && !isEscaped) {
+        inString = !inString;
+      }
+      isEscaped = false;
+    }
+
+    if (inString) {
+      resultProblems.push({
+        type: 'error',
+        file: fileName,
+        line: lineNum,
+        message: 'Unterminated string literal (missing closing quote ")',
+        snippet: lineText.trim(),
+        quickFix: 'Add closing double quote "'
+      });
+    }
+
+    // Bracket stack matching (ignoring comments and strings)
+    let cleanLine = lineText
+      .replace(/\/\/.*/, '')
+      .replace(/"[^"\\]*(?:\\.[^"\\]*)*"/g, '""')
+      .replace(/'[^'\\]*(?:\\.[^'\\]*)*'/g, "''");
+    
+    for (let cIdx = 0; cIdx < cleanLine.length; cIdx++) {
+      const ch = cleanLine[cIdx];
+      if (ch === '{' || ch === '(' || ch === '[') {
+        stack.push({ ch, line: lineNum, col: cIdx + 1 });
+      } else if (ch === '}' || ch === ')' || ch === ']') {
+        if (stack.length === 0) {
+          resultProblems.push({
+            type: 'error',
+            file: fileName,
+            line: lineNum,
+            message: `Unmatched closing bracket '${ch}'`,
+            snippet: lineText.trim(),
+            quickFix: `Remove extra '${ch}' or add matching opening bracket`
+          });
+        } else {
+          const top = stack.pop();
+          const expectedPair = { '}': '{', ')': '(', ']': '[' }[ch];
+          if (top.ch !== expectedPair) {
+            resultProblems.push({
+              type: 'error',
+              file: fileName,
+              line: lineNum,
+              message: `Mismatching bracket '${ch}'. Expected closing bracket for '${top.ch}' from line ${top.line}`,
+              snippet: lineText.trim(),
+              quickFix: `Replace '${ch}' with matching closing bracket`
+            });
+          }
+        }
+      }
+    }
+
+    // 2. Missing Semicolon Check
+    const trimmed = cleanLine.trim();
+    if (trimmed && !trimmed.startsWith('//') && !trimmed.startsWith('/*') && !trimmed.startsWith('*')) {
+      const isControlOrHeader = (
+        trimmed.endsWith('{') || 
+        trimmed.endsWith('}') || 
+        trimmed.endsWith(':') || 
+        trimmed.endsWith(',') ||
+        trimmed.startsWith('if') ||
+        trimmed.startsWith('else') ||
+        trimmed.startsWith('for') ||
+        trimmed.startsWith('while') ||
+        trimmed.startsWith('switch') ||
+        trimmed.startsWith('case') ||
+        trimmed.startsWith('default') ||
+        trimmed.startsWith('@') ||
+        trimmed.startsWith('public class') ||
+        trimmed.startsWith('class ') ||
+        trimmed.startsWith('interface ') ||
+        trimmed.startsWith('abstract class') ||
+        trimmed.includes('static void main') ||
+        trimmed.match(/^(public|private|protected|static|\s)*[\w<>\[\]]+\s+\w+\s*\([^)]*\)\s*$/)
+      );
+
+      if (!isControlOrHeader && !trimmed.endsWith(';')) {
+        resultProblems.push({
+          type: 'error',
+          file: fileName,
+          line: lineNum,
+          message: "Syntax Error: Missing semicolon ';' at end of statement",
+          snippet: lineText.trim(),
+          quickFix: "Add ';' at the end of line"
+        });
+      }
+    }
+  }
+
+  // Report any remaining unclosed brackets in stack
+  while (stack.length > 0) {
+    const unclosed = stack.pop();
+    const nameMap = { '{': 'brace {', '(': 'parenthesis (', '[': 'bracket [' };
+    resultProblems.push({
+      type: 'error',
+      file: fileName,
+      line: unclosed.line,
+      message: `Syntax Error: Unclosed ${nameMap[unclosed.ch]} introduced on line ${unclosed.line}`,
+      snippet: (lines[unclosed.line - 1] || '').trim(),
+      quickFix: `Add closing '${unclosed.ch === '{' ? '}' : unclosed.ch === '(' ? ')' : ']'}'`
+    });
+  }
+
+  // 3. Public Class vs Filename Matching
+  const publicClassMatch = sourceCode.match(/\bpublic\s+class\s+(\w+)/);
+  if (publicClassMatch) {
+    const pubClassName = publicClassMatch[1];
+    const expectedFileName = `${pubClassName}.java`;
+    if (fileName && fileName !== expectedFileName) {
+      let pubClassLine = 1;
+      for (let l = 0; l < lines.length; l++) {
+        if (lines[l].includes(`public class ${pubClassName}`)) {
+          pubClassLine = l + 1;
+          break;
+        }
+      }
+      resultProblems.push({
+        type: 'error',
+        file: fileName,
+        line: pubClassLine,
+        message: `Class Error: Public class '${pubClassName}' must be defined in a file named '${expectedFileName}'`,
+        snippet: (lines[pubClassLine - 1] || '').trim(),
+        quickFix: `Rename class to '${fileName.replace('.java', '')}' or rename file`
+      });
+    }
+  }
+
+  // 4. Entry point check for Main class
+  if (fileName === 'Main.java' || sourceCode.includes('class Main')) {
+    if (!sourceCode.includes('public static void main')) {
+      resultProblems.push({
+        type: 'warning',
+        file: fileName,
+        line: 1,
+        message: "Missing Entry Point: Class 'Main' does not contain 'public static void main(String[] args)'",
+        snippet: 'class Main { ... }',
+        quickFix: 'Generate public static void main(String[] args) method'
+      });
+    }
+  }
+
+  // 5. Statements directly inside class body check
+  for (let l = 0; l < lines.length; l++) {
+    const line = lines[l];
+    if (line.includes('System.out.') && !isInsideMethod(sourceCode, l)) {
+      resultProblems.push({
+        type: 'error',
+        file: fileName,
+        line: l + 1,
+        message: "Structure Error: Statement like 'System.out.print' must be inside a method or constructor body",
+        snippet: line.trim(),
+        quickFix: "Move statement inside public static void main() or a method"
+      });
+    }
+  }
+
+  // 6. Multi-file Duplicate Class check
+  if (filesList && filesList.length > 1) {
+    const currentClasses = [];
+    const classMatches = sourceCode.matchAll(/\b(?:public\s+)?class\s+(\w+)/g);
+    for (const m of classMatches) {
+      currentClasses.push(m[1]);
+    }
+    for (const otherFile of filesList) {
+      if (otherFile.name !== fileName && otherFile.code) {
+        for (const cls of currentClasses) {
+          if (otherFile.code.includes(`class ${cls}`)) {
+            resultProblems.push({
+              type: 'error',
+              file: fileName,
+              line: 1,
+              message: `Duplicate Class Error: Class '${cls}' is already defined in file '${otherFile.name}'`,
+              snippet: `class ${cls}`,
+              quickFix: `Rename class '${cls}' to avoid conflict across files`
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return resultProblems;
+};
+
+// Helper: Check if line index is inside a method body
+const isInsideMethod = (codeVal, lineIdx) => {
+  const lines = codeVal.split('\n');
+  let openBraceCount = 0;
+  for (let i = 0; i <= lineIdx; i++) {
+    const l = lines[i].replace(/\/\/.*/, '');
+    for (const ch of l) {
+      if (ch === '{') openBraceCount++;
+      if (ch === '}') openBraceCount--;
+    }
+  }
+  return openBraceCount >= 2;
+};
+
+const runAnalyzer = () => {
+  problems.value = analyzeJavaCode(code.value, props.activeFileName, props.allFiles);
+};
+
+const jumpToLine = (lineNum) => {
+  if (!textareaRef.value) return;
+  const text = code.value;
+  const lines = text.split('\n');
+  let pos = 0;
+  for (let i = 0; i < Math.min(lineNum - 1, lines.length); i++) {
+    pos += lines[i].length + 1;
+  }
+  textareaRef.value.focus();
+  textareaRef.value.setSelectionRange(pos, pos + (lines[lineNum - 1] || '').length);
+};
+
+// Re-run analyzer on code changes
+watch([code, () => props.activeFileName, () => props.allFiles], () => {
+  runAnalyzer();
+}, { immediate: true });
+
+// ── Java → JavaScript Transpiler ─────────────────────────────────────────────
 const stripComments = (src) => {
-  // Remove block comments /* ... */
   src = src.replace(/\/\*[\s\S]*?\*\//g, '');
-  // Remove line comments // ...
   src = src.replace(/\/\/[^\n]*/g, '');
   return src;
 };
 
-/**
- * Remove import and package statements.
- */
 const stripImports = (src) => {
   src = src.replace(/^\s*import\s+[\w\.]+(\.\*)?\s*;/gm, '');
   src = src.replace(/^\s*package\s+[\w\.]+\s*;/gm, '');
   return src;
 };
 
-/**
- * Given a source string and an opening brace index,
- * return the index of the matching closing brace.
- */
-const findMatchingBrace = (src, openIdx) => {
-  let depth = 1;
-  for (let i = openIdx + 1; i < src.length; i++) {
-    if (src[i] === '{') depth++;
-    else if (src[i] === '}') {
-      depth--;
-      if (depth === 0) return i;
-    }
-  }
-  return -1;
-};
-
-/**
- * Translate Java type declarations to JS `let` bindings.
- * Handles: int, double, float, long, short, byte, boolean, char, String, var,
- *          arrays (int[]), generic collections (List<...>, Map<...>), class names.
- * Only touches declarations — does NOT mangle `this.`, method signatures, etc.
- */
-const translateTypes = (code) => {
-  // Primitive and common types (including arrays): replace type in declaration context
+const translateTypes = (codeVal) => {
   const primitiveTypes = [
     'int', 'double', 'float', 'long', 'short', 'byte', 'boolean', 'char',
     'String', 'var', 'Object'
   ];
   const typePattern = primitiveTypes.join('|');
 
-  // "type varname" or "type[] varname" or "type varname =" — in statement position
-  // Use a regex that only matches at start-of-statement (after ; { } or newline)
-  code = code.replace(
+  codeVal = codeVal.replace(
     new RegExp(`(?<=[;{}\\n\\(,]\\s*)(?:(?:${typePattern})(?:\\s*\\[\\])*|(?:[A-Z][\\w]*(?:<[^>]*>)?(?:\\s*\\[\\])*))(?=\\s+[a-z_$][\\w$]*)`, 'g'),
     'let'
   );
 
-  // for-loop declarations: for (int i = 0; ...)
-  code = code.replace(
+  codeVal = codeVal.replace(
     new RegExp(`\\bfor\\s*\\(\\s*(?:${typePattern})(?:\\s*\\[\\])*`, 'g'),
     'for (let'
   );
 
-  // Enhanced for-each: for (String s : list) → for (let s of list)
-  code = code.replace(
+  codeVal = codeVal.replace(
     new RegExp(`\\bfor\\s*\\(\\s*(?:${typePattern}|[A-Z][\\w]*)(?:\\s*\\[\\])?\\s+([a-z_$][\\w$]*)\\s*:\\s*`, 'g'),
     'for (let $1 of '
   );
 
-  return code;
+  return codeVal;
 };
 
-/**
- * Translate common Java built-in calls and idioms to JavaScript equivalents.
- */
-const translateBuiltins = (code) => {
-  // System.out.println / print / printf
-  code = code.replace(/System\.out\.println\s*\(/g, '__print__(');
-  code = code.replace(/System\.out\.print\s*\(/g, '__printInline__(');
-  code = code.replace(/System\.out\.printf\s*\(/g, '__printInline__(');
-  code = code.replace(/System\.err\.println\s*\(/g, '__print__(');
+const translateBuiltins = (codeVal) => {
+  codeVal = codeVal.replace(/System\.out\.println\s*\(/g, '__print__(');
+  codeVal = codeVal.replace(/System\.out\.print\s*\(/g, '__printInline__(');
+  codeVal = codeVal.replace(/System\.out\.printf\s*\(/g, '__printInline__(');
+  codeVal = codeVal.replace(/System\.err\.println\s*\(/g, '__print__(');
 
-  // Math functions map directly (JS Math is mostly compatible)
-  // Math.pow, Math.sqrt, Math.abs, Math.max, Math.min, Math.floor, Math.ceil, Math.round — same
-  // Math.PI, Math.E — same
+  codeVal = codeVal.replace(/\.length\s*\(\s*\)/g, '.length');
+  codeVal = codeVal.replace(/\bString\.valueOf\s*\(/g, 'String(');
 
-  // String methods: Java .length() → JS .length
-  code = code.replace(/\.length\s*\(\s*\)/g, '.length');
+  codeVal = codeVal.replace(/\bInteger\.parseInt\s*\(/g, 'parseInt(');
+  codeVal = codeVal.replace(/\bDouble\.parseDouble\s*\(/g, 'parseFloat(');
+  codeVal = codeVal.replace(/\bFloat\.parseFloat\s*\(/g, 'parseFloat(');
+  codeVal = codeVal.replace(/\bLong\.parseLong\s*\(/g, 'parseInt(');
+  codeVal = codeVal.replace(/\bInteger\.toString\s*\(/g, 'String(');
+  codeVal = codeVal.replace(/\bInteger\.MAX_VALUE\b/g, 'Number.MAX_SAFE_INTEGER');
+  codeVal = codeVal.replace(/\bInteger\.MIN_VALUE\b/g, 'Number.MIN_SAFE_INTEGER');
 
-  // String.valueOf(x) → String(x)
-  code = code.replace(/\bString\.valueOf\s*\(/g, 'String(');
+  codeVal = codeVal.replace(/\bArrays\.toString\s*\(([^)]+)\)/g, '($1).join(", ")');
+  codeVal = codeVal.replace(/\bArrays\.sort\s*\(([^)]+)\)/g, '$1.sort((a,b)=>a-b)');
 
-  // Integer.parseInt, Double.parseDouble
-  code = code.replace(/\bInteger\.parseInt\s*\(/g, 'parseInt(');
-  code = code.replace(/\bDouble\.parseDouble\s*\(/g, 'parseFloat(');
-  code = code.replace(/\bFloat\.parseFloat\s*\(/g, 'parseFloat(');
-  code = code.replace(/\bLong\.parseLong\s*\(/g, 'parseInt(');
-  code = code.replace(/\bInteger\.toString\s*\(/g, 'String(');
-  code = code.replace(/\bInteger\.MAX_VALUE\b/g, 'Number.MAX_SAFE_INTEGER');
-  code = code.replace(/\bInteger\.MIN_VALUE\b/g, 'Number.MIN_SAFE_INTEGER');
+  codeVal = codeVal.replace(/new\s+ArrayList\s*<[^>]*>\s*\(\s*\)/g, '[]');
+  codeVal = codeVal.replace(/new\s+LinkedList\s*<[^>]*>\s*\(\s*\)/g, '[]');
+  codeVal = codeVal.replace(/\.add\s*\(/g, '.push(');
+  codeVal = codeVal.replace(/\.get\s*\(\s*(\w+)\s*\)/g, '[$1]');
+  codeVal = codeVal.replace(/\.size\s*\(\s*\)/g, '.length');
+  codeVal = codeVal.replace(/\.isEmpty\s*\(\s*\)/g, '.length === 0');
+  codeVal = codeVal.replace(/\.remove\s*\((\d+)\)/g, '.splice($1, 1)');
 
-  // Arrays.toString(arr) → arr.join(', ')
-  code = code.replace(/\bArrays\.toString\s*\(([^)]+)\)/g, '($1).join(", ")');
-  code = code.replace(/\bArrays\.sort\s*\(([^)]+)\)/g, '$1.sort((a,b)=>a-b)');
+  codeVal = codeVal.replace(/\bnew\s+Scanner\s*\([^)]*\)\s*;?/g, '/* Scanner ready */');
+  codeVal = codeVal.replace(/\bScanner\s+(\w+)\s*=\s*\/\*[^*]*\*\//g, 'let $1 = {}');
+  codeVal = codeVal.replace(/(\w+)\.nextInt\s*\(\s*\)/g, "(await __readInput__('int'))");
+  codeVal = codeVal.replace(/(\w+)\.nextDouble\s*\(\s*\)/g, "(await __readInput__('double'))");
+  codeVal = codeVal.replace(/(\w+)\.nextFloat\s*\(\s*\)/g, "(await __readInput__('double'))");
+  codeVal = codeVal.replace(/(\w+)\.nextLong\s*\(\s*\)/g, "(await __readInput__('int'))");
+  codeVal = codeVal.replace(/(\w+)\.next\s*\(\s*\)/g, "(await __readInput__('word'))");
+  codeVal = codeVal.replace(/(\w+)\.nextLine\s*\(\s*\)/g, "(await __readInput__('line'))");
 
-  // ArrayList / List operations (basic)
-  // new ArrayList<>() → []
-  code = code.replace(/new\s+ArrayList\s*<[^>]*>\s*\(\s*\)/g, '[]');
-  code = code.replace(/new\s+LinkedList\s*<[^>]*>\s*\(\s*\)/g, '[]');
-  code = code.replace(/\.add\s*\(/g, '.push(');
-  code = code.replace(/\.get\s*\(\s*(\w+)\s*\)/g, '[$1]');
-  code = code.replace(/\.size\s*\(\s*\)/g, '.length');
-  code = code.replace(/\.isEmpty\s*\(\s*\)/g, '.length === 0');
-  code = code.replace(/\.remove\s*\((\d+)\)/g, '.splice($1, 1)');
+  codeVal = codeVal.replace(/\(int\)\s*([a-zA-Z0-9_.()]+)/g, 'Math.trunc($1)');
+  codeVal = codeVal.replace(/\(double\)\s*([a-zA-Z0-9_.()]+)/g, 'Number($1)');
+  codeVal = codeVal.replace(/\(float\)\s*([a-zA-Z0-9_.()]+)/g, 'Number($1)');
+  codeVal = codeVal.replace(/\(String\)\s*([a-zA-Z0-9_.()]+)/g, 'String($1)');
 
-  // Scanner → replaced individually per call
-  code = code.replace(/\bnew\s+Scanner\s*\([^)]*\)\s*;?/g, '/* Scanner ready */');
-  code = code.replace(/\bScanner\s+(\w+)\s*=\s*\/\*[^*]*\*\//g, 'let $1 = {}');
-  // .nextInt(), .nextDouble(), .next(), .nextLine()
-  code = code.replace(/(\w+)\.nextInt\s*\(\s*\)/g, "(await __readInput__('int'))");
-  code = code.replace(/(\w+)\.nextDouble\s*\(\s*\)/g, "(await __readInput__('double'))");
-  code = code.replace(/(\w+)\.nextFloat\s*\(\s*\)/g, "(await __readInput__('double'))");
-  code = code.replace(/(\w+)\.nextLong\s*\(\s*\)/g, "(await __readInput__('int'))");
-  code = code.replace(/(\w+)\.next\s*\(\s*\)/g, "(await __readInput__('word'))");
-  code = code.replace(/(\w+)\.nextLine\s*\(\s*\)/g, "(await __readInput__('line'))");
-
-  // Type cast idioms: (int) x → Math.trunc(x)
-  code = code.replace(/\(int\)\s*([a-zA-Z0-9_.()]+)/g, 'Math.trunc($1)');
-  code = code.replace(/\(double\)\s*([a-zA-Z0-9_.()]+)/g, 'Number($1)');
-  code = code.replace(/\(float\)\s*([a-zA-Z0-9_.()]+)/g, 'Number($1)');
-  code = code.replace(/\(String\)\s*([a-zA-Z0-9_.()]+)/g, 'String($1)');
-
-  // String concatenation with + is same in JS — no change needed
-  // final keyword: strip
-  code = code.replace(/\bfinal\s+/g, '');
-  // static (in method body context) — strip
-  // Access modifiers stripped later at class-level
-
-  return code;
+  codeVal = codeVal.replace(/\bfinal\s+/g, '');
+  return codeVal;
 };
 
-/**
- * Parse a Java class body and produce JavaScript class code.
- * Handles: fields, constructors, methods (instance + static), access modifiers.
- */
 const transpileClassBody = (className, body, superClass) => {
-  // Access modifier and type patterns to strip from member declarations
   const modifiers = /\b(public|private|protected|static|final|synchronized|abstract|native|transient|volatile)\b\s*/g;
 
-  // Split body into members by scanning for { } balanced blocks
   const members = [];
   let i = 0;
   while (i < body.length) {
-    // Skip whitespace and semicolons
     if (/[\s;]/.test(body[i])) { i++; continue; }
 
-    // Find the next { or ;
     let memberStart = i;
     let j = i;
     let depth = 0;
@@ -327,14 +617,12 @@ const transpileClassBody = (className, body, superClass) => {
     const isStatic = /\bstatic\b/.test(member);
     const stripped = member.replace(modifiers, '');
 
-    // Detect constructor: ClassName(...)  {  }
     const ctorMatch = stripped.match(new RegExp(`^${className}\\s*\\(([^)]*)\\)\\s*\\{([\\s\\S]*)\\}\\s*$`));
     if (ctorMatch) {
       constructors.push({ params: ctorMatch[1].trim(), body: ctorMatch[2] });
       continue;
     }
 
-    // Detect method: returnType name(...) { body }
     const methodMatch = stripped.match(/^[\w<>\[\],\s]+?\s+(\w+)\s*\(([^)]*)\)\s*\{([\s\S]*)\}\s*$/);
     if (methodMatch) {
       const mName = methodMatch[1];
@@ -348,7 +636,6 @@ const transpileClassBody = (className, body, superClass) => {
       continue;
     }
 
-    // Detect field: type name = value; or type name;
     const fieldMatch = stripped.match(/^[\w<>\[\],\s]+?\s+(\w+)\s*(?:=\s*([\s\S]+?))?\s*;?\s*$/);
     if (fieldMatch && fieldMatch[1] !== className) {
       if (isStatic) {
@@ -359,26 +646,23 @@ const transpileClassBody = (className, body, superClass) => {
     }
   }
 
-  // Build constructor body: initialize fields then user constructor body
   const defaultFieldInits = fields.map(f => `this.${f.name} = ${f.value === 'undefined' ? 'undefined' : f.value};`).join('\n    ');
 
   const ctorBodies = constructors.map(ctor => {
     const paramList = ctor.params
       ? ctor.params.split(',').map(p => {
           const parts = p.trim().split(/\s+/);
-          return parts[parts.length - 1]; // last word is the param name
+          return parts[parts.length - 1];
         }).join(', ')
       : '';
     const translatedBody = transpileMethodBody(ctor.body, className);
     return `  constructor(${paramList}) {\n    ${superClass ? 'super();' : ''}\n    ${defaultFieldInits}\n    ${translatedBody}\n  }`;
   });
 
-  // If no explicit constructor, still init fields
   const ctorSection = ctorBodies.length > 0
-    ? ctorBodies[0]  // JS only supports one constructor
+    ? ctorBodies[0]
     : `  constructor() {\n    ${superClass ? 'super();' : ''}\n    ${defaultFieldInits}\n  }`;
 
-  // Instance methods
   const methodSection = methods.map(m => {
     const paramList = m.params
       ? m.params.split(',').map(p => { const parts = p.trim().split(/\s+/); return parts[parts.length - 1]; }).join(', ')
@@ -387,7 +671,6 @@ const transpileClassBody = (className, body, superClass) => {
     return `  ${m.name}(${paramList}) {\n    ${translatedBody}\n  }`;
   }).join('\n\n');
 
-  // Static methods
   const staticMethodSection = staticMethods.map(m => {
     const paramList = m.params
       ? m.params.split(',').map(p => { const parts = p.trim().split(/\s+/); return parts[parts.length - 1]; }).join(', ')
@@ -396,112 +679,93 @@ const transpileClassBody = (className, body, superClass) => {
     return `  static ${m.name}(${paramList}) {\n    ${translatedBody}\n  }`;
   }).join('\n\n');
 
-  // Static fields
   const staticFieldSection = staticFields.map(f => `${className}.${f.name} = ${f.value === 'undefined' ? 'undefined' : f.value};`).join('\n');
-
   const extendsClause = superClass ? ` extends ${superClass}` : '';
 
   return `class ${className}${extendsClause} {\n${ctorSection}\n\n${methodSection}\n\n${staticMethodSection}\n}\n${staticFieldSection}`;
 };
 
-/**
- * Translate a Java method body to JavaScript.
- */
 const transpileMethodBody = (body, currentClass) => {
-  let code = body;
+  let codeVal = body;
+  codeVal = codeVal.replace(/\b(public|private|protected)\b\s*/g, '');
+  codeVal = translateTypes(codeVal);
+  codeVal = translateBuiltins(codeVal);
 
-  // Strip access modifiers used inside method scope (shouldn't be there, but be safe)
-  code = code.replace(/\b(public|private|protected)\b\s*/g, '');
-
-  // Translate types and built-ins
-  code = translateTypes(code);
-  code = translateBuiltins(code);
-
-  // this.field access — already correct in JS
-  // super() calls — already correct in JS
-
-  // String comparison: .equals() → === (simplified for sandbox)
-  code = code.replace(/(\w+)\.equals\s*\(([^)]+)\)/g, '($1 === $2)');
-  code = code.replace(/(\w+)\.equalsIgnoreCase\s*\(([^)]+)\)/g, '($1.toLowerCase() === $2.toLowerCase())');
-
-  // .toString() — mostly a no-op in JS
-  code = code.replace(/\.toString\s*\(\s*\)/g, '');
-
-  // null → null (same)
-  // true/false → true/false (same)
-
-  // Wrap in async IIFE marker so await works (added by caller)
-  return code.trim();
+  codeVal = codeVal.replace(/(\w+)\.equals\s*\(([^)]+)\)/g, '($1 === $2)');
+  codeVal = codeVal.replace(/(\w+)\.equalsIgnoreCase\s*\(([^)]+)\)/g, '($1.toLowerCase() === $2.toLowerCase())');
+  codeVal = codeVal.replace(/\.toString\s*\(\s*\)/g, '');
+  return codeVal.trim();
 };
 
-/**
- * Main Java → JS transpiler entry point.
- * Finds all class definitions, transpiles them to JS classes,
- * then finds and runs main().
- */
 const transpileJava = (rawSrc) => {
   let src = stripComments(rawSrc);
   src = stripImports(src);
-  // Strip annotations (e.g., @Override) so they don't break method parsing
   src = src.replace(/@\w+\b/g, '');
 
-  // Find all top-level class declarations
   const classRegex = /\b(?:public\s+|private\s+|protected\s+|abstract\s+|final\s+)*class\s+(\w+)(?:\s+extends\s+(\w+))?(?:\s+implements\s+[\w,\s]+)?\s*\{/g;
   const classes = [];
   let match;
-
   while ((match = classRegex.exec(src)) !== null) {
     const className = match[1];
     const superClass = match[2] || null;
-    const bodyStart = match.index + match[0].length - 1; // index of opening {
-    const bodyEnd = findMatchingBrace(src, bodyStart);
-    if (bodyEnd === -1) continue;
-    const body = src.substring(bodyStart + 1, bodyEnd);
-    classes.push({ className, superClass, body, bodyStart, bodyEnd });
+    const braceIdx = match.index + match[0].length - 1;
+    const endIdx = findMatchingBrace(src, braceIdx);
+    if (endIdx !== -1) {
+      const body = src.substring(braceIdx + 1, endIdx);
+      classes.push({ name: className, superClass, body });
+    }
   }
 
   if (classes.length === 0) {
-    return { error: 'No class definition found. Please define at least one public class.' };
+    return { error: 'No class definition found. Ensure your code defines a class (e.g. public class Main { ... }).' };
   }
 
-  // Transpile each class
-  const jsClasses = classes.map(c => transpileClassBody(c.className, c.body, c.superClass)).join('\n\n');
+  const jsClasses = classes.map(cls => transpileClassBody(cls.name, cls.body, cls.superClass));
 
-  // Find the class that has a main method
-  const mainClass = classes.find(c => /public\s+static\s+void\s+main\b/.test(c.body) || /static\s+public\s+void\s+main\b/.test(c.body));
-  if (!mainClass) {
-    return { error: 'main method not found. Ensure one class contains:\n  public static void main(String[] args)' };
-  }
+  let entryClass = classes.find(c => c.name === 'Main') || classes[0];
+  const mainRunner = `\n(async () => {\n  if (typeof ${entryClass.name} !== 'undefined' && typeof ${entryClass.name}.main === 'function') {\n    await ${entryClass.name}.main([]);\n  } else {\n    __print__("Notice: No static main() method found in ${entryClass.name}. Class loaded.");\n  }\n})();`;
 
-  // Extract main body
-  const mainMatch = mainClass.body.match(/(?:public\s+static|static\s+public)\s+void\s+main\s*\([^)]*\)\s*\{/);
-  if (!mainMatch) return { error: 'Could not parse main method signature.' };
-
-  const mainBodyStart = mainClass.body.indexOf(mainMatch[0]) + mainMatch[0].length - 1;
-  const mainBodyEnd = findMatchingBrace(mainClass.body, mainBodyStart);
-  const mainBody = mainClass.body.substring(mainBodyStart + 1, mainBodyEnd);
-  const translatedMain = transpileMethodBody(mainBody, mainClass.className);
-
-  return {
-    js: `${jsClasses}\n\n// Entry point\nawait (async function main() {\n${translatedMain}\n})();`
-  };
+  return { js: jsClasses.join('\n\n') + '\n' + mainRunner };
 };
 
-const runCode = async () => {
+const findMatchingBrace = (src, openIdx) => {
+  let depth = 1;
+  for (let i = openIdx + 1; i < src.length; i++) {
+    if (src[i] === '{') depth++;
+    else if (src[i] === '}') {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+};
+
+const runCode = (isAuto = false) => {
+  if (isRunning.value) return;
+
+  runAnalyzer();
+  const criticalErrors = problems.value.filter(p => p.type === 'error');
+  if (criticalErrors.length > 0) {
+    activeBottomTab.value = 'problems';
+    $q.notify({
+      type: 'negative',
+      message: `Syntax Check: Found ${criticalErrors.length} compilation error(s). Switch to Error Finder to inspect.`,
+      position: 'top',
+      timeout: 3000
+    });
+    return;
+  }
+
+  activeBottomTab.value = 'console';
   isRunning.value = true;
-  output.value = 'Compiling Java...\n';
-  currentInput.value = '';
-  isWaitingForInput.value = false;
-  resolveInputPromise = null;
+  output.value = 'Compiling and executing Java project...\n';
 
   setTimeout(async () => {
-    // Collect all file sources
     let rawSrc = code.value;
     if (props.allFiles && props.allFiles.length > 0) {
       rawSrc = props.allFiles.map(f => f.code).join('\n\n');
     }
 
-    // Transpile Java → JS
     const result = transpileJava(rawSrc);
     if (result.error) {
       output.value = 'Compilation Error: ' + result.error;
@@ -510,9 +774,8 @@ const runCode = async () => {
     }
 
     const jsCode = result.js;
-    output.value = ''; // clear "Compiling..." message
+    output.value = '';
 
-    // Runtime helpers
     const __print__ = (val) => {
       output.value += (val !== undefined && val !== null ? String(val) : 'null') + '\n';
     };
@@ -575,7 +838,7 @@ watch(() => props.initialCode, (newVal) => {
 
 .code-textarea {
   width: 100%;
-  height: 300px;
+  height: 320px;
   font-family: 'Fira Code', 'Courier New', monospace;
   font-size: 14px;
   background: #1e1e1e;
@@ -610,10 +873,6 @@ watch(() => props.initialCode, (newVal) => {
   cursor: text;
 }
 
-.console-text:focus {
-  outline: none;
-}
-
 .user-typed-input {
   color: #ffaa00;
   font-weight: bold;
@@ -638,6 +897,44 @@ watch(() => props.initialCode, (newVal) => {
   cursor: text;
   z-index: 10;
   font-size: 16px;
+}
+
+.tab-btn-active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #818cf8 !important;
+  border-bottom: 2px solid #818cf8;
+}
+
+.border-bottom-dark {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.problem-item-card {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s ease;
+}
+
+.problem-item-card:hover {
+  background: rgba(99, 102, 241, 0.18);
+  border-color: #818cf8;
+}
+
+.jump-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(99, 102, 241, 0.25);
+  color: #a5b4fc;
+  font-weight: 600;
+}
+
+.code-snippet-box {
+  background: #0f172a;
+  color: #f1f5f9;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 12px;
+  border-left: 3px solid #ef4444;
 }
 
 @keyframes blink {

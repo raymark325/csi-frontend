@@ -263,6 +263,7 @@
                 ref="javaEditorRef" 
                 :initial-code="javaFiles[activeJavaFileIndex]?.code || ''" 
                 :all-files="javaFiles"
+                :active-file-name="javaFiles[activeJavaFileIndex]?.name || 'Main.java'"
                 :disabled="isReadOnly" 
                 @change="handleJavaChange" 
               />
