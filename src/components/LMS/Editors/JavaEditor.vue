@@ -214,9 +214,16 @@ const focusConsole = () => {
 
 // Global input resolver callback
 let resolveInputPromise = null;
+let lastSubmitTimestamp = 0;
 
 const submitMobileInput = (e) => {
   if (props.disabled || !isRunning.value || !isWaitingForInput.value) return;
+
+  // Guard against Enter key auto-repeat: ignore if submitted less than 300ms ago
+  const now = Date.now();
+  if (now - lastSubmitTimestamp < 300) return;
+  lastSubmitTimestamp = now;
+
   const val = currentInput.value;
   currentInput.value = '';
   if (resolveInputPromise) {
