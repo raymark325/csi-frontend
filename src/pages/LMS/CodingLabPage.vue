@@ -99,41 +99,39 @@
       <template v-else>
         <div v-show="activeTab === 'java'">
           <!-- If no project is loaded/named, show the project creation wizard -->
-          <div v-if="!projectName" class="glass-card q-pa-xl text-center shadow-lg rounded-borders" style="max-width: 620px; margin: 40px auto; background: rgba(18, 24, 38, 0.95); border: 1px solid rgba(99, 102, 241, 0.3); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6); backdrop-filter: blur(12px);">
+          <div v-if="!projectName" class="glass-card q-pa-xl text-center shadow-lg rounded-borders" style="max-width: 620px; margin: 40px auto; background: #ffffff; border: 1px solid rgba(0, 122, 255, 0.15); box-shadow: 0 10px 30px rgba(0, 122, 255, 0.08);">
             <div class="q-mb-md flex flex-center">
-              <div class="q-pa-md rounded-circle" style="background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3);">
-                <q-icon name="coffee" size="48px" color="indigo-4" />
+              <div class="q-pa-md rounded-circle" style="background: rgba(0, 122, 255, 0.08); border: 1px solid rgba(0, 122, 255, 0.15); display: inline-flex;">
+                <q-icon name="coffee" size="48px" color="primary" />
               </div>
             </div>
-            <h2 class="text-h5 text-white text-weight-bold q-my-none">Create New Java Project</h2>
-            <p class="text-body2 text-grey-4 q-mt-sm q-mb-lg">Specify your project details and select an OOP starter template to begin.</p>
+            <h2 class="text-h5 text-weight-bold q-my-none" style="color: #0d1b2a;">Create New Java Project</h2>
+            <p class="text-body2 q-mt-sm q-mb-lg" style="color: #4a5568;">Specify your project details and select an OOP starter template to begin.</p>
             
             <q-input 
               v-model="wizardProjName" 
               label="Project Name" 
-              dark 
-              color="indigo-4" 
-              label-color="indigo-3"
-              input-class="text-white text-weight-medium"
+              color="primary" 
+              label-color="primary"
+              input-style="color: #0d1b2a; font-weight: 500;"
               class="q-mb-md" 
               outlined 
               placeholder="e.g. MyOOPApplication" 
-              style="background: rgba(15, 23, 42, 0.7); border-radius: 8px;"
+              style="background: #f8fafc; border-radius: 8px;"
             />
             <q-input 
               v-model="wizardBasePkg" 
               label="Base Package" 
-              dark 
-              color="indigo-4" 
-              label-color="indigo-3"
-              input-class="text-white text-weight-medium"
+              color="primary" 
+              label-color="primary"
+              input-style="color: #0d1b2a; font-weight: 500;"
               class="q-mb-lg" 
               outlined 
               placeholder="e.g. com.example.app" 
-              style="background: rgba(15, 23, 42, 0.7); border-radius: 8px;"
+              style="background: #f8fafc; border-radius: 8px;"
             />
             
-            <div class="text-subtitle2 text-left text-grey-3 text-weight-bold q-mb-sm">Choose Project Template</div>
+            <div class="text-subtitle2 text-left text-weight-bold q-mb-sm" style="color: #334155;">Choose Project Template</div>
             <div class="row q-col-gutter-sm q-mb-lg">
               <div class="col-6">
                 <div 
@@ -142,8 +140,8 @@
                   @click="selectedTemplate = 'blank'"
                 >
                   <div class="text-h6 q-mb-xs">📄</div>
-                  <div class="text-weight-bold text-white">Blank Project</div>
-                  <div class="text-caption text-grey-4">Empty project with Main.java</div>
+                  <div class="text-weight-bold template-title">Blank Project</div>
+                  <div class="text-caption template-desc">Empty project with Main.java</div>
                 </div>
               </div>
               <div class="col-6">
@@ -153,8 +151,8 @@
                   @click="selectedTemplate = 'oop'"
                 >
                   <div class="text-h6 q-mb-xs">🏗️</div>
-                  <div class="text-weight-bold text-white">OOP Starter</div>
-                  <div class="text-caption text-grey-4">Polymorphism (Main, Animal, Dog)</div>
+                  <div class="text-weight-bold template-title">OOP Starter</div>
+                  <div class="text-caption template-desc">Polymorphism (Main, Animal, Dog)</div>
                 </div>
               </div>
               <div class="col-6">
@@ -164,8 +162,8 @@
                   @click="selectedTemplate = 'ds'"
                 >
                   <div class="text-h6 q-mb-xs">🗃️</div>
-                  <div class="text-weight-bold text-white">Data Structures</div>
-                  <div class="text-caption text-grey-4">Stack, Queue, ArrayList demo</div>
+                  <div class="text-weight-bold template-title">Data Structures</div>
+                  <div class="text-caption template-desc">Stack, Queue, ArrayList demo</div>
                 </div>
               </div>
               <div class="col-6">
@@ -175,20 +173,20 @@
                   @click="selectedTemplate = 'design'"
                 >
                   <div class="text-h6 q-mb-xs">🎨</div>
-                  <div class="text-weight-bold text-white">Design Patterns</div>
-                  <div class="text-caption text-grey-4">Singleton & Factory patterns</div>
+                  <div class="text-weight-bold template-title">Design Patterns</div>
+                  <div class="text-caption template-desc">Singleton & Factory patterns</div>
                 </div>
               </div>
             </div>
             
             <q-btn 
-              color="indigo-6" 
+              color="primary" 
               label="Create Java Project" 
               rounded 
               unelevated 
               @click="initJavaProject" 
               class="full-width q-py-sm text-weight-bold text-subtitle2" 
-              style="background: linear-gradient(135deg, #6366f1, #4f46e5); box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);"
+              style="background: linear-gradient(135deg, #007AFF, #0055b3); box-shadow: 0 4px 15px rgba(0, 122, 255, 0.25);"
             />
           </div>
 
@@ -298,14 +296,28 @@
         </div>
         <div v-show="activeTab === 'html'">
           <!-- If no HTML project is created yet, show Project Creation Wizard -->
-          <div v-if="!htmlProjectName" class="glass-card q-pa-xl text-center shadow-lg" style="max-width: 650px; margin: 40px auto;">
-            <q-icon name="web" size="56px" color="positive" class="q-mb-md" />
-            <h2 class="text-h5 text-white font-weight-bold q-my-none">Create New HTML/CSS Web Project</h2>
-            <p class="text-body2 text-grey-4 q-mt-sm q-mb-lg">Build responsive websites with HTML, CSS, JavaScript, and Image assets.</p>
+          <div v-if="!htmlProjectName" class="glass-card q-pa-xl text-center shadow-lg rounded-borders" style="max-width: 650px; margin: 40px auto; background: #ffffff; border: 1px solid rgba(52, 199, 89, 0.2); box-shadow: 0 10px 30px rgba(52, 199, 89, 0.08);">
+            <div class="q-mb-md flex flex-center">
+              <div class="q-pa-md rounded-circle" style="background: rgba(52, 199, 89, 0.08); border: 1px solid rgba(52, 199, 89, 0.15); display: inline-flex;">
+                <q-icon name="web" size="48px" color="positive" />
+              </div>
+            </div>
+            <h2 class="text-h5 text-weight-bold q-my-none" style="color: #0d1b2a;">Create New HTML/CSS Web Project</h2>
+            <p class="text-body2 q-mt-sm q-mb-lg" style="color: #4a5568;">Build responsive websites with HTML, CSS, JavaScript, and Image assets.</p>
 
-            <q-input v-model="htmlWizardProjName" label="Project Name" dark color="positive" class="q-mb-lg" outlined placeholder="e.g. MyWebPortfolio" />
+            <q-input 
+              v-model="htmlWizardProjName" 
+              label="Project Name" 
+              color="positive" 
+              label-color="positive"
+              input-style="color: #0d1b2a; font-weight: 500;"
+              class="q-mb-lg" 
+              outlined 
+              placeholder="e.g. MyWebPortfolio" 
+              style="background: #f8fafc; border-radius: 8px;"
+            />
 
-            <div class="text-subtitle2 text-left text-grey-4 q-mb-sm">Choose Web Project Template</div>
+            <div class="text-subtitle2 text-left text-weight-bold q-mb-sm" style="color: #334155;">Choose Web Project Template</div>
             <div class="row q-col-gutter-sm q-mb-lg">
               <div class="col-6">
                 <div 
@@ -313,9 +325,9 @@
                   :class="{ active: htmlSelectedTemplate === 'blank' }" 
                   @click="htmlSelectedTemplate = 'blank'"
                 >
-                  <div class="text-h6">📄</div>
-                  <div class="text-weight-bold text-white">Blank Web Page</div>
-                  <div class="text-caption text-grey-5">index.html, style.css, script.js</div>
+                  <div class="text-h6 q-mb-xs">📄</div>
+                  <div class="text-weight-bold template-title">Blank Web Page</div>
+                  <div class="text-caption template-desc">index.html, style.css, script.js</div>
                 </div>
               </div>
               <div class="col-6">
@@ -324,9 +336,9 @@
                   :class="{ active: htmlSelectedTemplate === 'landing' }" 
                   @click="htmlSelectedTemplate = 'landing'"
                 >
-                  <div class="text-h6">🎨</div>
-                  <div class="text-weight-bold text-white">Landing Page</div>
-                  <div class="text-caption text-grey-5">Hero section, CSS grid & flex styling</div>
+                  <div class="text-h6 q-mb-xs">🎨</div>
+                  <div class="text-weight-bold template-title">Landing Page</div>
+                  <div class="text-caption template-desc">Hero section, CSS grid & flex styling</div>
                 </div>
               </div>
               <div class="col-6">
@@ -335,9 +347,9 @@
                   :class="{ active: htmlSelectedTemplate === 'gallery' }" 
                   @click="htmlSelectedTemplate = 'gallery'"
                 >
-                  <div class="text-h6">🖼️</div>
-                  <div class="text-weight-bold text-white">Image Gallery</div>
-                  <div class="text-caption text-grey-5">HTML + CSS grid & pre-seeded images</div>
+                  <div class="text-h6 q-mb-xs">🖼️</div>
+                  <div class="text-weight-bold template-title">Image Gallery</div>
+                  <div class="text-caption template-desc">HTML + CSS grid & pre-seeded images</div>
                 </div>
               </div>
               <div class="col-6">
@@ -346,14 +358,14 @@
                   :class="{ active: htmlSelectedTemplate === 'app' }" 
                   @click="htmlSelectedTemplate = 'app'"
                 >
-                  <div class="text-h6">⚡</div>
-                  <div class="text-weight-bold text-white">Interactive App</div>
-                  <div class="text-caption text-grey-5">HTML UI + JS DOM manipulation demo</div>
+                  <div class="text-h6 q-mb-xs">⚡</div>
+                  <div class="text-weight-bold template-title">Interactive App</div>
+                  <div class="text-caption template-desc">HTML UI + JS DOM manipulation demo</div>
                 </div>
               </div>
             </div>
 
-            <q-btn color="positive" label="Create Web Project" rounded unelevated @click="initHtmlProject" class="full-width q-py-sm" />
+            <q-btn color="positive" label="Create Web Project" rounded unelevated @click="initHtmlProject" class="full-width q-py-sm text-weight-bold text-subtitle2" style="background: linear-gradient(135deg, #34c759, #28a745); box-shadow: 0 4px 15px rgba(52, 199, 89, 0.25);" />
           </div>
 
           <!-- HTML Project Explorer & Editor Layout -->
@@ -2057,23 +2069,56 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.08);
 }
 .template-card {
-  background: rgba(30, 41, 59, 0.6);
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
   border-radius: 10px;
   padding: 16px 12px;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   text-align: center;
 }
+.template-card .template-title {
+  color: #0f172a;
+}
+.template-card .template-desc {
+  color: #64748b;
+}
 .template-card:hover {
-  border-color: #818cf8;
-  background: rgba(99, 102, 241, 0.15);
+  border-color: #007aff;
+  background: #f1f5f9;
   transform: translateY(-2px);
 }
 .template-card.active {
+  border-color: #007aff;
+  background: #eef6ff;
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.25);
+}
+.template-card.active .template-title {
+  color: #0055b3;
+}
+.template-card.active .template-desc {
+  color: #334155;
+}
+
+/* Dark mode overrides */
+.body--dark .template-card {
+  background: rgba(30, 41, 59, 0.6);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.body--dark .template-card .template-title {
+  color: #f8fafc;
+}
+.body--dark .template-card .template-desc {
+  color: #94a3b8;
+}
+.body--dark .template-card:hover {
+  border-color: #818cf8;
+  background: rgba(99, 102, 241, 0.15);
+}
+.body--dark .template-card.active {
   border-color: #818cf8;
   background: rgba(99, 102, 241, 0.25);
-  box-shadow: 0 0 16px rgba(99, 102, 241, 0.4), inset 0 0 0 1px rgba(129, 140, 248, 0.5);
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.4);
 }
 .border-bottom {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
