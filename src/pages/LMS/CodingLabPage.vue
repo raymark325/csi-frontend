@@ -196,12 +196,12 @@
             <div class="col-3">
               <div class="glass-card q-pa-md height-100 flex flex-column" style="min-height: 500px; display: flex; flex-direction: column;">
                 <div class="row justify-between items-center q-mb-md border-bottom q-pb-sm">
-                  <span class="text-caption text-weight-bold text-grey-4">PROJECT EXPLORER</span>
+                  <span class="text-caption text-weight-bold" style="color: #64748b;">PROJECT EXPLORER</span>
                   <div class="row q-gutter-xs">
                     <q-btn flat round dense size="sm" icon="add" color="primary" @click="openNewClassDialog" :disable="isReadOnly">
                       <q-tooltip>New Class</q-tooltip>
                     </q-btn>
-                    <q-btn flat round dense size="sm" icon="refresh" color="grey-4" @click="resetJavaProject" :disable="isReadOnly">
+                    <q-btn flat round dense size="sm" icon="refresh" color="grey-7" @click="resetJavaProject" :disable="isReadOnly">
                       <q-tooltip>Reset Project</q-tooltip>
                     </q-btn>
                   </div>
@@ -211,16 +211,16 @@
                 <div class="project-tree-container scroll" style="flex: 1; max-height: 400px; overflow-y: auto;">
                   <!-- Project Node -->
                   <div class="project-node q-py-xs">
-                    <div class="row items-center q-gutter-xs text-weight-bold text-white">
-                      <q-icon name="folder" color="amber" size="20px" />
+                    <div class="row items-center q-gutter-xs text-weight-bold" style="color: #0f172a;">
+                      <q-icon name="folder" color="amber-9" size="20px" />
                       <span>{{ projectName }}</span>
                     </div>
                     
                     <!-- Package structure -->
                     <div class="package-nodes q-ml-md q-pl-xs border-left-dashed">
                       <div v-for="(pkgGroup, pkgName) in groupedJavaFiles" :key="pkgName" class="q-py-xs">
-                        <div class="row items-center q-gutter-xs text-grey-4 text-weight-medium">
-                          <q-icon name="inventory_2" color="blue-grey-3" size="16px" />
+                        <div class="row items-center q-gutter-xs text-weight-bold" style="color: #475569;">
+                          <q-icon name="inventory_2" color="blue-grey-6" size="16px" />
                           <span>{{ pkgName }}</span>
                         </div>
                         
@@ -230,16 +230,16 @@
                             v-for="file in pkgGroup" 
                             :key="file.name" 
                             class="file-node-row row justify-between items-center q-px-sm q-py-xs rounded-borders cursor-pointer q-mb-xs"
-                            :style="{ background: activeJavaFileIndex === getJavaFileIndex(file.name) ? 'rgba(99, 102, 241, 0.15)' : 'transparent', color: activeJavaFileIndex === getJavaFileIndex(file.name) ? '#818cf8' : '#9aa3c4' }"
+                            :style="{ background: activeJavaFileIndex === getJavaFileIndex(file.name) ? 'rgba(0, 122, 255, 0.12)' : 'transparent', color: activeJavaFileIndex === getJavaFileIndex(file.name) ? '#0055b3' : '#334155' }"
                             @click="activeJavaFileIndex = getJavaFileIndex(file.name)"
                           >
                             <div class="row items-center q-gutter-xs">
                               <q-icon 
                                 :name="file.type === 'interface' ? 'star_border' : file.type === 'abstract' ? 'architecture' : 'code'" 
-                                :color="file.type === 'interface' ? 'cyan' : file.type === 'abstract' ? 'orange' : 'primary'" 
+                                :color="file.type === 'interface' ? 'cyan-8' : file.type === 'abstract' ? 'orange-9' : 'primary'" 
                                 size="14px" 
                               />
-                              <span class="text-caption">{{ file.name }}</span>
+                              <span class="text-caption text-weight-medium">{{ file.name }}</span>
                             </div>
                             <q-btn 
                               v-if="file.name !== 'Main.java' && !isReadOnly" 
@@ -374,7 +374,7 @@
             <div class="col-3">
               <div class="glass-card q-pa-md height-100 flex flex-column" style="min-height: 520px; display: flex; flex-direction: column;">
                 <div class="row justify-between items-center q-mb-md border-bottom q-pb-sm">
-                  <span class="text-caption text-weight-bold text-grey-4">WEB EXPLORER</span>
+                  <span class="text-caption text-weight-bold" style="color: #64748b;">WEB EXPLORER</span>
                   <div class="row q-gutter-xs">
                     <q-btn flat round dense size="sm" icon="note_add" color="positive" @click="openNewHtmlFileDialog" :disable="isReadOnly">
                       <q-tooltip>New File (.html, .css, .js)</q-tooltip>
@@ -382,7 +382,7 @@
                     <q-btn flat round dense size="sm" icon="add_photo_alternate" color="info" @click="triggerImageUpload" :disable="isReadOnly">
                       <q-tooltip>Upload Image Asset</q-tooltip>
                     </q-btn>
-                    <q-btn flat round dense size="sm" icon="refresh" color="grey-4" @click="resetHtmlProject" :disable="isReadOnly">
+                    <q-btn flat round dense size="sm" icon="refresh" color="grey-7" @click="resetHtmlProject" :disable="isReadOnly">
                       <q-tooltip>Reset Project</q-tooltip>
                     </q-btn>
                   </div>
@@ -395,27 +395,27 @@
                 <div class="project-tree-container scroll" style="flex: 1; max-height: 440px; overflow-y: auto;">
                   <!-- Project Title Node -->
                   <div class="project-node q-py-xs">
-                    <div class="row items-center q-gutter-xs text-weight-bold text-white q-mb-sm">
+                    <div class="row items-center q-gutter-xs text-weight-bold q-mb-sm" style="color: #0f172a;">
                       <q-icon name="folder_zip" color="positive" size="20px" />
                       <span>{{ htmlProjectName }}</span>
                     </div>
 
                     <!-- Code Files Section -->
                     <div class="q-ml-sm q-mb-md">
-                      <div class="row items-center justify-between text-caption text-weight-bold text-grey-5 q-mb-xs">
+                      <div class="row items-center justify-between text-caption text-weight-bold q-mb-xs" style="color: #64748b;">
                         <span>CODE FILES ({{ htmlFiles.length }})</span>
                       </div>
                       <div 
                         v-for="(file, idx) in htmlFiles" 
                         :key="'html-file-'+idx"
                         class="file-node-row row justify-between items-center q-px-sm q-py-xs rounded-borders cursor-pointer q-mb-xs"
-                        :style="{ background: activeHtmlFileIndex === idx ? 'rgba(74, 222, 128, 0.15)' : 'transparent', color: activeHtmlFileIndex === idx ? '#4ade80' : '#9aa3c4' }"
+                        :style="{ background: activeHtmlFileIndex === idx ? 'rgba(34, 197, 94, 0.15)' : 'transparent', color: activeHtmlFileIndex === idx ? '#15803d' : '#334155' }"
                         @click="activeHtmlFileIndex = idx"
                       >
                         <div class="row items-center q-gutter-xs overflow-hidden">
                           <q-icon 
                             :name="file.name.endsWith('.html') ? 'html' : file.name.endsWith('.css') ? 'palette' : 'javascript'" 
-                            :color="file.name.endsWith('.html') ? 'orange' : file.name.endsWith('.css') ? 'cyan' : 'yellow-8'" 
+                            :color="file.name.endsWith('.html') ? 'orange-9' : file.name.endsWith('.css') ? 'cyan-8' : 'yellow-9'" 
                             size="16px" 
                           />
                           <span class="text-caption text-weight-medium ellipsis" style="max-width: 110px;">{{ file.name }}</span>
@@ -432,12 +432,12 @@
 
                     <!-- Images & Assets Section -->
                     <div class="q-ml-sm">
-                      <div class="row items-center justify-between text-caption text-weight-bold text-grey-5 q-mb-xs">
+                      <div class="row items-center justify-between text-caption text-weight-bold q-mb-xs" style="color: #64748b;">
                         <span>IMAGES & ASSETS ({{ htmlImages.length }})</span>
                         <q-btn flat dense size="xs" color="info" label="+ Add URL" @click="showAddImageUrlDialog = true" :disable="isReadOnly" />
                       </div>
 
-                      <div v-if="htmlImages.length === 0" class="text-caption text-grey-6 italic q-pa-xs">
+                      <div v-if="htmlImages.length === 0" class="text-caption italic q-pa-xs" style="color: #94a3b8;">
                         No images uploaded yet.
                       </div>
 
@@ -445,13 +445,13 @@
                         v-for="(img, imgIdx) in htmlImages" 
                         :key="'html-img-'+imgIdx"
                         class="file-node-row row justify-between items-center q-px-sm q-py-xs rounded-borders cursor-pointer q-mb-xs"
-                        style="background: rgba(255, 255, 255, 0.03);"
+                        style="background: rgba(0, 0, 0, 0.03);"
                       >
                         <div class="row items-center q-gutter-xs overflow-hidden" @click="viewImageDetail(img)">
                           <q-avatar size="20px" square rounded>
                             <img :src="img.url" alt="preview" style="object-fit: cover;" />
                           </q-avatar>
-                          <span class="text-caption text-grey-3 ellipsis" style="max-width: 100px;">{{ img.name }}</span>
+                          <span class="text-caption text-weight-medium ellipsis" style="max-width: 100px; color: #1e293b;">{{ img.name }}</span>
                         </div>
                         <div class="row q-gutter-none">
                           <q-btn flat round dense size="xs" icon="content_copy" color="info" @click.stop="copyImgTag(img.name)">
@@ -2058,7 +2058,7 @@ onUnmounted(() => {
 
 /* Java Project Explorer Styles */
 .border-left-dashed {
-  border-left: 1.5px dashed rgba(255, 255, 255, 0.12);
+  border-left: 1.5px dashed rgba(0, 0, 0, 0.15);
   margin-left: 10px;
 }
 .file-node-row {
@@ -2066,8 +2066,12 @@ onUnmounted(() => {
   border-radius: 4px;
 }
 .file-node-row:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.05);
 }
+.border-bottom {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
 .template-card {
   background: #f8fafc;
   border: 1.5px solid #e2e8f0;
@@ -2101,6 +2105,15 @@ onUnmounted(() => {
 }
 
 /* Dark mode overrides */
+.body--dark .border-left-dashed {
+  border-left-color: rgba(255, 255, 255, 0.15);
+}
+.body--dark .file-node-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.body--dark .border-bottom {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
 .body--dark .template-card {
   background: rgba(30, 41, 59, 0.6);
   border-color: rgba(255, 255, 255, 0.12);
@@ -2119,8 +2132,5 @@ onUnmounted(() => {
   border-color: #818cf8;
   background: rgba(99, 102, 241, 0.25);
   box-shadow: 0 0 16px rgba(99, 102, 241, 0.4);
-}
-.border-bottom {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 </style>
