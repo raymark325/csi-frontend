@@ -801,11 +801,13 @@ const runCode = (isAuto = false) => {
     };
 
     try {
+      console.log('[JavaEditor] Transpiled JS:\n', jsCode);
       const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
       const execFn = new AsyncFunction('__print__', '__printInline__', '__readInput__', jsCode);
       await execFn(__print__, __printInline__, __readInput__);
       output.value += '\nProcess finished with exit code 0';
     } catch (err) {
+      console.error('[JavaEditor] Runtime error:', err);
       output.value += '\nRuntime Error: ' + err.message;
     } finally {
       isRunning.value = false;
