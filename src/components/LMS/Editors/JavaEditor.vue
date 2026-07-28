@@ -497,8 +497,9 @@ const stripComments = (src) => {
 };
 
 const stripImports = (src) => {
-  src = src.replace(/^\s*import\s+[\w\.]+(\.\*)?\s*;/gm, '');
-  src = src.replace(/^\s*package\s+[\w\.]+\s*;/gm, '');
+  src = src.replace(/\r\n/g, '\n');
+  src = src.replace(/^\s*import\s+[\w\.]+(\.\*)?\s*;?/gm, '');
+  src = src.replace(/^\s*package\s+[\w\.]+\s*;?/gm, '');
   return src;
 };
 
@@ -555,14 +556,17 @@ const translateBuiltins = (codeVal) => {
   codeVal = codeVal.replace(/\.isEmpty\s*\(\s*\)/g, '.length === 0');
   codeVal = codeVal.replace(/\.remove\s*\((\d+)\)/g, '.splice($1, 1)');
 
-  codeVal = codeVal.replace(/\bnew\s+Scanner\s*\([^)]*\)\s*;?/g, '/* Scanner ready */');
-  codeVal = codeVal.replace(/\bScanner\s+(\w+)\s*=\s*\/\*[^*]*\*\//g, 'let $1 = {}');
+  // Scanner initialization (handles "Scanner scan = new Scanner(System.in)" or "let scan = new Scanner(System.in)" or "scan = new Scanner(System.in)")
+  codeVal = codeVal.replace(/(?:Scanner|let)?\s*([a-zA-Z_$][\w$]*)\s*=\s*new\s+Scanner\s*\([^)]*\)\s*;?/g, 'let $1 = {};');
+  codeVal = codeVal.replace(/\bnew\s+Scanner\s*\([^)]*\)\s*;?/g, '{}');
   codeVal = codeVal.replace(/(\w+)\.nextInt\s*\(\s*\)/g, "(await __readInput__('int'))");
   codeVal = codeVal.replace(/(\w+)\.nextDouble\s*\(\s*\)/g, "(await __readInput__('double'))");
   codeVal = codeVal.replace(/(\w+)\.nextFloat\s*\(\s*\)/g, "(await __readInput__('double'))");
   codeVal = codeVal.replace(/(\w+)\.nextLong\s*\(\s*\)/g, "(await __readInput__('int'))");
   codeVal = codeVal.replace(/(\w+)\.next\s*\(\s*\)/g, "(await __readInput__('word'))");
   codeVal = codeVal.replace(/(\w+)\.nextLine\s*\(\s*\)/g, "(await __readInput__('line'))");
+  codeVal = codeVal.replace(/(\w+)\.close\s*\(\s*\)\s*;?/g, '/* Scanner closed */');
+  codeVal = codeVal.replace(/(\w+)\.hasNext\w*\s*\(\s*\)/g, 'true');
 
   codeVal = codeVal.replace(/\(int\)\s*([a-zA-Z0-9_.()]+)/g, 'Math.trunc($1)');
   codeVal = codeVal.replace(/\(double\)\s*([a-zA-Z0-9_.()]+)/g, 'Number($1)');
@@ -688,8 +692,8 @@ const transpileClassBody = (className, body, superClass) => {
 const transpileMethodBody = (body, currentClass) => {
   let codeVal = body;
   codeVal = codeVal.replace(/\b(public|private|protected)\b\s*/g, '');
-  codeVal = translateTypes(codeVal);
   codeVal = translateBuiltins(codeVal);
+  codeVal = translateTypes(codeVal);
 
   codeVal = codeVal.replace(/(\w+)\.equals\s*\(([^)]+)\)/g, '($1 === $2)');
   codeVal = codeVal.replace(/(\w+)\.equalsIgnoreCase\s*\(([^)]+)\)/g, '($1.toLowerCase() === $2.toLowerCase())');
