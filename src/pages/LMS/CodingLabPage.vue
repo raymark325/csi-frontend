@@ -373,10 +373,10 @@
           </div>
 
           <!-- HTML Project Explorer & Editor Layout -->
-          <div v-else class="row no-wrap q-col-gutter-md">
+          <div v-else class="row q-col-gutter-md">
             <!-- Sidebar: HTML Project Explorer -->
-            <div class="col-3">
-              <div class="glass-card q-pa-md height-100 flex flex-column" style="min-height: 520px; display: flex; flex-direction: column;">
+            <div class="col-12 col-md-3">
+              <div class="glass-card q-pa-md height-100 project-explorer-card">
                 <div class="row justify-between items-center q-mb-md border-bottom q-pb-sm">
                   <span class="text-caption text-weight-bold" style="color: #64748b;">WEB EXPLORER</span>
                   <div class="row q-gutter-xs">
@@ -396,7 +396,7 @@
                 <input ref="imageFileInput" type="file" accept="image/*" style="display: none;" @change="uploadHtmlImage" />
 
                 <!-- Scrollable Tree & Assets -->
-                <div class="project-tree-container scroll" style="flex: 1; max-height: 440px; overflow-y: auto;">
+                <div class="project-tree-container scroll">
                   <!-- Project Title Node -->
                   <div class="project-node q-py-xs">
                     <div class="row items-center q-gutter-xs text-weight-bold q-mb-sm" style="color: #0f172a;">
@@ -471,7 +471,7 @@
             </div>
 
             <!-- Main Editor Column -->
-            <div class="col-9">
+            <div class="col-12 col-md-9">
               <HtmlEditor 
                 ref="htmlEditorRef" 
                 :initial-code="htmlFiles[activeHtmlFileIndex]?.code || ''" 
