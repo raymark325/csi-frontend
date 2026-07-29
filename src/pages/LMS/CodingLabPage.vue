@@ -191,13 +191,16 @@
           </div>
 
           <!-- Otherwise, show the full Eclipse/NetBeans style IDE layout -->
-          <div v-else class="row no-wrap q-col-gutter-md">
+          <div v-else class="row q-col-gutter-md">
             <!-- Sidebar: Project Explorer (Eclipse/NetBeans Style) -->
-            <div class="col-3">
-              <div class="glass-card q-pa-md height-100 flex flex-column" style="min-height: 500px; display: flex; flex-direction: column;">
+            <div class="col-12 col-md-3">
+              <div class="glass-card q-pa-md height-100 project-explorer-card">
                 <div class="row justify-between items-center q-mb-md border-bottom q-pb-sm">
                   <span class="text-caption text-weight-bold" style="color: #64748b;">PROJECT EXPLORER</span>
                   <div class="row q-gutter-xs">
+                    <q-btn flat round dense size="sm" icon="create_new_folder" color="primary" @click="createNewProject" :disable="isReadOnly">
+                      <q-tooltip>New Project</q-tooltip>
+                    </q-btn>
                     <q-btn flat round dense size="sm" icon="add" color="primary" @click="openNewClassDialog" :disable="isReadOnly">
                       <q-tooltip>New Class</q-tooltip>
                     </q-btn>
@@ -208,7 +211,7 @@
                 </div>
                 
                 <!-- Project Tree list -->
-                <div class="project-tree-container scroll" style="flex: 1; max-height: 400px; overflow-y: auto;">
+                <div class="project-tree-container scroll">
                   <!-- Project Node -->
                   <div class="project-node q-py-xs">
                     <div class="row items-center q-gutter-xs text-weight-bold" style="color: #0f172a;">
@@ -258,7 +261,7 @@
             </div>
             
             <!-- Right Column: Code Editor & Output Console -->
-            <div class="col-9">
+            <div class="col-12 col-md-9">
               <JavaEditor 
                 ref="javaEditorRef" 
                 :initial-code="javaFiles[activeJavaFileIndex]?.code || ''" 
@@ -746,6 +749,27 @@ const isJava = (content) => {
   return content.includes('class ') || content.includes('System.out') || content.includes('public static void main');
 };
 
+const loadJavaDraft = (draftStr) => {
+  if (!draftStr) {
+    return [{ name: 'Main.java', code: '', pkg: 'com.myapp', type: 'class' }];
+  }
+  try {
+    const parsed = JSON.parse(draftStr);
+    if (Array.isArray(parsed)) {
+      projectName.value = '';
+      return parsed;
+    } else if (parsed && Array.isArray(parsed.files)) {
+      projectName.value = parsed.projectName || '';
+      return parsed.files;
+    }
+  } catch (e) {
+    projectName.value = '';
+    return [{ name: 'Main.java', code: draftStr, pkg: 'com.myapp', type: 'class' }];
+  }
+  projectName.value = '';
+  return [{ name: 'Main.java', code: '', pkg: 'com.myapp', type: 'class' }];
+};
+
 const getStorageKey = (baseKey) => {
   const userId = authStore.user?.id || 'guest';
   return `${baseKey}_user_${userId}`;
@@ -807,6 +831,17 @@ const deleteJavaFile = (name) => {
 
 const resetJavaProject = () => {
   if (confirm('Are you sure you want to reset the current Java project? This will delete all custom files.')) {
+    projectName.value = '';
+    wizardProjName.value = '';
+    wizardBasePkg.value = 'com.myapp';
+    javaFiles.value = [{ name: 'Main.java', code: '', pkg: 'com.myapp', type: 'class' }];
+    activeJavaFileIndex.value = 0;
+    saveCode(JSON.stringify({ projectName: '', files: javaFiles.value }), 'java');
+  }
+};
+
+const createNewProject = () => {
+  if (confirm('Are you sure you want to create a new Java project? This will replace your current files.')) {
     projectName.value = '';
     wizardProjName.value = '';
     wizardBasePkg.value = 'com.myapp';
@@ -1515,10 +1550,7 @@ const handleJavaChange = (newCode) => {
   const currentFile = javaFiles.value[activeJavaFileIndex.value];
   if (currentFile && currentFile.code !== newCode) {
     currentFile.code = newCode;
-    saveCode(JSON.stringify({
-      projectName: projectName.value,
-      files: javaFiles.value
-    }), 'java');
+    saveCode(JSON.stringify(javaFiles.value), 'java');
   }
 };
 
@@ -1815,9 +1847,7 @@ watch(activeTab, (newTab) => {
         htmlImages.value = payload.images;
         activeHtmlFileIndex.value = 0;
       } else if (newTab === 'java') {
-        const payload = parseJavaPayload(draft);
-        projectName.value = payload.projectName;
-        javaFiles.value = payload.files;
+        try { javaFiles.value = JSON.parse(draft); } catch { javaFiles.value = [{ name: 'Main.java', code: draft }]; }
         activeJavaFileIndex.value = 0;
       }
     }
@@ -1895,10 +1925,13 @@ const loadDraftsForCurrentUser = async () => {
         activeSqlFileIndex.value = 0;
         activeTab.value = getFallbackTab('sql');
       } else {
-        const payload = parseJavaPayload(codeVal);
-        projectName.value = payload.projectName;
-        javaFiles.value = payload.files;
-        htmlProjectName.value = '';
+        try {
+          const parsed = JSON.parse(codeVal);
+          if (Array.isArray(parsed)) javaFiles.value = parsed;
+          else throw new Error();
+        } catch {
+          javaFiles.value = [{ name: 'Main.java', code: codeVal || '' }];
+        }
         htmlFiles.value = [{ name: 'index.html', code: '' }];
         htmlImages.value = [];
         activeJavaFileIndex.value = 0;
@@ -2008,10 +2041,7 @@ const loadDraftsForCurrentUser = async () => {
         javaFiles.value = [{ name: 'Main.java', code: '' }];
         activeSqlFileIndex.value = 0;
       } else {
-        const payload = parseJavaPayload(draft);
-        projectName.value = payload.projectName;
-        javaFiles.value = payload.files;
-        htmlProjectName.value = '';
+        try { javaFiles.value = JSON.parse(draft); } catch { javaFiles.value = [{ name: 'Main.java', code: draft }]; }
         htmlFiles.value = [{ name: 'index.html', code: '' }];
         htmlImages.value = [];
         sqlFiles.value = [{ name: 'main.db', code: '', buffer: null }];
@@ -2166,5 +2196,26 @@ onUnmounted(() => {
   border-color: #818cf8;
   background: rgba(99, 102, 241, 0.25);
   box-shadow: 0 0 16px rgba(99, 102, 241, 0.4);
+}
+
+.project-explorer-card {
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+}
+
+.project-tree-container {
+  flex: 1;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+@media (min-width: 1024px) {
+  .project-explorer-card {
+    min-height: 500px;
+  }
+  .project-tree-container {
+    max-height: 400px;
+  }
 }
 </style>

@@ -44,6 +44,7 @@
         class="code-textarea"
         placeholder="public class Main { ... }"
         spellcheck="false"
+        wrap="off"
         :readonly="disabled"
         @keydown.tab.prevent="insertTab"
         @copy.prevent="preventAction"
@@ -1010,6 +1011,8 @@ watch(() => props.initialCode, (newVal) => {
   resize: vertical;
   outline: none;
   line-height: 1.5;
+  white-space: pre;
+  overflow-x: auto;
 }
 
 .output-console {
