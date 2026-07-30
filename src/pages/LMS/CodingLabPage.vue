@@ -98,8 +98,13 @@
       <!-- Coding Playgrounds -->
       <template v-else>
         <div v-show="activeTab === 'java'">
+          <!-- Loading skeleton while cloud projects are being fetched -->
+          <div v-if="isLabLoading && !projectName" class="glass-card q-pa-xl text-center shadow-lg rounded-borders" style="max-width: 620px; margin: 40px auto;">
+            <q-spinner-dots color="primary" size="48px" class="q-mb-md" />
+            <p class="text-body2 text-grey-6">Restoring your project...</p>
+          </div>
           <!-- If no project is loaded/named, show the project creation wizard -->
-          <div v-if="!projectName" class="glass-card q-pa-xl text-center shadow-lg rounded-borders" style="max-width: 620px; margin: 40px auto; background: #ffffff; border: 1px solid rgba(0, 122, 255, 0.15); box-shadow: 0 10px 30px rgba(0, 122, 255, 0.08);">
+          <div v-else-if="!isLabLoading && !projectName" class="glass-card q-pa-xl text-center shadow-lg rounded-borders" style="max-width: 620px; margin: 40px auto; background: #ffffff; border: 1px solid rgba(0, 122, 255, 0.15); box-shadow: 0 10px 30px rgba(0, 122, 255, 0.08);">
             <div class="q-mb-md flex flex-center">
               <div class="q-pa-md rounded-circle" style="background: rgba(0, 122, 255, 0.08); border: 1px solid rgba(0, 122, 255, 0.15); display: inline-flex;">
                 <q-icon name="coffee" size="48px" color="primary" />
@@ -748,6 +753,7 @@ const activeHtmlFileIndex = ref(0);
 
 const projectName = ref('');
 const wizardProjName = ref('');
+const isLabLoading = ref(false); // true while cloud projects are being fetched on first load
 const wizardBasePkg = ref('com.myapp');
 const selectedTemplate = ref('blank');
 
@@ -2140,6 +2146,7 @@ const loadDraftsForCurrentUser = async () => {
   } else {
     // ── Free-play mode ────────────────────────────────────────────────────────
     // Strategy:
+    isLabLoading.value = true;
     //   1. Restore active tab from localStorage preference.
     //   2. Try to restore state from localStorage (fast, offline-capable).
     //   3. If localStorage has nothing for this project, fetch from cloud and
@@ -2283,6 +2290,7 @@ const loadDraftsForCurrentUser = async () => {
         console.error('Failed to load SQL sandbox from cloud:', err);
       }
     }
+    isLabLoading.value = false;
   }
 };
 
