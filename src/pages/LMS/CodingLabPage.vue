@@ -1049,6 +1049,7 @@ const initJavaProject = () => {
   projectName.value = name;
   wizardProjName.value = name;
   wizardBasePkg.value = pkg;
+  localStorage.setItem(getStorageKey('sms_lab_active_java_project'), name);
   
   const files = [];
   if (selectedTemplate.value === 'oop') {
@@ -1407,6 +1408,7 @@ const initHtmlProject = () => {
 
   htmlProjectName.value = name;
   htmlWizardProjName.value = name;
+  localStorage.setItem(getStorageKey('sms_lab_active_html_project'), name);
 
   const files = [];
   const images = [];
