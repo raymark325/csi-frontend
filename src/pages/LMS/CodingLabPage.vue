@@ -2286,11 +2286,23 @@ const loadDraftsForCurrentUser = async () => {
   }
 };
 
+// Guard flag – prevents two concurrent loadDraftsForCurrentUser runs from racing each other
+let _draftsLoading = false;
+const _loadDraftsGuarded = async () => {
+  if (_draftsLoading) return;
+  _draftsLoading = true;
+  try {
+    await loadDraftsForCurrentUser();
+  } finally {
+    _draftsLoading = false;
+  }
+};
+
 // Watch for user changes to reset state and load the new user's drafts dynamically
 watch(() => authStore.user, (newUser) => {
   resetState();
   if (newUser) {
-    loadDraftsForCurrentUser();
+    _loadDraftsGuarded();
   }
 }, { immediate: true });
 
@@ -2298,16 +2310,17 @@ watch(() => authStore.user, (newUser) => {
 watch(() => route.query.assignment_id, (newId, oldId) => {
   if (newId !== oldId) {
     resetState();
-    loadDraftsForCurrentUser();
+    _loadDraftsGuarded();
   }
 });
 
 onMounted(() => {
   window.addEventListener('online', updateOnlineStatus);
   window.addEventListener('offline', updateOnlineStatus);
-  // Initial load
-  if (authStore.user) {
-    loadDraftsForCurrentUser();
+  // Only call if the user watcher's immediate: true did NOT already run it
+  // (it may not have run if authStore.user wasn't set during setup yet)
+  if (authStore.user && !_draftsLoading) {
+    _loadDraftsGuarded();
   }
 });
 
