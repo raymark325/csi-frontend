@@ -580,6 +580,8 @@ const translateBuiltins = (codeVal) => {
   codeVal = codeVal.replace(/\(double\)\s*([a-zA-Z0-9_.()]+)/g, 'Number($1)');
   codeVal = codeVal.replace(/\(float\)\s*([a-zA-Z0-9_.()]+)/g, 'Number($1)');
   codeVal = codeVal.replace(/\(String\)\s*([a-zA-Z0-9_.()]+)/g, 'String($1)');
+  // Strip class/object casts like (Dog) myDog — JS doesn't need them
+  codeVal = codeVal.replace(/\([A-Z][\w]*\)\s*/g, '');
 
   codeVal = codeVal.replace(/\bfinal\s+/g, '');
   return codeVal;
@@ -633,9 +635,10 @@ const parseClassMemberInfo = (body, className) => {
       continue;
     }
 
-    // Field?
+    // Field? (skip abstract method declarations that end with ';' and have '()' — no body)
+    const isAbstractDecl = /^[\w<>\[\],\s]+?\s+\w+\s*\([^)]*\)\s*;\s*$/.test(stripped);
     const fieldMatch = stripped.match(/^[\w<>\[\],\s]+?\s+(\w+)\s*(?:=\s*[\s\S]+?)?\s*;?\s*$/);
-    if (fieldMatch && fieldMatch[1] !== className && !isStatic) {
+    if (fieldMatch && fieldMatch[1] !== className && !isStatic && !isAbstractDecl) {
       instanceFields.push(fieldMatch[1]);
     }
   }
@@ -707,7 +710,9 @@ const transpileClassBody = (className, body, superClass, inheritedFields = [], i
     }
 
     const fieldMatch = stripped.match(/^[\w<>\[\],\s]+?\s+(\w+)\s*(?:=\s*([\s\S]+?))?\s*;?\s*$/);
-    if (fieldMatch && fieldMatch[1] !== className) {
+    // Skip abstract method declarations like "void makeSound();" — no body, ends with ';'
+    const isAbstractMethod = /^[\w<>\[\],\s]+?\s+\w+\s*\([^)]*\)\s*;\s*$/.test(stripped);
+    if (fieldMatch && fieldMatch[1] !== className && !isAbstractMethod) {
       if (isStatic) {
         staticFields.push({ name: fieldMatch[1], value: fieldMatch[2] || 'undefined' });
       } else {
