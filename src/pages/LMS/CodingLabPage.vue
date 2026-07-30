@@ -1953,12 +1953,14 @@ watch(writtenResponse, (newVal) => {
 // Watch active tab in free play mode to load drafts correctly
 watch(activeTab, (newTab) => {
   if (!assignmentId.value) {
-    const activeProj = newTab === 'java' 
-      ? (localStorage.getItem(getStorageKey('sms_lab_active_java_project')) || 'Default Project')
+    const activeProj = newTab === 'java'
+      ? localStorage.getItem(getStorageKey('sms_lab_active_java_project'))
       : newTab === 'html'
-      ? (localStorage.getItem(getStorageKey('sms_lab_active_html_project')) || 'Default Project')
-      : '';
-    const key = activeProj ? `sms_lab_freeplay_${newTab}_${activeProj}` : `sms_lab_freeplay_${newTab}`;
+      ? localStorage.getItem(getStorageKey('sms_lab_active_html_project'))
+      : null;
+    const key = activeProj
+      ? `sms_lab_freeplay_${newTab}_${activeProj}`
+      : `sms_lab_freeplay_${newTab}`;
     const draft = localStorage.getItem(getStorageKey(key));
     if (draft) {
       if (newTab === 'html') {
@@ -1974,12 +1976,11 @@ watch(activeTab, (newTab) => {
         activeJavaFileIndex.value = 0;
       }
     } else {
-      if (newTab === 'html') {
-        htmlProjectName.value = '';
+      // Only reset if no project is already loaded — don't clobber a cloud restore in progress
+      if (newTab === 'html' && !htmlProjectName.value) {
         htmlFiles.value = [{ name: 'index.html', code: '' }];
         htmlImages.value = [];
-      } else if (newTab === 'java') {
-        projectName.value = '';
+      } else if (newTab === 'java' && !projectName.value) {
         javaFiles.value = [{ name: 'Main.java', code: '' }];
       }
     }
