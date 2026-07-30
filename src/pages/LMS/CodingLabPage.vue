@@ -1237,45 +1237,18 @@ const HTML_BLANK_INDEX = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Web Page</title>
+  <title>Document</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <h1>Hello, World!</h1>
-    <p>Welcome to your live HTML/CSS Code Lab project!</p>
-  </div>
+
   <script src="script.js"><\/script>
 </body>
 </html>`;
 
-const HTML_BLANK_CSS = `body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #111827;
-  color: #f9fafb;
-  margin: 0;
-  padding: 40px 20px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-}
+const HTML_BLANK_CSS = ``;
 
-.container {
-  background: #1f2937;
-  padding: 32px;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-  text-align: center;
-  max-width: 500px;
-}
-
-h1 {
-  color: #4ade80;
-  margin-top: 0;
-}`;
-
-const HTML_BLANK_JS = `console.log("HTML Project Initialized!");`;
+const HTML_BLANK_JS = ``;
 
 const HTML_LANDING_INDEX = `<!DOCTYPE html>
 <html lang="en">
