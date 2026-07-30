@@ -157,8 +157,9 @@ export const javaSandboxService = {
   sync(projectName, projectData) {
     return API.post('/java-sandbox/sync', { project_name: projectName, project_data: projectData });
   },
-  clear() {
-    return API.delete('/java-sandbox');
+  clear(projectName = null) {
+    const params = projectName ? { params: { project_name: projectName } } : {};
+    return API.delete('/java-sandbox', params);
   }
 };
 
@@ -170,8 +171,9 @@ export const htmlSandboxService = {
   sync(projectName, projectData) {
     return API.post('/html-sandbox/sync', { project_name: projectName, project_data: projectData });
   },
-  clear() {
-    return API.delete('/html-sandbox');
+  clear(projectName = null) {
+    const params = projectName ? { params: { project_name: projectName } } : {};
+    return API.delete('/html-sandbox', params);
   }
 };
 

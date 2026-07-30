@@ -108,6 +108,26 @@
             <h2 class="text-h5 text-weight-bold q-my-none" style="color: #0d1b2a;">Create New Java Project</h2>
             <p class="text-body2 q-mt-sm q-mb-lg" style="color: #4a5568;">Specify your project details and select an OOP starter template to begin.</p>
             
+            <!-- Open Existing Java Project Section -->
+            <div v-if="javaProjectsList.length > 0" class="q-mb-lg text-left" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px;">
+              <div class="text-subtitle2 text-weight-bold q-mb-xs" style="color: #334155;">📂 Open Existing Project</div>
+              <p class="text-caption text-grey-6 q-mb-sm">Switch back to any of your previous projects:</p>
+              <div class="row q-gutter-sm">
+                <q-btn 
+                  v-for="projName in javaProjectsList" 
+                  :key="projName" 
+                  flat 
+                  dense 
+                  color="primary" 
+                  icon="folder" 
+                  :label="projName" 
+                  @click="switchJavaProject(projName)"
+                  class="q-px-sm text-capitalize"
+                  style="background: #eef6ff; border-radius: 6px; font-size: 12px; font-weight: 600;"
+                />
+              </div>
+            </div>
+
             <q-input 
               v-model="wizardProjName" 
               label="Project Name" 
@@ -214,9 +234,35 @@
                 <div class="project-tree-container scroll">
                   <!-- Project Node -->
                   <div class="project-node q-py-xs">
-                    <div class="row items-center q-gutter-xs text-weight-bold" style="color: #0f172a;">
+                    <div class="row items-center q-gutter-xs text-weight-bold cursor-pointer" style="color: #0f172a;">
                       <q-icon name="folder" color="amber-9" size="20px" />
                       <span>{{ projectName }}</span>
+                      <q-icon name="arrow_drop_down" size="16px" color="grey-6" />
+                      <q-menu>
+                        <q-list style="min-width: 180px">
+                          <q-item-label header class="text-weight-bold">My Java Projects</q-item-label>
+                          <q-item 
+                            v-for="proj in javaProjectsList" 
+                            :key="proj" 
+                            clickable 
+                            v-close-popup 
+                            @click="switchJavaProject(proj)"
+                            :active="proj === projectName"
+                          >
+                            <q-item-section avatar>
+                              <q-icon name="folder" :color="proj === projectName ? 'primary' : 'grey-7'" size="18px" />
+                            </q-item-section>
+                            <q-item-section>{{ proj }}</q-item-section>
+                          </q-item>
+                          <q-separator />
+                          <q-item clickable v-close-popup @click="createNewProject">
+                            <q-item-section avatar>
+                              <q-icon name="create_new_folder" color="primary" size="18px" />
+                            </q-item-section>
+                            <q-item-section class="text-primary text-weight-bold">Create New Project</q-item-section>
+                          </q-item>
+                        </q-list>
+                      </q-menu>
                     </div>
                     
                     <!-- Package structure -->
@@ -309,6 +355,26 @@
             <h2 class="text-h5 text-weight-bold q-my-none" style="color: #0d1b2a;">Create New HTML/CSS Web Project</h2>
             <p class="text-body2 q-mt-sm q-mb-lg" style="color: #4a5568;">Build responsive websites with HTML, CSS, JavaScript, and Image assets.</p>
 
+            <!-- Open Existing HTML Project Section -->
+            <div v-if="htmlProjectsList.length > 0" class="q-mb-lg text-left" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px;">
+              <div class="text-subtitle2 text-weight-bold q-mb-xs" style="color: #334155;">📂 Open Existing Project</div>
+              <p class="text-caption text-grey-6 q-mb-sm">Switch back to any of your previous web projects:</p>
+              <div class="row q-gutter-sm">
+                <q-btn 
+                  v-for="projName in htmlProjectsList" 
+                  :key="projName" 
+                  flat 
+                  dense 
+                  color="positive" 
+                  icon="folder_zip" 
+                  :label="projName" 
+                  @click="switchHtmlProject(projName)"
+                  class="q-px-sm text-capitalize"
+                  style="background: #f0fdf4; border-radius: 6px; font-size: 12px; font-weight: 600;"
+                />
+              </div>
+            </div>
+
             <q-input 
               v-model="htmlWizardProjName" 
               label="Project Name" 
@@ -399,9 +465,35 @@
                 <div class="project-tree-container scroll">
                   <!-- Project Title Node -->
                   <div class="project-node q-py-xs">
-                    <div class="row items-center q-gutter-xs text-weight-bold q-mb-sm" style="color: #0f172a;">
+                    <div class="row items-center q-gutter-xs text-weight-bold q-mb-sm cursor-pointer" style="color: #0f172a;">
                       <q-icon name="folder_zip" color="positive" size="20px" />
                       <span>{{ htmlProjectName }}</span>
+                      <q-icon name="arrow_drop_down" size="16px" color="grey-6" />
+                      <q-menu>
+                        <q-list style="min-width: 180px">
+                          <q-item-label header class="text-weight-bold">My HTML Projects</q-item-label>
+                          <q-item 
+                            v-for="proj in htmlProjectsList" 
+                            :key="proj" 
+                            clickable 
+                            v-close-popup 
+                            @click="switchHtmlProject(proj)"
+                            :active="proj === htmlProjectName"
+                          >
+                            <q-item-section avatar>
+                              <q-icon name="folder_zip" :color="proj === htmlProjectName ? 'positive' : 'grey-7'" size="18px" />
+                            </q-item-section>
+                            <q-item-section>{{ proj }}</q-item-section>
+                          </q-item>
+                          <q-separator />
+                          <q-item clickable v-close-popup @click="createNewHtmlProject">
+                            <q-item-section avatar>
+                              <q-icon name="note_add" color="positive" size="18px" />
+                            </q-item-section>
+                            <q-item-section class="text-positive text-weight-bold">Create New Project</q-item-section>
+                          </q-item>
+                        </q-list>
+                      </q-menu>
                     </div>
 
                     <!-- Code Files Section -->
@@ -622,6 +714,15 @@ const authStore = useAuthStore();
 
 const activeTab = ref('java');
 const disabledCompilers = ref([]);
+const allJavaProjects = ref([]);
+const allHtmlProjects = ref([]);
+
+const javaProjectsList = computed(() => {
+  return allJavaProjects.value.map(p => p.project_name);
+});
+const htmlProjectsList = computed(() => {
+  return allHtmlProjects.value.map(p => p.project_name);
+});
 
 const allCompilersDisabled = computed(() => {
   return ['java', 'sql', 'html'].every(lang => disabledCompilers.value.includes(lang));
@@ -841,13 +942,48 @@ const resetJavaProject = () => {
 };
 
 const createNewProject = () => {
-  if (confirm('Are you sure you want to create a new Java project? This will replace your current files.')) {
-    projectName.value = '';
-    wizardProjName.value = '';
-    wizardBasePkg.value = 'com.myapp';
-    javaFiles.value = [{ name: 'Main.java', code: '', pkg: 'com.myapp', type: 'class' }];
-    activeJavaFileIndex.value = 0;
-    saveCode(JSON.stringify({ projectName: '', files: javaFiles.value }), 'java');
+  projectName.value = '';
+  wizardProjName.value = '';
+  wizardBasePkg.value = 'com.myapp';
+  selectedTemplate.value = 'blank';
+  javaFiles.value = [{ name: 'Main.java', code: '', pkg: 'com.myapp', type: 'class' }];
+  activeJavaFileIndex.value = 0;
+};
+
+const switchJavaProject = (projName) => {
+  const proj = allJavaProjects.value.find(p => p.project_name === projName);
+  if (proj) {
+    projectName.value = proj.project_name;
+    wizardProjName.value = proj.project_name;
+    const parsed = JSON.parse(proj.project_data);
+    if (parsed) {
+      javaFiles.value = parsed.files || parsed;
+      activeJavaFileIndex.value = 0;
+      localStorage.setItem(getStorageKey('sms_lab_active_java_project'), proj.project_name);
+      localStorage.setItem(
+        getStorageKey(`sms_lab_freeplay_java_${proj.project_name}`),
+        JSON.stringify({ projectName: proj.project_name, files: javaFiles.value })
+      );
+    }
+  }
+};
+
+const switchHtmlProject = (projName) => {
+  const proj = allHtmlProjects.value.find(p => p.project_name === projName);
+  if (proj) {
+    htmlProjectName.value = proj.project_name;
+    htmlWizardProjName.value = proj.project_name;
+    const parsed = JSON.parse(proj.project_data);
+    if (parsed) {
+      htmlFiles.value = parsed.files || [{ name: 'index.html', code: '' }];
+      htmlImages.value = parsed.images || [];
+      activeHtmlFileIndex.value = 0;
+      localStorage.setItem(getStorageKey('sms_lab_active_html_project'), proj.project_name);
+      localStorage.setItem(
+        getStorageKey(`sms_lab_freeplay_html_${proj.project_name}`),
+        JSON.stringify({ projectName: proj.project_name, files: htmlFiles.value, images: htmlImages.value })
+      );
+    }
   }
 };
 
@@ -1351,6 +1487,15 @@ const resetHtmlProject = () => {
   }
 };
 
+const createNewHtmlProject = () => {
+  htmlProjectName.value = '';
+  htmlWizardProjName.value = '';
+  htmlSelectedTemplate.value = 'blank';
+  htmlFiles.value = [{ name: 'index.html', code: '' }];
+  htmlImages.value = [];
+  activeHtmlFileIndex.value = 0;
+};
+
 const openNewHtmlFileDialog = () => {
   newHtmlFileName.value = '';
   newHtmlFileType.value = 'html';
@@ -1614,7 +1759,12 @@ const saveCode = (newCode, lang) => {
     saveStatus.value = 'Saving to local draft...';
     if (saveTimeout) clearTimeout(saveTimeout);
     saveTimeout = setTimeout(() => {
-      localStorage.setItem(getStorageKey(`sms_lab_freeplay_${lang}`), newCode);
+      const key = (lang === 'java' && projectName.value)
+        ? `sms_lab_freeplay_java_${projectName.value}`
+        : (lang === 'html' && htmlProjectName.value)
+        ? `sms_lab_freeplay_html_${htmlProjectName.value}`
+        : `sms_lab_freeplay_${lang}`;
+      localStorage.setItem(getStorageKey(key), newCode);
       saveStatus.value = 'Local draft saved';
       scheduleSilentCloudSync();
     }, 1000);
@@ -1705,18 +1855,38 @@ const silentCloudSync = async () => {
       }));
       await sqlSandboxService.syncAll(payload);
     } else if (activeTab.value === 'java') {
+      if (!projectName.value) return;
       const projectData = JSON.stringify({
         projectName: projectName.value,
         files: javaFiles.value
       });
-      await javaSandboxService.sync(projectName.value, projectData);
+      const res = await javaSandboxService.sync(projectName.value, projectData);
+      if (res && res.data && res.data.data) {
+        const synced = res.data.data;
+        const idx = allJavaProjects.value.findIndex(p => p.project_name === synced.project_name);
+        if (idx !== -1) {
+          allJavaProjects.value[idx] = synced;
+        } else {
+          allJavaProjects.value.push(synced);
+        }
+      }
     } else if (activeTab.value === 'html') {
+      if (!htmlProjectName.value) return;
       const projectData = JSON.stringify({
         projectName: htmlProjectName.value,
         files: htmlFiles.value,
         images: htmlImages.value
       });
-      await htmlSandboxService.sync(htmlProjectName.value, projectData);
+      const res = await htmlSandboxService.sync(htmlProjectName.value, projectData);
+      if (res && res.data && res.data.data) {
+        const synced = res.data.data;
+        const idx = allHtmlProjects.value.findIndex(p => p.project_name === synced.project_name);
+        if (idx !== -1) {
+          allHtmlProjects.value[idx] = synced;
+        } else {
+          allHtmlProjects.value.push(synced);
+        }
+      }
     }
   } catch (err) {
     console.error('Failed silent cloud sync:', err);
@@ -1769,27 +1939,29 @@ const loadFromCloud = async () => {
 
   // 2. Load Java Sandbox
   try {
-    const javaCloud = await javaSandboxService.fetch();
-    if (javaCloud && javaCloud.project_data) {
+    const javaCloudList = await javaSandboxService.fetch();
+    if (javaCloudList && Array.isArray(javaCloudList) && javaCloudList.length > 0) {
+      allJavaProjects.value = javaCloudList;
+      
+      const lastActive = localStorage.getItem(getStorageKey('sms_lab_active_java_project')) || javaCloudList[0].project_name;
+      const activeProj = javaCloudList.find(p => p.project_name === lastActive) || javaCloudList[0];
+      
       const localIsEmpty = javaFiles.value.length === 1 &&
         javaFiles.value[0].name === 'Main.java' &&
         !javaFiles.value[0].code;
 
-      if (localIsEmpty) {
-        const parsed = JSON.parse(javaCloud.project_data);
+      if (localIsEmpty && activeProj) {
+        projectName.value = activeProj.project_name;
+        wizardProjName.value = activeProj.project_name;
+        const parsed = JSON.parse(activeProj.project_data);
         if (parsed) {
-          if (Array.isArray(parsed)) {
-            javaFiles.value = parsed;
-            projectName.value = javaCloud.project_name || '';
-          } else {
-            javaFiles.value = parsed.files || [{ name: 'Main.java', code: '' }];
-            projectName.value = parsed.projectName || javaCloud.project_name || '';
-          }
+          javaFiles.value = parsed.files || parsed;
           activeJavaFileIndex.value = 0;
           localStorage.setItem(
-            getStorageKey('sms_lab_freeplay_java'),
-            JSON.stringify({ projectName: projectName.value, files: javaFiles.value })
+            getStorageKey(`sms_lab_freeplay_java_${activeProj.project_name}`),
+            JSON.stringify({ projectName: activeProj.project_name, files: javaFiles.value })
           );
+          localStorage.setItem(getStorageKey('sms_lab_active_java_project'), activeProj.project_name);
         }
       }
     }
@@ -1799,23 +1971,30 @@ const loadFromCloud = async () => {
 
   // 3. Load HTML Sandbox
   try {
-    const htmlCloud = await htmlSandboxService.fetch();
-    if (htmlCloud && htmlCloud.project_data) {
+    const htmlCloudList = await htmlSandboxService.fetch();
+    if (htmlCloudList && Array.isArray(htmlCloudList) && htmlCloudList.length > 0) {
+      allHtmlProjects.value = htmlCloudList;
+      
+      const lastActive = localStorage.getItem(getStorageKey('sms_lab_active_html_project')) || htmlCloudList[0].project_name;
+      const activeProj = htmlCloudList.find(p => p.project_name === lastActive) || htmlCloudList[0];
+
       const localIsEmpty = htmlFiles.value.length === 1 &&
         htmlFiles.value[0].name === 'index.html' &&
         !htmlFiles.value[0].code;
 
-      if (localIsEmpty) {
-        const parsed = JSON.parse(htmlCloud.project_data);
+      if (localIsEmpty && activeProj) {
+        htmlProjectName.value = activeProj.project_name;
+        htmlWizardProjName.value = activeProj.project_name;
+        const parsed = JSON.parse(activeProj.project_data);
         if (parsed) {
           htmlFiles.value = parsed.files || [{ name: 'index.html', code: '' }];
           htmlImages.value = parsed.images || [];
-          htmlProjectName.value = parsed.projectName || htmlCloud.project_name || '';
           activeHtmlFileIndex.value = 0;
           localStorage.setItem(
-            getStorageKey('sms_lab_freeplay_html'),
-            JSON.stringify({ projectName: htmlProjectName.value, files: htmlFiles.value, images: htmlImages.value })
+            getStorageKey(`sms_lab_freeplay_html_${activeProj.project_name}`),
+            JSON.stringify({ projectName: activeProj.project_name, files: htmlFiles.value, images: htmlImages.value })
           );
+          localStorage.setItem(getStorageKey('sms_lab_active_html_project'), activeProj.project_name);
         }
       }
     }
@@ -1901,19 +2080,34 @@ watch(writtenResponse, (newVal) => {
 // Watch active tab in free play mode to load drafts correctly
 watch(activeTab, (newTab) => {
   if (!assignmentId.value) {
-    const draft = localStorage.getItem(getStorageKey(`sms_lab_freeplay_${newTab}`));
+    const activeProj = newTab === 'java' 
+      ? (localStorage.getItem(getStorageKey('sms_lab_active_java_project')) || 'Default Project')
+      : newTab === 'html'
+      ? (localStorage.getItem(getStorageKey('sms_lab_active_html_project')) || 'Default Project')
+      : '';
+    const key = activeProj ? `sms_lab_freeplay_${newTab}_${activeProj}` : `sms_lab_freeplay_${newTab}`;
+    const draft = localStorage.getItem(getStorageKey(key));
     if (draft) {
       if (newTab === 'html') {
         const payload = parseHtmlPayload(draft);
-        htmlProjectName.value = payload.projectName;
+        htmlProjectName.value = payload.projectName || activeProj;
         htmlFiles.value = payload.files;
         htmlImages.value = payload.images;
         activeHtmlFileIndex.value = 0;
       } else if (newTab === 'java') {
         const payload = parseJavaPayload(draft);
-        projectName.value = payload.projectName;
+        projectName.value = payload.projectName || activeProj;
         javaFiles.value = payload.files;
         activeJavaFileIndex.value = 0;
+      }
+    } else {
+      if (newTab === 'html') {
+        htmlProjectName.value = '';
+        htmlFiles.value = [{ name: 'index.html', code: '' }];
+        htmlImages.value = [];
+      } else if (newTab === 'java') {
+        projectName.value = '';
+        javaFiles.value = [{ name: 'Main.java', code: '' }];
       }
     }
     // Save active tab preference
@@ -2078,48 +2272,61 @@ const loadDraftsForCurrentUser = async () => {
       activeTab.value = getFallbackTab('java');
     }
 
+    const activeJavaProj = localStorage.getItem(getStorageKey('sms_lab_active_java_project')) || 'Default Project';
+    const activeHtmlProj = localStorage.getItem(getStorageKey('sms_lab_active_html_project')) || 'Default Project';
+
     // Check free play local draft
-    const draft = localStorage.getItem(getStorageKey(`sms_lab_freeplay_${activeTab.value}`));
-    if (draft) {
-      if (activeTab.value === 'html') {
-        const payload = parseHtmlPayload(draft);
-        htmlProjectName.value = payload.projectName;
+    const javaDraft = localStorage.getItem(getStorageKey(`sms_lab_freeplay_java_${activeJavaProj}`));
+    const htmlDraft = localStorage.getItem(getStorageKey(`sms_lab_freeplay_html_${activeHtmlProj}`));
+    const sqlDraft = localStorage.getItem(getStorageKey('sms_lab_freeplay_sql'));
+
+    if (activeTab.value === 'html') {
+      if (htmlDraft) {
+        const payload = parseHtmlPayload(htmlDraft);
+        htmlProjectName.value = payload.projectName || activeHtmlProj;
         htmlFiles.value = payload.files;
         htmlImages.value = payload.images;
-        projectName.value = '';
-        javaFiles.value = [{ name: 'Main.java', code: '' }];
-        sqlFiles.value = [{ name: 'main.db', code: '', buffer: null }];
-        activeHtmlFileIndex.value = 0;
-      } else if (activeTab.value === 'sql') {
-        try { 
-          const parsed = JSON.parse(draft);
-          sqlFiles.value = parsed.map(f => ({ ...f, buffer: null }));
-        } catch { sqlFiles.value = [{ name: 'main.db', code: draft, buffer: null }]; }
-        projectName.value = '';
+      } else {
         htmlProjectName.value = '';
         htmlFiles.value = [{ name: 'index.html', code: '' }];
         htmlImages.value = [];
-        javaFiles.value = [{ name: 'Main.java', code: '' }];
-        activeSqlFileIndex.value = 0;
-      } else {
-        const payload = parseJavaPayload(draft);
-        projectName.value = payload.projectName;
-        javaFiles.value = payload.files;
-        htmlFiles.value = [{ name: 'index.html', code: '' }];
-        htmlImages.value = [];
-        sqlFiles.value = [{ name: 'main.db', code: '', buffer: null }];
-        activeJavaFileIndex.value = 0;
       }
-    } else {
+      projectName.value = '';
+      javaFiles.value = [{ name: 'Main.java', code: '' }];
+      sqlFiles.value = [{ name: 'main.db', code: '', buffer: null }];
+      activeHtmlFileIndex.value = 0;
+    } else if (activeTab.value === 'sql') {
+      if (sqlDraft) {
+        try {
+          const parsed = JSON.parse(sqlDraft);
+          sqlFiles.value = parsed.map(f => ({ ...f, buffer: null }));
+        } catch {
+          sqlFiles.value = [{ name: 'main.db', code: sqlDraft, buffer: null }];
+        }
+      } else {
+        sqlFiles.value = [{ name: 'main.db', code: '', buffer: null }];
+      }
       projectName.value = '';
       htmlProjectName.value = '';
       htmlFiles.value = [{ name: 'index.html', code: '' }];
       htmlImages.value = [];
       javaFiles.value = [{ name: 'Main.java', code: '' }];
+      activeSqlFileIndex.value = 0;
+    } else {
+      // java
+      if (javaDraft) {
+        const payload = parseJavaPayload(javaDraft);
+        projectName.value = payload.projectName || activeJavaProj;
+        javaFiles.value = payload.files;
+      } else {
+        projectName.value = '';
+        javaFiles.value = [{ name: 'Main.java', code: '' }];
+      }
+      htmlProjectName.value = '';
+      htmlFiles.value = [{ name: 'index.html', code: '' }];
+      htmlImages.value = [];
       sqlFiles.value = [{ name: 'main.db', code: '', buffer: null }];
       activeJavaFileIndex.value = 0;
-      activeHtmlFileIndex.value = 0;
-      activeSqlFileIndex.value = 0;
     }
   }
   // After local state is set, silently merge cloud SQL databases (free-play only)
