@@ -607,7 +607,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useLmsStore } from '../../stores/LMS/lmsStore';
 import { useAuthStore } from '../../stores/auth';
-import lmsService, { sqlSandboxService } from '../../services/LMS/lmsService';
+import lmsService, { sqlSandboxService, javaSandboxService, htmlSandboxService } from '../../services/LMS/lmsService';
 import API from '../../services/api';
 import { bufferToBase64, base64ToBuffer } from '../../utils/base64';
 import JavaEditor from '../../components/LMS/Editors/JavaEditor.vue';
@@ -1550,7 +1550,10 @@ const handleJavaChange = (newCode) => {
   const currentFile = javaFiles.value[activeJavaFileIndex.value];
   if (currentFile && currentFile.code !== newCode) {
     currentFile.code = newCode;
-    saveCode(JSON.stringify(javaFiles.value), 'java');
+    saveCode(JSON.stringify({
+      projectName: projectName.value,
+      files: javaFiles.value
+    }), 'java');
   }
 };
 
@@ -1607,12 +1610,13 @@ const getSubmissionPayload = (content) => {
 const saveCode = (newCode, lang) => {
   if (isReadOnly.value) return;
   if (!assignmentId.value) {
-    // Free play: save to local storage only
+    // Free play: save to local storage and sync to cloud
     saveStatus.value = 'Saving to local draft...';
     if (saveTimeout) clearTimeout(saveTimeout);
     saveTimeout = setTimeout(() => {
       localStorage.setItem(getStorageKey(`sms_lab_freeplay_${lang}`), newCode);
       saveStatus.value = 'Local draft saved';
+      scheduleSilentCloudSync();
     }, 1000);
     return;
   }
@@ -1672,7 +1676,6 @@ const updateOnlineStatus = () => {
   isOnline.value = navigator.onLine;
   if (isOnline.value) {
     syncPendingDrafts();
-    // When coming back online in SQL free-play, push any buffered changes
     if (!assignmentId.value) {
       scheduleSilentCloudSync();
     }
@@ -1681,32 +1684,42 @@ const updateOnlineStatus = () => {
   }
 };
 
-// ── Silent SQL Cloud Sync ──────────────────────────────────────────────────
+// ── Silent Cloud Sync ──────────────────────────────────────────────────────
 // Operates only in free-play mode (no assignment). Debounced 3 s to batch changes.
 let cloudSyncTimer = null;
 
-/**
- * Export all current sql.js databases and push them to the cloud silently.
- * Errors are swallowed — local copy is always the source of truth.
- */
 const silentCloudSync = async () => {
   if (!isOnline.value || assignmentId.value) return;
   try {
-    // First export the active database binary
-    if (sqlEditorRef.value) {
-      const dbBuffer = sqlEditorRef.value.exportDatabase();
-      if (dbBuffer) {
-        sqlFiles.value[activeSqlFileIndex.value].buffer = dbBuffer;
+    if (activeTab.value === 'sql') {
+      if (sqlEditorRef.value) {
+        const dbBuffer = sqlEditorRef.value.exportDatabase();
+        if (dbBuffer) {
+          sqlFiles.value[activeSqlFileIndex.value].buffer = dbBuffer;
+        }
       }
+      const payload = sqlFiles.value.map(f => ({
+        db_name:  f.name,
+        db_data:  f.buffer ? bufferToBase64(f.buffer) : null,
+        sql_code: f.code || '',
+      }));
+      await sqlSandboxService.syncAll(payload);
+    } else if (activeTab.value === 'java') {
+      const projectData = JSON.stringify({
+        projectName: projectName.value,
+        files: javaFiles.value
+      });
+      await javaSandboxService.sync(projectName.value, projectData);
+    } else if (activeTab.value === 'html') {
+      const projectData = JSON.stringify({
+        projectName: htmlProjectName.value,
+        files: htmlFiles.value,
+        images: htmlImages.value
+      });
+      await htmlSandboxService.sync(htmlProjectName.value, projectData);
     }
-    const payload = sqlFiles.value.map(f => ({
-      db_name:  f.name,
-      db_data:  f.buffer ? bufferToBase64(f.buffer) : null,
-      sql_code: f.code || '',
-    }));
-    await sqlSandboxService.syncAll(payload);
-  } catch {
-    // Silent fail — user doesn't see this
+  } catch (err) {
+    console.error('Failed silent cloud sync:', err);
   }
 };
 
@@ -1716,48 +1729,98 @@ const scheduleSilentCloudSync = () => {
 };
 
 /**
- * On first load (free-play, online), fetch cloud databases and merge with local.
- * Cloud wins for databases NOT present locally; local wins otherwise.
+ * On first load (free-play, online), fetch cloud databases/projects and merge with local.
  */
 const loadFromCloud = async () => {
   if (!isOnline.value || assignmentId.value) return;
+
+  // 1. Load SQL Sandbox
   try {
     const cloudDbs = await sqlSandboxService.fetchAll();
-    if (!cloudDbs || cloudDbs.length === 0) return;
+    if (cloudDbs && cloudDbs.length > 0) {
+      const localNames = new Set(sqlFiles.value.map(f => f.name));
+      const localIsEmpty = sqlFiles.value.length === 1 &&
+        sqlFiles.value[0].name === 'main.db' &&
+        !sqlFiles.value[0].code &&
+        !sqlFiles.value[0].buffer;
 
-    // Build a map of existing local file names
-    const localNames = new Set(sqlFiles.value.map(f => f.name));
-
-    // If local is completely empty (fresh install / new device), replace entirely
-    const localIsEmpty = sqlFiles.value.length === 1 &&
-      sqlFiles.value[0].name === 'main.db' &&
-      !sqlFiles.value[0].code &&
-      !sqlFiles.value[0].buffer;
-
-    if (localIsEmpty) {
-      // Replace with cloud data
-      sqlFiles.value = cloudDbs.map(db => ({
-        name:   db.db_name,
-        code:   db.sql_code || '',
-        buffer: db.db_data ? base64ToBuffer(db.db_data) : null,
-      }));
-      activeSqlFileIndex.value = 0;
-      saveStatus.value = 'Loaded from cloud ☁️';
-      setTimeout(() => { saveStatus.value = 'All changes saved'; }, 3000);
-    } else {
-      // Merge: add cloud databases that don't exist locally
-      cloudDbs.forEach(db => {
-        if (!localNames.has(db.db_name)) {
-          sqlFiles.value.push({
-            name:   db.db_name,
-            code:   db.sql_code || '',
-            buffer: db.db_data ? base64ToBuffer(db.db_data) : null,
-          });
-        }
-      });
+      if (localIsEmpty) {
+        sqlFiles.value = cloudDbs.map(db => ({
+          name:   db.db_name,
+          code:   db.sql_code || '',
+          buffer: db.db_data ? base64ToBuffer(db.db_data) : null,
+        }));
+        activeSqlFileIndex.value = 0;
+      } else {
+        cloudDbs.forEach(db => {
+          if (!localNames.has(db.db_name)) {
+            sqlFiles.value.push({
+              name:   db.db_name,
+              code:   db.sql_code || '',
+              buffer: db.db_data ? base64ToBuffer(db.db_data) : null,
+            });
+          }
+        });
+      }
     }
-  } catch {
-    // Silent fail
+  } catch (err) {
+    console.error('Failed to load SQL sandbox from cloud:', err);
+  }
+
+  // 2. Load Java Sandbox
+  try {
+    const javaCloud = await javaSandboxService.fetch();
+    if (javaCloud && javaCloud.project_data) {
+      const localIsEmpty = javaFiles.value.length === 1 &&
+        javaFiles.value[0].name === 'Main.java' &&
+        !javaFiles.value[0].code;
+
+      if (localIsEmpty) {
+        const parsed = JSON.parse(javaCloud.project_data);
+        if (parsed) {
+          if (Array.isArray(parsed)) {
+            javaFiles.value = parsed;
+            projectName.value = javaCloud.project_name || '';
+          } else {
+            javaFiles.value = parsed.files || [{ name: 'Main.java', code: '' }];
+            projectName.value = parsed.projectName || javaCloud.project_name || '';
+          }
+          activeJavaFileIndex.value = 0;
+          localStorage.setItem(
+            getStorageKey('sms_lab_freeplay_java'),
+            JSON.stringify({ projectName: projectName.value, files: javaFiles.value })
+          );
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load Java sandbox from cloud:', err);
+  }
+
+  // 3. Load HTML Sandbox
+  try {
+    const htmlCloud = await htmlSandboxService.fetch();
+    if (htmlCloud && htmlCloud.project_data) {
+      const localIsEmpty = htmlFiles.value.length === 1 &&
+        htmlFiles.value[0].name === 'index.html' &&
+        !htmlFiles.value[0].code;
+
+      if (localIsEmpty) {
+        const parsed = JSON.parse(htmlCloud.project_data);
+        if (parsed) {
+          htmlFiles.value = parsed.files || [{ name: 'index.html', code: '' }];
+          htmlImages.value = parsed.images || [];
+          htmlProjectName.value = parsed.projectName || htmlCloud.project_name || '';
+          activeHtmlFileIndex.value = 0;
+          localStorage.setItem(
+            getStorageKey('sms_lab_freeplay_html'),
+            JSON.stringify({ projectName: htmlProjectName.value, files: htmlFiles.value, images: htmlImages.value })
+          );
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load HTML sandbox from cloud:', err);
   }
 };
 
@@ -1847,7 +1910,9 @@ watch(activeTab, (newTab) => {
         htmlImages.value = payload.images;
         activeHtmlFileIndex.value = 0;
       } else if (newTab === 'java') {
-        try { javaFiles.value = JSON.parse(draft); } catch { javaFiles.value = [{ name: 'Main.java', code: draft }]; }
+        const payload = parseJavaPayload(draft);
+        projectName.value = payload.projectName;
+        javaFiles.value = payload.files;
         activeJavaFileIndex.value = 0;
       }
     }
@@ -1925,13 +1990,9 @@ const loadDraftsForCurrentUser = async () => {
         activeSqlFileIndex.value = 0;
         activeTab.value = getFallbackTab('sql');
       } else {
-        try {
-          const parsed = JSON.parse(codeVal);
-          if (Array.isArray(parsed)) javaFiles.value = parsed;
-          else throw new Error();
-        } catch {
-          javaFiles.value = [{ name: 'Main.java', code: codeVal || '' }];
-        }
+        const payload = parseJavaPayload(codeVal);
+        projectName.value = payload.projectName;
+        javaFiles.value = payload.files;
         htmlFiles.value = [{ name: 'index.html', code: '' }];
         htmlImages.value = [];
         activeJavaFileIndex.value = 0;
@@ -2041,7 +2102,9 @@ const loadDraftsForCurrentUser = async () => {
         javaFiles.value = [{ name: 'Main.java', code: '' }];
         activeSqlFileIndex.value = 0;
       } else {
-        try { javaFiles.value = JSON.parse(draft); } catch { javaFiles.value = [{ name: 'Main.java', code: draft }]; }
+        const payload = parseJavaPayload(draft);
+        projectName.value = payload.projectName;
+        javaFiles.value = payload.files;
         htmlFiles.value = [{ name: 'index.html', code: '' }];
         htmlImages.value = [];
         sqlFiles.value = [{ name: 'main.db', code: '', buffer: null }];

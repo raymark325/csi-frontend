@@ -149,3 +149,30 @@ export const sqlSandboxService = {
   },
 };
 
+// ── Java Sandbox Cloud Sync ──────────────────────────────────────────────────
+export const javaSandboxService = {
+  fetch() {
+    return API.get('/java-sandbox').then(res => res.data?.data || null);
+  },
+  sync(projectName, projectData) {
+    return API.post('/java-sandbox/sync', { project_name: projectName, project_data: projectData });
+  },
+  clear() {
+    return API.delete('/java-sandbox');
+  }
+};
+
+// ── HTML Sandbox Cloud Sync ──────────────────────────────────────────────────
+export const htmlSandboxService = {
+  fetch() {
+    return API.get('/html-sandbox').then(res => res.data?.data || null);
+  },
+  sync(projectName, projectData) {
+    return API.post('/html-sandbox/sync', { project_name: projectName, project_data: projectData });
+  },
+  clear() {
+    return API.delete('/html-sandbox');
+  }
+};
+
+
