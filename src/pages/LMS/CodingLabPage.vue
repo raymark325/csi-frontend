@@ -1873,110 +1873,8 @@ const scheduleSilentCloudSync = () => {
   cloudSyncTimer = setTimeout(silentCloudSync, 3000);
 };
 
-/**
- * On first load (free-play, online), fetch cloud databases/projects and merge with local.
- */
-const loadFromCloud = async () => {
-  if (!isOnline.value || assignmentId.value) return;
 
-  // 1. Load SQL Sandbox
-  try {
-    const cloudDbs = await sqlSandboxService.fetchAll();
-    if (cloudDbs && cloudDbs.length > 0) {
-      const localNames = new Set(sqlFiles.value.map(f => f.name));
-      const localIsEmpty = sqlFiles.value.length === 1 &&
-        sqlFiles.value[0].name === 'main.db' &&
-        !sqlFiles.value[0].code &&
-        !sqlFiles.value[0].buffer;
 
-      if (localIsEmpty) {
-        sqlFiles.value = cloudDbs.map(db => ({
-          name:   db.db_name,
-          code:   db.sql_code || '',
-          buffer: db.db_data ? base64ToBuffer(db.db_data) : null,
-        }));
-        activeSqlFileIndex.value = 0;
-      } else {
-        cloudDbs.forEach(db => {
-          if (!localNames.has(db.db_name)) {
-            sqlFiles.value.push({
-              name:   db.db_name,
-              code:   db.sql_code || '',
-              buffer: db.db_data ? base64ToBuffer(db.db_data) : null,
-            });
-          }
-        });
-      }
-    }
-  } catch (err) {
-    console.error('Failed to load SQL sandbox from cloud:', err);
-  }
-
-  // 2. Load Java Sandbox
-  try {
-    const javaCloudList = await javaSandboxService.fetch();
-    if (javaCloudList && Array.isArray(javaCloudList) && javaCloudList.length > 0) {
-      allJavaProjects.value = javaCloudList;
-      
-      const lastActive = localStorage.getItem(getStorageKey('sms_lab_active_java_project')) || javaCloudList[0].project_name;
-      const activeProj = javaCloudList.find(p => p.project_name === lastActive) || javaCloudList[0];
-      
-      const localIsEmpty = javaFiles.value.length === 1 &&
-        javaFiles.value[0].name === 'Main.java' &&
-        !javaFiles.value[0].code;
-
-      if (localIsEmpty && activeProj) {
-        projectName.value = activeProj.project_name;
-        wizardProjName.value = activeProj.project_name;
-        const parsed = JSON.parse(activeProj.project_data);
-        if (parsed) {
-          javaFiles.value = parsed.files || parsed;
-          activeJavaFileIndex.value = 0;
-          localStorage.setItem(
-            getStorageKey(`sms_lab_freeplay_java_${activeProj.project_name}`),
-            JSON.stringify({ projectName: activeProj.project_name, files: javaFiles.value })
-          );
-          localStorage.setItem(getStorageKey('sms_lab_active_java_project'), activeProj.project_name);
-        }
-      }
-    }
-  } catch (err) {
-    console.error('Failed to load Java sandbox from cloud:', err);
-  }
-
-  // 3. Load HTML Sandbox
-  try {
-    const htmlCloudList = await htmlSandboxService.fetch();
-    if (htmlCloudList && Array.isArray(htmlCloudList) && htmlCloudList.length > 0) {
-      allHtmlProjects.value = htmlCloudList;
-      
-      const lastActive = localStorage.getItem(getStorageKey('sms_lab_active_html_project')) || htmlCloudList[0].project_name;
-      const activeProj = htmlCloudList.find(p => p.project_name === lastActive) || htmlCloudList[0];
-
-      const localIsEmpty = htmlFiles.value.length === 1 &&
-        htmlFiles.value[0].name === 'index.html' &&
-        !htmlFiles.value[0].code;
-
-      if (localIsEmpty && activeProj) {
-        htmlProjectName.value = activeProj.project_name;
-        htmlWizardProjName.value = activeProj.project_name;
-        const parsed = JSON.parse(activeProj.project_data);
-        if (parsed) {
-          htmlFiles.value = parsed.files || [{ name: 'index.html', code: '' }];
-          htmlImages.value = parsed.images || [];
-          activeHtmlFileIndex.value = 0;
-          localStorage.setItem(
-            getStorageKey(`sms_lab_freeplay_html_${activeProj.project_name}`),
-            JSON.stringify({ projectName: activeProj.project_name, files: htmlFiles.value, images: htmlImages.value })
-          );
-          localStorage.setItem(getStorageKey('sms_lab_active_html_project'), activeProj.project_name);
-        }
-      }
-    }
-  } catch (err) {
-    console.error('Failed to load HTML sandbox from cloud:', err);
-  }
-};
 
 const handleSubmitCode = async () => {
   if (!assignmentId.value) return;
@@ -2239,7 +2137,15 @@ const loadDraftsForCurrentUser = async () => {
       }
     }
   } else {
-    // Restore free play active tab preference if saved
+    // ── Free-play mode ────────────────────────────────────────────────────────
+    // Strategy:
+    //   1. Restore active tab from localStorage preference.
+    //   2. Try to restore state from localStorage (fast, offline-capable).
+    //   3. If localStorage has nothing for this project, fetch from cloud and
+    //      restore from there (awaited inline so the wizard never flashes).
+    //   4. Always populate allJavaProjects / allHtmlProjects from cloud so the
+    //      project-switcher dropdown is populated even on a fresh device.
+
     const savedTab = localStorage.getItem(getStorageKey('sms_lab_active_tab'));
     if (savedTab && ['java', 'sql', 'html'].includes(savedTab)) {
       activeTab.value = getFallbackTab(savedTab);
@@ -2247,24 +2153,24 @@ const loadDraftsForCurrentUser = async () => {
       activeTab.value = getFallbackTab('java');
     }
 
-    const activeJavaProj = localStorage.getItem(getStorageKey('sms_lab_active_java_project')) || 'Default Project';
-    const activeHtmlProj = localStorage.getItem(getStorageKey('sms_lab_active_html_project')) || 'Default Project';
+    const activeJavaProj = localStorage.getItem(getStorageKey('sms_lab_active_java_project'));
+    const activeHtmlProj = localStorage.getItem(getStorageKey('sms_lab_active_html_project'));
 
-    // Check free play local draft
-    const javaDraft = localStorage.getItem(getStorageKey(`sms_lab_freeplay_java_${activeJavaProj}`));
-    const htmlDraft = localStorage.getItem(getStorageKey(`sms_lab_freeplay_html_${activeHtmlProj}`));
+    const javaDraft = activeJavaProj
+      ? localStorage.getItem(getStorageKey(`sms_lab_freeplay_java_${activeJavaProj}`))
+      : null;
+    const htmlDraft = activeHtmlProj
+      ? localStorage.getItem(getStorageKey(`sms_lab_freeplay_html_${activeHtmlProj}`))
+      : null;
     const sqlDraft = localStorage.getItem(getStorageKey('sms_lab_freeplay_sql'));
 
+    // ── 1. Apply whatever we have locally first (instant, no flash) ──────────
     if (activeTab.value === 'html') {
       if (htmlDraft) {
         const payload = parseHtmlPayload(htmlDraft);
         htmlProjectName.value = payload.projectName || activeHtmlProj;
         htmlFiles.value = payload.files;
         htmlImages.value = payload.images;
-      } else {
-        htmlProjectName.value = '';
-        htmlFiles.value = [{ name: 'index.html', code: '' }];
-        htmlImages.value = [];
       }
       projectName.value = '';
       javaFiles.value = [{ name: 'Main.java', code: '' }];
@@ -2278,8 +2184,6 @@ const loadDraftsForCurrentUser = async () => {
         } catch {
           sqlFiles.value = [{ name: 'main.db', code: sqlDraft, buffer: null }];
         }
-      } else {
-        sqlFiles.value = [{ name: 'main.db', code: '', buffer: null }];
       }
       projectName.value = '';
       htmlProjectName.value = '';
@@ -2288,14 +2192,11 @@ const loadDraftsForCurrentUser = async () => {
       javaFiles.value = [{ name: 'Main.java', code: '' }];
       activeSqlFileIndex.value = 0;
     } else {
-      // java
+      // java tab
       if (javaDraft) {
         const payload = parseJavaPayload(javaDraft);
         projectName.value = payload.projectName || activeJavaProj;
         javaFiles.value = payload.files;
-      } else {
-        projectName.value = '';
-        javaFiles.value = [{ name: 'Main.java', code: '' }];
       }
       htmlProjectName.value = '';
       htmlFiles.value = [{ name: 'index.html', code: '' }];
@@ -2303,10 +2204,84 @@ const loadDraftsForCurrentUser = async () => {
       sqlFiles.value = [{ name: 'main.db', code: '', buffer: null }];
       activeJavaFileIndex.value = 0;
     }
-  }
-  // After local state is set, silently merge cloud SQL databases (free-play only)
-  if (!route.query.assignment_id) {
-    loadFromCloud();
+
+    // ── 2. Fetch cloud data (awaited inline) ─────────────────────────────────
+    if (isOnline.value) {
+      // Java cloud projects
+      try {
+        const javaCloudList = await javaSandboxService.fetch();
+        if (javaCloudList && Array.isArray(javaCloudList) && javaCloudList.length > 0) {
+          allJavaProjects.value = javaCloudList;
+
+          // If local draft was missing, restore the last-active (or first) cloud project
+          if (!javaDraft) {
+            const lastActive = activeJavaProj || javaCloudList[0].project_name;
+            const activeProj = javaCloudList.find(p => p.project_name === lastActive) || javaCloudList[0];
+            if (activeProj && activeProj.project_data) {
+              const parsed = JSON.parse(activeProj.project_data);
+              if (parsed) {
+                projectName.value = activeProj.project_name;
+                wizardProjName.value = activeProj.project_name;
+                javaFiles.value = parsed.files || parsed;
+                activeJavaFileIndex.value = 0;
+                localStorage.setItem(getStorageKey('sms_lab_active_java_project'), activeProj.project_name);
+                localStorage.setItem(
+                  getStorageKey(`sms_lab_freeplay_java_${activeProj.project_name}`),
+                  JSON.stringify({ projectName: activeProj.project_name, files: javaFiles.value })
+                );
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load Java sandbox from cloud:', err);
+      }
+
+      // HTML cloud projects
+      try {
+        const htmlCloudList = await htmlSandboxService.fetch();
+        if (htmlCloudList && Array.isArray(htmlCloudList) && htmlCloudList.length > 0) {
+          allHtmlProjects.value = htmlCloudList;
+
+          if (!htmlDraft) {
+            const lastActive = activeHtmlProj || htmlCloudList[0].project_name;
+            const activeProj = htmlCloudList.find(p => p.project_name === lastActive) || htmlCloudList[0];
+            if (activeProj && activeProj.project_data) {
+              const parsed = JSON.parse(activeProj.project_data);
+              if (parsed) {
+                htmlProjectName.value = activeProj.project_name;
+                htmlWizardProjName.value = activeProj.project_name;
+                htmlFiles.value = parsed.files || [{ name: 'index.html', code: '' }];
+                htmlImages.value = parsed.images || [];
+                activeHtmlFileIndex.value = 0;
+                localStorage.setItem(getStorageKey('sms_lab_active_html_project'), activeProj.project_name);
+                localStorage.setItem(
+                  getStorageKey(`sms_lab_freeplay_html_${activeProj.project_name}`),
+                  JSON.stringify({ projectName: activeProj.project_name, files: htmlFiles.value, images: htmlImages.value })
+                );
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load HTML sandbox from cloud:', err);
+      }
+
+      // SQL cloud databases
+      try {
+        const cloudDbs = await sqlSandboxService.fetchAll();
+        if (cloudDbs && cloudDbs.length > 0 && !sqlDraft) {
+          sqlFiles.value = cloudDbs.map(db => ({
+            name: db.db_name,
+            code: db.sql_code || '',
+            buffer: db.db_data ? base64ToBuffer(db.db_data) : null,
+          }));
+          activeSqlFileIndex.value = 0;
+        }
+      } catch (err) {
+        console.error('Failed to load SQL sandbox from cloud:', err);
+      }
+    }
   }
 };
 
