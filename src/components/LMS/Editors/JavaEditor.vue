@@ -83,39 +83,7 @@
         />
       </div>
 
-      <!-- Inline errors — displayed directly in the console when problems exist -->
-      <div v-if="problems.length > 0" class="q-mt-sm">
-        <div class="row items-center q-gutter-xs q-mb-xs" style="border-top: 1px solid rgba(239,68,68,0.25); padding-top: 8px;">
-          <q-icon name="bug_report" size="14px" color="negative" />
-          <span style="color: #ef4444; font-size: 11px; font-weight: 700; letter-spacing: 0.04em;">{{ problems.length }} {{ problems.length === 1 ? 'ISSUE' : 'ISSUES' }} DETECTED</span>
-        </div>
-        <div class="q-gutter-xs">
-          <div
-            v-for="(prob, idx) in problems"
-            :key="'prob-'+idx"
-            class="problem-item-card q-pa-sm rounded-borders cursor-pointer"
-            @click="jumpToLine(prob.line)"
-          >
-            <div class="row justify-between items-center q-mb-xs">
-              <div class="row items-center q-gutter-xs">
-                <q-icon :name="prob.type === 'error' ? 'cancel' : 'warning'" :color="prob.type === 'error' ? 'negative' : 'warning'" size="14px" />
-                <span class="text-caption text-weight-bold text-white">{{ prob.file }}</span>
-                <span class="line-number-badge" :class="prob.type === 'error' ? 'line-number-badge--error' : 'line-number-badge--warn'">Line {{ prob.line }}</span>
-              </div>
-              <span class="jump-badge">Jump ↵</span>
-            </div>
-            <div class="text-caption text-weight-bold q-mb-xs" :class="prob.type === 'error' ? 'text-red-4' : 'text-amber-4'">
-              {{ prob.message }}
-            </div>
-            <div v-if="prob.snippet" class="code-snippet-box q-pa-xs q-mt-xs text-caption rounded-borders">
-              <code>{{ prob.snippet }}</code>
-            </div>
-            <div v-if="prob.quickFix" class="text-caption text-info text-weight-medium q-mt-xs">
-              💡 Quick Fix: {{ prob.quickFix }}
-            </div>
-          </div>
-        </div>
-      </div>
+
     </div>
   </div>
 </template>
@@ -905,8 +873,11 @@ const runCode = (isAuto = false) => {
   runAnalyzer();
   const criticalErrors = problems.value.filter(p => p.type === 'error');
   if (criticalErrors.length > 0) {
-    // Show errors inline in the console output
-    output.value = `⚠️ Found ${criticalErrors.length} compilation error(s). Fix the issues shown below and try again.`;
+    let errorMsg = `⚠️ Found ${criticalErrors.length} compilation error(s):\n\n`;
+    criticalErrors.forEach(err => {
+      errorMsg += `[Line ${err.line}] ${err.message}\n`;
+    });
+    output.value = errorMsg;
     return;
   }
 
@@ -1068,64 +1039,6 @@ watch(() => props.initialCode, (newVal) => {
 }
 
 
-.tab-btn-active {
-  background: rgba(255, 255, 255, 0.1);
-  color: #818cf8 !important;
-  border-bottom: 2px solid #818cf8;
-}
-
-.border-bottom-dark {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.problem-item-card {
-  background: rgba(30, 41, 59, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.2s ease;
-}
-
-.problem-item-card:hover {
-  background: rgba(99, 102, 241, 0.18);
-  border-color: #818cf8;
-}
-
-.jump-badge {
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgba(99, 102, 241, 0.25);
-  color: #a5b4fc;
-  font-weight: 600;
-}
-
-.code-snippet-box {
-  background: #0f172a;
-  color: #f1f5f9;
-  font-family: 'Fira Code', 'Courier New', monospace;
-  font-size: 12px;
-  border-left: 3px solid #ef4444;
-}
-
-/* Line number badge inside error cards */
-.line-number-badge {
-  display: inline-flex;
-  align-items: center;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 1px 7px;
-  border-radius: 4px;
-  letter-spacing: 0.02em;
-}
-.line-number-badge--error {
-  background: rgba(239,68,68,0.18);
-  color: #fca5a5;
-  border: 1px solid rgba(239,68,68,0.35);
-}
-.line-number-badge--warn {
-  background: rgba(245,158,11,0.18);
-  color: #fcd34d;
-  border: 1px solid rgba(245,158,11,0.35);
-}
 
 @keyframes blink {
   from, to { color: transparent }

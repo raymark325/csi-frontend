@@ -237,42 +237,23 @@
                 
                 <!-- Project Tree list -->
                 <div class="project-tree-container scroll">
-                  <!-- Project Node -->
-                  <div class="project-node q-py-xs">
-                    <div class="row items-center q-gutter-xs text-weight-bold cursor-pointer" style="color: #0f172a;">
-                      <q-icon name="folder" color="amber-9" size="20px" />
-                      <span>{{ projectName }}</span>
-                      <q-icon name="arrow_drop_down" size="16px" color="grey-6" />
-                      <q-menu>
-                        <q-list style="min-width: 180px">
-                          <q-item-label header class="text-weight-bold">My Java Projects</q-item-label>
-                          <q-item 
-                            v-for="proj in javaProjectsList" 
-                            :key="proj" 
-                            clickable 
-                            v-close-popup 
-                            @click="switchJavaProject(proj)"
-                            :active="proj === projectName"
-                          >
-                            <q-item-section avatar>
-                              <q-icon name="folder" :color="proj === projectName ? 'primary' : 'grey-7'" size="18px" />
-                            </q-item-section>
-                            <q-item-section>{{ proj }}</q-item-section>
-                          </q-item>
-                          <q-separator />
-                          <q-item clickable v-close-popup @click="createNewProject">
-                            <q-item-section avatar>
-                              <q-icon name="create_new_folder" color="primary" size="18px" />
-                            </q-item-section>
-                            <q-item-section class="text-primary text-weight-bold">Create New Project</q-item-section>
-                          </q-item>
-                        </q-list>
-                      </q-menu>
+                  <!-- Loop over all projects -->
+                  <div class="project-node q-py-xs" v-for="proj in allParsedJavaProjects" :key="proj.name">
+                    <div class="row items-center justify-between q-mb-xs">
+                      <div class="row items-center q-gutter-xs text-weight-bold cursor-pointer" 
+                           :style="proj.name === projectName ? 'color: #0f172a;' : 'color: #64748b;'"
+                           @click="switchJavaProject(proj.name)">
+                        <q-icon :name="proj.name === projectName ? 'folder_open' : 'folder'" :color="proj.name === projectName ? 'amber-9' : 'grey-7'" size="20px" />
+                        <span>{{ proj.name }}</span>
+                      </div>
+                      <q-btn v-if="proj.name !== projectName && !isReadOnly" flat round dense size="xs" icon="delete" color="negative" @click.stop="deleteJavaProject(proj.name)">
+                        <q-tooltip>Delete Project</q-tooltip>
+                      </q-btn>
                     </div>
                     
-                    <!-- Package structure -->
+                    <!-- Package structure (always visible) -->
                     <div class="package-nodes q-ml-md q-pl-xs border-left-dashed">
-                      <div v-for="(pkgGroup, pkgName) in groupedJavaFiles" :key="pkgName" class="q-py-xs">
+                      <div v-for="(pkgGroup, pkgName) in proj.groupedFiles" :key="pkgName" class="q-py-xs">
                         <div class="row items-center q-gutter-xs text-weight-bold" style="color: #475569;">
                           <q-icon name="inventory_2" color="blue-grey-6" size="16px" />
                           <span>{{ pkgName }}</span>
@@ -284,8 +265,8 @@
                             v-for="file in pkgGroup" 
                             :key="file.name" 
                             class="file-node-row row justify-between items-center q-px-sm q-py-xs rounded-borders cursor-pointer q-mb-xs"
-                            :style="{ background: activeJavaFileIndex === getJavaFileIndex(file.name) ? 'rgba(0, 122, 255, 0.12)' : 'transparent', color: activeJavaFileIndex === getJavaFileIndex(file.name) ? '#0055b3' : '#334155' }"
-                            @click="activeJavaFileIndex = getJavaFileIndex(file.name)"
+                            :style="{ background: (proj.name === projectName && activeJavaFileIndex === file.index) ? 'rgba(0, 122, 255, 0.12)' : 'transparent', color: (proj.name === projectName && activeJavaFileIndex === file.index) ? '#0055b3' : '#334155' }"
+                            @click="switchJavaProjectAndFile(proj.name, file.index)"
                           >
                             <div class="row items-center q-gutter-xs">
                               <q-icon 
@@ -296,7 +277,7 @@
                               <span class="text-caption text-weight-medium">{{ file.name }}</span>
                             </div>
                             <q-btn 
-                              v-if="file.name !== 'Main.java' && !isReadOnly" 
+                              v-if="proj.name === projectName && file.name !== 'Main.java' && !isReadOnly" 
                               flat round dense size="xs" 
                               icon="close" 
                               color="negative" 
@@ -468,50 +449,31 @@
 
                 <!-- Scrollable Tree & Assets -->
                 <div class="project-tree-container scroll">
-                  <!-- Project Title Node -->
-                  <div class="project-node q-py-xs">
-                    <div class="row items-center q-gutter-xs text-weight-bold q-mb-sm cursor-pointer" style="color: #0f172a;">
-                      <q-icon name="folder_zip" color="positive" size="20px" />
-                      <span>{{ htmlProjectName }}</span>
-                      <q-icon name="arrow_drop_down" size="16px" color="grey-6" />
-                      <q-menu>
-                        <q-list style="min-width: 180px">
-                          <q-item-label header class="text-weight-bold">My HTML Projects</q-item-label>
-                          <q-item 
-                            v-for="proj in htmlProjectsList" 
-                            :key="proj" 
-                            clickable 
-                            v-close-popup 
-                            @click="switchHtmlProject(proj)"
-                            :active="proj === htmlProjectName"
-                          >
-                            <q-item-section avatar>
-                              <q-icon name="folder_zip" :color="proj === htmlProjectName ? 'positive' : 'grey-7'" size="18px" />
-                            </q-item-section>
-                            <q-item-section>{{ proj }}</q-item-section>
-                          </q-item>
-                          <q-separator />
-                          <q-item clickable v-close-popup @click="createNewHtmlProject">
-                            <q-item-section avatar>
-                              <q-icon name="note_add" color="positive" size="18px" />
-                            </q-item-section>
-                            <q-item-section class="text-positive text-weight-bold">Create New Project</q-item-section>
-                          </q-item>
-                        </q-list>
-                      </q-menu>
+                  <!-- Loop over HTML projects -->
+                  <div class="project-node q-py-xs q-mb-md" v-for="proj in allParsedHtmlProjects" :key="proj.name">
+                    <div class="row items-center justify-between q-mb-sm">
+                      <div class="row items-center q-gutter-xs text-weight-bold cursor-pointer" 
+                           :style="proj.name === htmlProjectName ? 'color: #0f172a;' : 'color: #64748b;'"
+                           @click="switchHtmlProject(proj.name)">
+                        <q-icon name="folder_zip" :color="proj.name === htmlProjectName ? 'positive' : 'grey-7'" size="20px" />
+                        <span>{{ proj.name }}</span>
+                      </div>
+                      <q-btn v-if="proj.name !== htmlProjectName && !isReadOnly" flat round dense size="xs" icon="delete" color="negative" @click.stop="deleteHtmlProject(proj.name)">
+                        <q-tooltip>Delete Project</q-tooltip>
+                      </q-btn>
                     </div>
 
                     <!-- Code Files Section -->
                     <div class="q-ml-sm q-mb-md">
                       <div class="row items-center justify-between text-caption text-weight-bold q-mb-xs" style="color: #64748b;">
-                        <span>CODE FILES ({{ htmlFiles.length }})</span>
+                        <span>CODE FILES ({{ proj.files.length }})</span>
                       </div>
                       <div 
-                        v-for="(file, idx) in htmlFiles" 
+                        v-for="(file, idx) in proj.files" 
                         :key="'html-file-'+idx"
                         class="file-node-row row justify-between items-center q-px-sm q-py-xs rounded-borders cursor-pointer q-mb-xs"
-                        :style="{ background: activeHtmlFileIndex === idx ? 'rgba(34, 197, 94, 0.15)' : 'transparent', color: activeHtmlFileIndex === idx ? '#15803d' : '#334155' }"
-                        @click="activeHtmlFileIndex = idx"
+                        :style="{ background: (proj.name === htmlProjectName && activeHtmlFileIndex === idx) ? 'rgba(34, 197, 94, 0.15)' : 'transparent', color: (proj.name === htmlProjectName && activeHtmlFileIndex === idx) ? '#15803d' : '#334155' }"
+                        @click="switchHtmlProjectAndFile(proj.name, idx)"
                       >
                         <div class="row items-center q-gutter-xs overflow-hidden">
                           <q-icon 
@@ -522,7 +484,7 @@
                           <span class="text-caption text-weight-medium ellipsis" style="max-width: 110px;">{{ file.name }}</span>
                         </div>
                         <q-btn 
-                          v-if="file.name !== 'index.html' && !isReadOnly" 
+                          v-if="proj.name === htmlProjectName && file.name !== 'index.html' && !isReadOnly" 
                           flat round dense size="xs" 
                           icon="close" 
                           color="negative" 
@@ -534,16 +496,16 @@
                     <!-- Images & Assets Section -->
                     <div class="q-ml-sm">
                       <div class="row items-center justify-between text-caption text-weight-bold q-mb-xs" style="color: #64748b;">
-                        <span>IMAGES & ASSETS ({{ htmlImages.length }})</span>
-                        <q-btn flat dense size="xs" color="info" label="+ Add URL" @click="showAddImageUrlDialog = true" :disable="isReadOnly" />
+                        <span>IMAGES & ASSETS ({{ proj.images.length }})</span>
+                        <q-btn v-if="proj.name === htmlProjectName" flat dense size="xs" color="info" label="+ Add URL" @click="showAddImageUrlDialog = true" :disable="isReadOnly" />
                       </div>
 
-                      <div v-if="htmlImages.length === 0" class="text-caption italic q-pa-xs" style="color: #94a3b8;">
+                      <div v-if="proj.images.length === 0" class="text-caption italic q-pa-xs" style="color: #94a3b8;">
                         No images uploaded yet.
                       </div>
 
                       <div 
-                        v-for="(img, imgIdx) in htmlImages" 
+                        v-for="(img, imgIdx) in proj.images" 
                         :key="'html-img-'+imgIdx"
                         class="file-node-row row justify-between items-center q-px-sm q-py-xs rounded-borders cursor-pointer q-mb-xs"
                         style="background: rgba(0, 0, 0, 0.03);"
@@ -558,7 +520,7 @@
                           <q-btn flat round dense size="xs" icon="content_copy" color="info" @click.stop="copyImgTag(img.name)">
                             <q-tooltip>Copy &lt;img src="{{ img.name }}"&gt;</q-tooltip>
                           </q-btn>
-                          <q-btn v-if="!isReadOnly" flat round dense size="xs" icon="close" color="negative" @click.stop="deleteHtmlImage(imgIdx)" />
+                          <q-btn v-if="proj.name === htmlProjectName && !isReadOnly" flat round dense size="xs" icon="close" color="negative" @click.stop="deleteHtmlImage(imgIdx)" />
                         </div>
                       </div>
                     </div>
@@ -911,16 +873,82 @@ let saveTimeout = null;
 
 const groupedJavaFiles = computed(() => {
   const groups = {};
-  javaFiles.value.forEach(file => {
+  javaFiles.value.forEach((file, index) => {
     const pkg = file.pkg || '(default)';
     if (!groups[pkg]) groups[pkg] = [];
-    groups[pkg].push(file);
+    groups[pkg].push({ ...file, index });
   });
   return groups;
 });
 
-const getJavaFileIndex = (name) => {
-  return javaFiles.value.findIndex(f => f.name === name);
+const allParsedJavaProjects = computed(() => {
+  return allJavaProjects.value.map(proj => {
+    let files = [];
+    try {
+      const parsed = JSON.parse(proj.project_data);
+      files = parsed.files || parsed || [];
+    } catch (e) {
+      files = [];
+    }
+    
+    // Check if this is the active project; if so, we can just use javaFiles to ensure real-time UI updates
+    if (proj.project_name === projectName.value) {
+      files = javaFiles.value;
+    }
+    
+    const groups = {};
+    files.forEach((file, index) => {
+      const pkg = file.pkg || '(default)';
+      if (!groups[pkg]) groups[pkg] = [];
+      groups[pkg].push({ ...file, index });
+    });
+    
+    return {
+      name: proj.project_name,
+      groupedFiles: groups
+    };
+  });
+});
+
+const allParsedHtmlProjects = computed(() => {
+  return allHtmlProjects.value.map(proj => {
+    let files = [];
+    let images = [];
+    try {
+      const parsed = JSON.parse(proj.project_data);
+      files = parsed.files || [{ name: 'index.html', code: '' }];
+      images = parsed.images || [];
+    } catch (e) {
+      files = [{ name: 'index.html', code: '' }];
+      images = [];
+    }
+    
+    // For active project, use real-time arrays
+    if (proj.project_name === htmlProjectName.value) {
+      files = htmlFiles.value;
+      images = htmlImages.value;
+    }
+    
+    return {
+      name: proj.project_name,
+      files,
+      images
+    };
+  });
+});
+
+const switchJavaProjectAndFile = (projName, fileIndex) => {
+  if (projName !== projectName.value) {
+    switchJavaProject(projName);
+  }
+  activeJavaFileIndex.value = fileIndex;
+};
+
+const switchHtmlProjectAndFile = (projName, fileIndex) => {
+  if (projName !== htmlProjectName.value) {
+    switchHtmlProject(projName);
+  }
+  activeHtmlFileIndex.value = fileIndex;
 };
 
 const deleteJavaFile = (name) => {
