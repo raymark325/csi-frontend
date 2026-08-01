@@ -719,7 +719,18 @@ const transpileClassBody = (className, body, superClass, inheritedFields = [], i
         }).join(', ')
       : '';
     const translatedBody = transpileMethodBody(ctor.body, className, { instanceFields: allInstanceFields, instanceMethods: allInstanceMethods, asyncMethods: localAsyncMethods, isStatic: false });
-    return `  constructor(${paramList}) {\n    ${superClass ? 'super();' : ''}\n    ${defaultFieldInits}\n    ${translatedBody}\n  }`;
+    
+    let userSuperCall = '';
+    let restOfBody = translatedBody;
+    const superMatch = translatedBody.match(/^\s*super\s*\([^)]*\)\s*;/);
+    if (superMatch) {
+      userSuperCall = superMatch[0];
+      restOfBody = translatedBody.substring(superMatch[0].length);
+    } else if (superClass) {
+      userSuperCall = 'super();';
+    }
+
+    return `  constructor(${paramList}) {\n    ${userSuperCall}\n    ${defaultFieldInits}\n    ${restOfBody}\n  }`;
   });
 
   const ctorSection = ctorBodies.length > 0
