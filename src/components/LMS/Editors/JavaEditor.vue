@@ -4,16 +4,15 @@
       <div class="row items-center q-gutter-sm">
         <span class="badge badge-blue">Java Sandbox</span>
         <span class="text-caption text-red text-weight-bold">⚠️ Copy-Paste Disabled</span>
-        
-        <!-- Error Finder Badge -->
-        <span 
-          class="badge flex items-center q-px-sm cursor-pointer" 
+
+        <!-- Problems badge (display only) -->
+        <span
+          class="badge flex items-center q-px-sm"
           :style="{
             background: problems.length > 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(34, 197, 94, 0.15)',
             color: problems.length > 0 ? '#ef4444' : '#22c55e',
             border: `1px solid ${problems.length > 0 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`
           }"
-          @click="activeBottomTab = 'problems'"
         >
           <q-icon :name="problems.length > 0 ? 'cancel' : 'check_circle'" size="14px" class="q-mr-xs" />
           {{ problems.length }} {{ problems.length === 1 ? 'Problem' : 'Problems' }}
@@ -21,23 +20,22 @@
       </div>
 
       <div class="row q-gutter-xs">
-        <q-btn 
-          flat 
-          dense 
-          no-caps 
-          color="indigo-4" 
-          icon="bug_report" 
-          label="Check Errors" 
-          rounded 
-          class="q-px-sm" 
-          @click="activeBottomTab = 'problems'; runAnalyzer();" 
-        />
         <q-btn color="primary" icon="play_arrow" label="Run Code" rounded unelevated :loading="isRunning" @click="runCode(false)"/>
       </div>
     </div>
 
     <!-- Code Editor Box -->
     <div class="editor-container">
+      <!-- Line number gutter -->
+      <div class="line-numbers-gutter" ref="gutterRef">
+        <div
+          v-for="n in lineCount"
+          :key="n"
+          class="line-number"
+          :class="{ 'line-number--error': errorLines.has(n) }"
+        >{{ n }}</div>
+      </div>
+      <!-- Code textarea -->
       <textarea
         ref="textareaRef"
         v-model="code"
@@ -50,63 +48,27 @@
         @copy.prevent="preventAction"
         @paste.prevent="preventAction"
         @cut.prevent="preventAction"
+        @scroll="syncGutterScroll"
       ></textarea>
     </div>
 
-    <!-- Bottom Panel: Console & Error Finder (Eclipse / NetBeans Style) -->
+    <!-- Output Console (unified: program output + inline errors) -->
     <div class="output-console q-mt-md">
+      <!-- Console header -->
       <div class="row justify-between items-center q-mb-sm border-bottom-dark q-pb-xs">
-        <div class="row items-center q-gutter-sm">
-          <q-btn 
-            flat 
-            dense 
-            no-caps 
-            size="sm" 
-            :class="{ 'tab-btn-active': activeBottomTab === 'console' }"
-            class="text-weight-bold"
-            style="color: #94a3b8;"
-            @click="activeBottomTab = 'console'"
-          >
-            <q-icon name="terminal" size="16px" class="q-mr-xs" />
-            CONSOLE
-          </q-btn>
-
-          <q-btn 
-            flat 
-            dense 
-            no-caps 
-            size="sm" 
-            :class="{ 'tab-btn-active': activeBottomTab === 'problems' }"
-            class="text-weight-bold"
-            style="color: #94a3b8;"
-            @click="activeBottomTab = 'problems'"
-          >
-            <q-icon name="bug_report" size="16px" class="q-mr-xs" :color="problems.length > 0 ? 'negative' : 'positive'" />
-            ERROR FINDER
-            <q-badge 
-              :color="problems.length > 0 ? 'negative' : 'positive'" 
-              floating 
-              rounded 
-              style="top: -2px; right: -14px;"
-            >
-              {{ problems.length }}
-            </q-badge>
-          </q-btn>
+        <div class="row items-center q-gutter-xs">
+          <q-icon name="terminal" size="16px" style="color: #94a3b8;" />
+          <span class="text-weight-bold" style="color: #94a3b8; font-size: 12px;">CONSOLE</span>
         </div>
-
         <div>
-          <span v-if="activeBottomTab === 'console' && isRunning && !isWaitingForInput" class="text-caption text-grey-4">Compiling & Running...</span>
-          <span v-else-if="activeBottomTab === 'console' && isWaitingForInput" class="text-caption text-amber text-weight-bold" style="font-size: 11px;">⚠️ (Program waiting for input. Click console below to type)</span>
-          <span v-else-if="activeBottomTab === 'problems'" class="text-caption text-grey-4" style="font-size: 11px;">
-            {{ problems.length }} {{ problems.length === 1 ? 'issue' : 'issues' }} detected in {{ activeFileName }}
-          </span>
+          <span v-if="isRunning && !isWaitingForInput" class="text-caption text-grey-4">Compiling &amp; Running...</span>
+          <span v-else-if="isWaitingForInput" class="text-caption text-amber text-weight-bold" style="font-size: 11px;">⚠️ Program waiting for input — click below to type</span>
         </div>
       </div>
-      
-      <!-- Console Content -->
-      <div v-show="activeBottomTab === 'console'" class="console-content" @click="focusConsole" style="position: relative;">
+
+      <!-- Program output -->
+      <div class="console-content" @click="focusConsole" style="position: relative;">
         <pre class="console-text"><span>{{ output || 'Console ready. Click Run Code to execute.' }}</span><span class="user-typed-input">{{ currentInput }}</span><span v-if="isWaitingForInput" class="console-cursor">█</span></pre>
-        <!-- Transparent inline input — types directly into console like a real terminal -->
         <input
           ref="consoleInputRef"
           v-model="currentInput"
@@ -121,29 +83,26 @@
         />
       </div>
 
-      <!-- Error Finder Content (Eclipse / NetBeans Style) -->
-      <div v-show="activeBottomTab === 'problems'" class="problems-content scroll" style="max-height: 250px; min-height: 100px; overflow-y: auto;">
-        <div v-if="problems.length === 0" class="flex flex-center q-pa-md text-center" style="min-height: 100px;">
-          <div>
-            <q-icon name="check_circle" size="36px" color="positive" class="q-mb-xs" />
-            <div class="text-subtitle2 text-positive text-weight-bold">No Errors Found!</div>
-            <div class="text-caption text-grey-4">Your Java code passed static syntax analysis cleanly.</div>
-          </div>
+      <!-- Inline errors — displayed directly in the console when problems exist -->
+      <div v-if="problems.length > 0" class="q-mt-sm">
+        <div class="row items-center q-gutter-xs q-mb-xs" style="border-top: 1px solid rgba(239,68,68,0.25); padding-top: 8px;">
+          <q-icon name="bug_report" size="14px" color="negative" />
+          <span style="color: #ef4444; font-size: 11px; font-weight: 700; letter-spacing: 0.04em;">{{ problems.length }} {{ problems.length === 1 ? 'ISSUE' : 'ISSUES' }} DETECTED</span>
         </div>
-
-        <div v-else class="q-gutter-xs">
-          <div 
-            v-for="(prob, idx) in problems" 
-            :key="'prob-'+idx" 
+        <div class="q-gutter-xs">
+          <div
+            v-for="(prob, idx) in problems"
+            :key="'prob-'+idx"
             class="problem-item-card q-pa-sm rounded-borders cursor-pointer"
             @click="jumpToLine(prob.line)"
           >
             <div class="row justify-between items-center q-mb-xs">
               <div class="row items-center q-gutter-xs">
-                <q-icon :name="prob.type === 'error' ? 'cancel' : 'warning'" :color="prob.type === 'error' ? 'negative' : 'warning'" size="16px" />
-                <span class="text-caption text-weight-bold text-white">{{ prob.file }}: Line {{ prob.line }}</span>
+                <q-icon :name="prob.type === 'error' ? 'cancel' : 'warning'" :color="prob.type === 'error' ? 'negative' : 'warning'" size="14px" />
+                <span class="text-caption text-weight-bold text-white">{{ prob.file }}</span>
+                <span class="line-number-badge" :class="prob.type === 'error' ? 'line-number-badge--error' : 'line-number-badge--warn'">Line {{ prob.line }}</span>
               </div>
-              <span class="jump-badge">Jump to Line {{ prob.line }} ↵</span>
+              <span class="jump-badge">Jump ↵</span>
             </div>
             <div class="text-caption text-weight-bold q-mb-xs" :class="prob.type === 'error' ? 'text-red-4' : 'text-amber-4'">
               {{ prob.message }}
@@ -161,8 +120,9 @@
   </div>
 </template>
 
+
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { useQuasar } from 'quasar';
 
 const props = defineProps({
@@ -204,8 +164,25 @@ const consoleInputRef = ref(null);
 const isWaitingForInput = ref(false);
 const textareaRef = ref(null);
 
-const activeBottomTab = ref('console'); // 'console' | 'problems'
+// activeBottomTab removed — unified console
 const problems = ref([]);
+const gutterRef = ref(null);
+
+// Computed line count from code
+const lineCount = computed(() => (code.value.match(/\n/g) || []).length + 1);
+
+// Set of line numbers that have errors — used to highlight gutter numbers
+const errorLines = computed(() => {
+  const set = new Set();
+  problems.value.forEach(p => { if (p.line) set.add(p.line); });
+  return set;
+});
+
+const syncGutterScroll = () => {
+  if (gutterRef.value && textareaRef.value) {
+    gutterRef.value.scrollTop = textareaRef.value.scrollTop;
+  }
+};
 
 const focusConsole = () => {
   if (consoleInputRef.value) {
@@ -917,17 +894,11 @@ const runCode = (isAuto = false) => {
   runAnalyzer();
   const criticalErrors = problems.value.filter(p => p.type === 'error');
   if (criticalErrors.length > 0) {
-    activeBottomTab.value = 'problems';
-    $q.notify({
-      type: 'negative',
-      message: `Syntax Check: Found ${criticalErrors.length} compilation error(s). Switch to Error Finder to inspect.`,
-      position: 'top',
-      timeout: 3000
-    });
+    // Show errors inline in the console output
+    output.value = `⚠️ Found ${criticalErrors.length} compilation error(s). Fix the issues shown below and try again.`;
     return;
   }
 
-  activeBottomTab.value = 'console';
   isRunning.value = true;
   output.value = 'Compiling and executing Java project...\n';
 
@@ -1002,22 +973,53 @@ watch(() => props.initialCode, (newVal) => {
   border-radius: var(--radius-md);
   background: #1e1e1e;
   overflow: hidden;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+}
+
+/* Line number gutter */
+.line-numbers-gutter {
+  background: #171717;
+  color: #4a5568;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 16px 10px 16px 8px;
+  text-align: right;
+  user-select: none;
+  min-width: 44px;
+  overflow-y: hidden; /* scroll synced via JS */
+  overflow-x: hidden;
+  border-right: 1px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
+}
+
+.line-number {
+  height: 21px; /* matches line-height: 1.5 × font-size: 14px */
+}
+
+.line-number--error {
+  color: #ef4444;
+  font-weight: 700;
 }
 
 .code-textarea {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   height: 320px;
   font-family: 'Fira Code', 'Courier New', monospace;
   font-size: 14px;
   background: #1e1e1e;
   color: #d4d4d4;
   border: none;
-  padding: 16px;
+  padding: 16px 16px 16px 8px;
   resize: vertical;
   outline: none;
   line-height: 1.5;
   white-space: pre;
   overflow-x: auto;
+  overflow-y: auto;
 }
 
 .output-console {
@@ -1091,6 +1093,27 @@ watch(() => props.initialCode, (newVal) => {
   font-family: 'Fira Code', 'Courier New', monospace;
   font-size: 12px;
   border-left: 3px solid #ef4444;
+}
+
+/* Line number badge inside error cards */
+.line-number-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+}
+.line-number-badge--error {
+  background: rgba(239,68,68,0.18);
+  color: #fca5a5;
+  border: 1px solid rgba(239,68,68,0.35);
+}
+.line-number-badge--warn {
+  background: rgba(245,158,11,0.18);
+  color: #fcd34d;
+  border: 1px solid rgba(245,158,11,0.35);
 }
 
 @keyframes blink {
