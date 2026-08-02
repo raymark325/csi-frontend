@@ -249,7 +249,7 @@ const syncGutterScroll = () => {
 
 const focusConsole = () => {
   if (consoleInputRef.value) {
-    consoleInputRef.value.focus();
+    consoleInputRef.value.focus({ preventScroll: true });
   }
 };
 
