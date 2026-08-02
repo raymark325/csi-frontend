@@ -1087,13 +1087,22 @@ watch(() => props.initialCode, (newVal) => {
   width: 100%;
   height: 100%;
   background: transparent;
-  color: transparent;
+  color: transparent !important;
   caret-color: #d4d4d4;
   border: none;
   resize: none;
   outline: none;
   overflow: auto;
   z-index: 2;
+}
+
+.code-textarea::selection {
+  background: rgba(86, 156, 214, 0.3);
+  color: transparent !important;
+}
+.code-textarea::-moz-selection {
+  background: rgba(86, 156, 214, 0.3);
+  color: transparent !important;
 }
 
 /* Highlight block is visually underlying */
