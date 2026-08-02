@@ -51,7 +51,7 @@
           @cut.prevent="preventAction"
           @scroll="syncGutterScroll"
         ></textarea>
-        <pre class="code-highlight" aria-hidden="true" ref="highlightRef"><code v-html="highlightedCode"></code></pre>
+        <pre class="code-highlight" aria-hidden="true" ref="highlightRef" v-html="highlightedCode"></pre>
       </div>
     </div>
 
@@ -1075,6 +1075,8 @@ watch(() => props.initialCode, (newVal) => {
   padding: 16px 16px 16px 8px;
   white-space: pre;
   tab-size: 4;
+  border: none;
+  box-sizing: border-box;
 }
 
 /* Textarea is interactive but transparent */
