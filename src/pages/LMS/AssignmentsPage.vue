@@ -4,8 +4,8 @@
     <div class="row justify-between items-center q-mb-xl">
       <div>
         <q-btn flat no-caps color="primary" icon="arrow_back" label="Back to Subjects" to="/assignments" class="q-mb-md" style="margin-left: -12px;" />
-        <p class="text-label q-mb-xs" style="color: var(--sms-blue);">LMS SUBSYSTEM</p>
-        <h1 class="text-display q-my-none">Assignments</h1>
+        <p class="text-label q-mb-xs" style="color: var(--sms-blue);">LEARNING MANAGEMENT SYSTEM</p>
+        <h1 class="text-display q-my-none">{{ courseName }}</h1>
         <p class="text-body q-my-none" style="color: var(--text-secondary);">Manage and submit class tasks and homework assignments.</p>
       </div>
     </div>
@@ -270,6 +270,25 @@ const showCreateDialog = ref(false);
 const showEditDialog = ref(false);
 const isSubmitting = ref(false);
 const editingAssignmentId = ref(null);
+
+const courseName = computed(() => {
+  if (authStore.value.user?.role === 'student') {
+    const data = dashboardStore.studentData?.sections || [];
+    const sec = data.find(s => s.id === selectedSectionSubjectId.value);
+    if (sec) {
+      return `${sec.course_code || ''} — ${sec.course || sec.name || 'Course'}`;
+    }
+  } else {
+    const allSections = authStore.value.user?.role === 'teacher'
+      ? dashboardStore.teacherSections
+      : (dashboardStore.sections || []);
+    const sec = allSections.find(s => s.id === selectedSectionSubjectId.value);
+    if (sec) {
+      return `${sec.course?.course_code || ''} — ${sec.course?.title || 'Course'}`;
+    }
+  }
+  return 'Assignments';
+});
 
 // Submission data
 const studentSubmissions = ref([]);   // student's own submissions

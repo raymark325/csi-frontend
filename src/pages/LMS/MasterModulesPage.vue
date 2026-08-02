@@ -144,7 +144,9 @@ const newModule = ref({
 let selectedFile = null;
 
 const filteredModules = computed(() => {
-  return lmsStore.modules.filter(m => m.course_id === currentCourseId.value);
+  return lmsStore.modules
+    .filter(m => m.course_id === currentCourseId.value)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 });
 
 const courseName = computed(() => {

@@ -323,11 +323,13 @@ let selectedFile = null;
 
 const filteredModules = computed(() => {
   // Show modules that are visible to the current section_subject
-  return lmsStore.modules.filter(m => {
-    if (m.course_id) return false; // skip master templates
-    const visibleIds = m.visible_section_ids || (m.section_subject_id ? [m.section_subject_id] : []);
-    return visibleIds.includes(currentSectionSubjectId.value);
-  });
+  return lmsStore.modules
+    .filter(m => {
+      if (m.course_id) return false; // skip master templates
+      const visibleIds = m.visible_section_ids || (m.section_subject_id ? [m.section_subject_id] : []);
+      return visibleIds.includes(currentSectionSubjectId.value);
+    })
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 });
 
 const courseName = computed(() => {
