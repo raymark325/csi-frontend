@@ -70,7 +70,7 @@
       </div>
 
       <!-- Program output -->
-      <div class="console-content" @click="focusConsole" style="position: relative;">
+      <div class="console-content" @click="focusConsole" style="position: relative;" ref="consoleContentRef">
         <pre class="console-text"><span>{{ output || 'Console ready. Click Run Code to execute.' }}</span><span class="user-typed-input">{{ currentInput }}</span><span v-if="isWaitingForInput" class="console-cursor">█</span></pre>
         <input
           ref="consoleInputRef"
@@ -93,7 +93,7 @@
 
 
 <script setup>
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, nextTick } from 'vue';
 import { useQuasar } from 'quasar';
 
 const props = defineProps({
@@ -132,9 +132,22 @@ const stdin = ref('');
 const currentInput = ref('');
 const consoleFocused = ref(false);
 const consoleInputRef = ref(null);
+const consoleContentRef = ref(null);
 const isWaitingForInput = ref(false);
 const textareaRef = ref(null);
 const highlightRef = ref(null);
+
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (consoleContentRef.value) {
+      consoleContentRef.value.scrollTop = consoleContentRef.value.scrollHeight;
+    }
+  });
+};
+
+watch([output, isWaitingForInput, currentInput], () => {
+  scrollToBottom();
+});
 
 const highlightedCode = computed(() => {
   let text = code.value || '';
@@ -178,6 +191,21 @@ const highlightedCode = computed(() => {
   
   // Highlight Numbers
   text = text.replace(/\b(\d+(?:\.\d+)?(?:[eE][+-]?\d+)?[fFlLdD]?)\b/g, '<span class="hl-number">$1</span>');
+
+  // Rainbow Brackets
+  let depth = 0;
+  const bracketColors = ['#3b82f6', '#22c55e', '#eab308', '#ec4899', '#8b5cf6', '#06b6d4'];
+  text = text.replace(/[{}]/g, (match) => {
+    if (match === '{') {
+      const color = bracketColors[depth % bracketColors.length];
+      depth++;
+      return `<span style="color: ${color}; font-weight: bold;">{</span>`;
+    } else {
+      depth = Math.max(0, depth - 1);
+      const color = bracketColors[depth % bracketColors.length];
+      return `<span style="color: ${color}; font-weight: bold;">}</span>`;
+    }
+  });
 
   // Restore Strings and Comments
   strLiterals.forEach((str, i) => {
