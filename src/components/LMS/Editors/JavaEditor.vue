@@ -20,7 +20,8 @@
       </div>
 
       <div class="row q-gutter-xs">
-        <q-btn color="primary" icon="play_arrow" label="Run Code" rounded unelevated :loading="isRunning" @click="runCode(false)"/>
+        <q-btn v-if="!isRunning" color="primary" icon="play_arrow" label="Run Code" rounded unelevated @click="runCode(false)"/>
+        <q-btn v-else color="negative" icon="stop" label="Stop" rounded unelevated @click="terminateProgram"/>
       </div>
     </div>
 
@@ -254,7 +255,17 @@ const focusConsole = () => {
 
 // Global input resolver callback
 let resolveInputPromise = null;
+let rejectInputPromise = null;
 let lastSubmitTimestamp = 0;
+const isTerminated = ref(false);
+
+const terminateProgram = () => {
+  if (!isRunning.value) return;
+  isTerminated.value = true;
+  if (isWaitingForInput.value && rejectInputPromise) {
+    rejectInputPromise(new Error("Terminated by User"));
+  }
+};
 
 const submitMobileInput = (e) => {
   if (props.disabled || !isRunning.value || !isWaitingForInput.value) return;
@@ -979,6 +990,7 @@ const runCode = (isAuto = false) => {
   }
 
   isRunning.value = true;
+  isTerminated.value = false;
   output.value = 'Compiling and executing Java project...\n';
 
   setTimeout(async () => {
@@ -998,16 +1010,21 @@ const runCode = (isAuto = false) => {
     output.value = '';
 
     const __print__ = (val) => {
+      if (isTerminated.value) throw new Error("Terminated by User");
       output.value += (val !== undefined && val !== null ? String(val) : 'null') + '\n';
     };
     const __printInline__ = (val) => {
+      if (isTerminated.value) throw new Error("Terminated by User");
       output.value += (val !== undefined && val !== null ? String(val) : 'null');
     };
     const __readInput__ = (type) => {
+      if (isTerminated.value) return Promise.reject(new Error("Terminated by User"));
       isWaitingForInput.value = true;
       setTimeout(() => focusConsole(), 50);
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
+        rejectInputPromise = reject;
         resolveInputPromise = (val) => {
+          if (isTerminated.value) { reject(new Error("Terminated by User")); return; }
           isWaitingForInput.value = false;
           output.value += val + '\n';
           if (type === 'int') resolve(parseInt(val) || 0);
