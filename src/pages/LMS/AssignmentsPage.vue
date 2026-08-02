@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="row justify-between items-center q-mb-xl">
       <div>
-        <q-btn flat no-caps color="primary" icon="arrow_back" label="Back to Subjects" to="/assignments" class="q-mb-md" style="margin-left: -12px;" />
+        <q-btn flat no-caps color="primary" icon="arrow_back" label="Back to Subjects" :to="`/assignments/section/${parentSectionId}/subjects`" class="q-mb-md" style="margin-left: -12px;" />
         <p class="text-label q-mb-xs" style="color: var(--sms-blue);">LEARNING MANAGEMENT SYSTEM</p>
         <h1 class="text-display q-my-none">{{ courseName }}</h1>
         <p class="text-body q-my-none" style="color: var(--text-secondary);">Manage and submit class tasks and homework assignments.</p>
@@ -288,6 +288,20 @@ const courseName = computed(() => {
     }
   }
   return 'Assignments';
+});
+
+const parentSectionId = computed(() => {
+  if (authStore.value.user?.role === 'student') {
+    const data = dashboardStore.studentData?.sections || [];
+    const sec = data.find(s => s.id === selectedSectionSubjectId.value);
+    return sec?.section_id || sec?.name || '';
+  } else {
+    const allSections = authStore.value.user?.role === 'teacher'
+      ? dashboardStore.teacherSections
+      : (dashboardStore.sections || []);
+    const sec = allSections.find(s => s.id === selectedSectionSubjectId.value);
+    return sec?.section_id || sec?.section?.id || '';
+  }
 });
 
 // Submission data

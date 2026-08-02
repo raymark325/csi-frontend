@@ -18,6 +18,7 @@ const routes = [
       { path: 'lms/master-modules/:id', component: () => import('@/pages/LMS/MasterModuleDetailPage.vue') },
       { path: 'lms/lab', component: () => import('@/pages/LMS/CodingLabPage.vue') },
       { path: 'assignments', component: () => import('@/pages/LMS/AssignmentCoursesPage.vue') },
+      { path: 'assignments/section/:section_id/subjects', component: () => import('@/pages/LMS/AssignmentSectionSubjectsPage.vue') },
       { path: 'assignments/course/:id', component: () => import('@/pages/LMS/AssignmentsPage.vue') },
       { 
         path: 'lms/submissions', 
