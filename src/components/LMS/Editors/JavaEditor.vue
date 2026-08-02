@@ -958,6 +958,8 @@ watch(() => props.initialCode, (newVal) => {
   border-radius: var(--radius-md);
   background: #1e1e1e;
   overflow: hidden;
+  height: 320px;
+  resize: vertical;
   display: flex;
   flex-direction: row;
   align-items: stretch;
@@ -992,14 +994,14 @@ watch(() => props.initialCode, (newVal) => {
 .code-textarea {
   flex: 1;
   min-width: 0;
-  height: 320px;
+  height: 100%;
   font-family: 'Fira Code', 'Courier New', monospace;
   font-size: 14px;
   background: #1e1e1e;
   color: #d4d4d4;
   border: none;
   padding: 16px 16px 16px 8px;
-  resize: vertical;
+  resize: none;
   outline: none;
   line-height: 1.5;
   white-space: pre;
