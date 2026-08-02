@@ -46,8 +46,8 @@
                   <q-icon name="folder_special" color="primary" size="24px" />
                 </div>
                 <div>
-                  <div style="font-size: 18px; font-weight: 700; color: var(--text-primary);">{{ course.code }}</div>
-                  <div style="font-size: 13px; color: var(--text-secondary);">{{ course.title }}</div>
+                  <div style="font-size: 18px; font-weight: 700; color: var(--text-primary);">{{ course.title }}</div>
+                  <div style="font-size: 13px; color: var(--text-secondary);">{{ course.code }}</div>
                 </div>
               </div>
               <div class="row items-center q-gutter-sm">

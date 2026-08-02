@@ -276,7 +276,7 @@ const courseName = computed(() => {
     const data = dashboardStore.studentData?.sections || [];
     const sec = data.find(s => s.id === selectedSectionSubjectId.value);
     if (sec) {
-      return `${sec.course_code || ''} — ${sec.course || sec.name || 'Course'}`;
+      return `${sec.course || sec.name || 'Course'} — ${sec.course_code || ''}`;
     }
   } else {
     const allSections = authStore.value.user?.role === 'teacher'
@@ -284,7 +284,7 @@ const courseName = computed(() => {
       : (dashboardStore.sections || []);
     const sec = allSections.find(s => s.id === selectedSectionSubjectId.value);
     if (sec) {
-      return `${sec.course?.course_code || ''} — ${sec.course?.title || 'Course'}`;
+      return `${sec.course?.title || 'Course'} — ${sec.course?.course_code || ''}`;
     }
   }
   return 'Assignments';

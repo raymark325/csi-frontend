@@ -30,10 +30,10 @@
             </div>
           </div>
           <h3 class="q-mt-none q-mb-xs" style="font-size: 20px; font-weight: 700; color: var(--text-primary);">
-            {{ course.code }}
+            {{ course.title }}
           </h3>
           <p class="text-body text-secondary q-mb-md" style="font-size: 14px; line-height: 1.5;">
-            {{ course.title }}
+            {{ course.code }}
           </p>
           <div class="row justify-between items-center">
             <span class="badge" style="background: rgba(0,0,0,0.05); color: var(--text-secondary);">

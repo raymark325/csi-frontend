@@ -161,7 +161,7 @@ const courseName = computed(() => {
   }
   
   if (course) {
-    return `${course.course_code} - ${course.title} (Master Resources)`;
+    return `${course.title} - ${course.course_code} (Master Resources)`;
   }
   return 'Subject Master Resources';
 });

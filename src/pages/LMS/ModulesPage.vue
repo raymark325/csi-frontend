@@ -338,13 +338,13 @@ const courseName = computed(() => {
     : (dashboardStore.sections || []);
   const sec = allSections.find(s => s.id === currentSectionSubjectId.value);
   if (sec) {
-    return `${sec.course?.course_code || ''} — ${sec.course?.title || 'Course'}`;
+    return `${sec.course?.title || 'Course'} — ${sec.course?.course_code || ''}`;
   }
   if (filteredModules.value.length > 0) {
     const mod = filteredModules.value[0];
     const code = mod.sectionSubject?.course?.course_code || 'General';
     const title = mod.sectionSubject?.course?.title || 'Course';
-    return `${code} — ${title}`;
+    return `${title} — ${code}`;
   }
   return 'Course Modules';
 });
