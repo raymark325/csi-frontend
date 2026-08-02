@@ -482,6 +482,9 @@ const translateTypes = (codeVal) => {
 };
 
 const translateBuiltins = (codeVal) => {
+  // Strip numeric literal suffixes (f, F, l, L, d, D) e.g., 100L -> 100, 3.14f -> 3.14
+  codeVal = codeVal.replace(/(?<![a-zA-Z0-9_$])((?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)[fFlLdD]\b/g, '$1');
+
   codeVal = codeVal.replace(/System\.out\.println\s*\(/g, '__print__(');
   codeVal = codeVal.replace(/System\.out\.print\s*\(/g, '__printInline__(');
   codeVal = codeVal.replace(/System\.out\.printf\s*\(/g, '__printInline__(');
