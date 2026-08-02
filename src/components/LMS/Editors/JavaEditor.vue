@@ -36,20 +36,23 @@
         >{{ n }}</div>
       </div>
       <!-- Code textarea -->
-      <textarea
-        ref="textareaRef"
-        v-model="code"
-        class="code-textarea"
-        placeholder="public class Main { ... }"
-        spellcheck="false"
-        wrap="off"
-        :readonly="disabled"
-        @keydown.tab.prevent="insertTab"
-        @copy.prevent="preventAction"
-        @paste.prevent="preventAction"
-        @cut.prevent="preventAction"
-        @scroll="syncGutterScroll"
-      ></textarea>
+      <div class="editor-wrapper">
+        <textarea
+          ref="textareaRef"
+          v-model="code"
+          class="code-textarea"
+          placeholder="public class Main { ... }"
+          spellcheck="false"
+          wrap="off"
+          :readonly="disabled"
+          @keydown.tab.prevent="insertTab"
+          @copy.prevent="preventAction"
+          @paste.prevent="preventAction"
+          @cut.prevent="preventAction"
+          @scroll="syncGutterScroll"
+        ></textarea>
+        <pre class="code-highlight" aria-hidden="true" ref="highlightRef"><code v-html="highlightedCode"></code></pre>
+      </div>
     </div>
 
     <!-- Output Console (unified: program output + inline errors) -->
@@ -131,6 +134,65 @@ const consoleFocused = ref(false);
 const consoleInputRef = ref(null);
 const isWaitingForInput = ref(false);
 const textareaRef = ref(null);
+const highlightRef = ref(null);
+
+const highlightedCode = computed(() => {
+  let text = code.value || '';
+  
+  // Escape HTML
+  text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  
+  // Apply error boundaries line by line
+  let lines = text.split('\n');
+  errorLines.value.forEach(lineNum => {
+    if (lineNum > 0 && lineNum <= lines.length) {
+      lines[lineNum - 1] = `__ERR_START__${lines[lineNum - 1]}__ERR_END__`;
+    }
+  });
+  text = lines.join('\n');
+
+  let strLiterals = [];
+  let comments = [];
+
+  // Extract strings
+  text = text.replace(/(&quot;.*?&quot;|&#39;.*?&#39;)/g, (match) => {
+      strLiterals.push(match);
+      return `__STR_${strLiterals.length - 1}__`;
+  });
+
+  // Extract comments
+  text = text.replace(/(\/\/.*|\/\*[\s\S]*?\*\/)/g, (match) => {
+      comments.push(match);
+      return `__COM_${comments.length - 1}__`;
+  });
+
+  // Highlight Keywords
+  const keywords = ['public', 'private', 'protected', 'class', 'static', 'void', 'final', 'abstract', 'extends', 'implements', 'return', 'new', 'if', 'else', 'for', 'while', 'switch', 'case', 'break', 'continue', 'default', 'try', 'catch', 'finally', 'throw', 'throws', 'import', 'package'];
+  const typeKeywords = ['int', 'double', 'float', 'boolean', 'char', 'byte', 'short', 'long', 'String', 'Object', 'var'];
+  
+  const kwRegex = new RegExp(`\\b(${keywords.join('|')})\\b`, 'g');
+  text = text.replace(kwRegex, '<span class="hl-keyword">$1</span>');
+  
+  const typeRegex = new RegExp(`\\b(${typeKeywords.join('|')})\\b`, 'g');
+  text = text.replace(typeRegex, '<span class="hl-type">$1</span>');
+  
+  // Highlight Numbers
+  text = text.replace(/\b(\d+(?:\.\d+)?(?:[eE][+-]?\d+)?[fFlLdD]?)\b/g, '<span class="hl-number">$1</span>');
+
+  // Restore Strings and Comments
+  strLiterals.forEach((str, i) => {
+      text = text.replace(`__STR_${i}__`, `<span class="hl-string">${str}</span>`);
+  });
+  comments.forEach((com, i) => {
+      text = text.replace(`__COM_${i}__`, `<span class="hl-comment">${com}</span>`);
+  });
+
+  // Convert Error boundaries to spans
+  text = text.replace(/__ERR_START__/g, '<span class="error-squiggly">');
+  text = text.replace(/__ERR_END__/g, '</span>');
+
+  return text + '\n';
+});
 
 // activeBottomTab removed — unified console
 const problems = ref([]);
@@ -149,6 +211,10 @@ const errorLines = computed(() => {
 const syncGutterScroll = () => {
   if (gutterRef.value && textareaRef.value) {
     gutterRef.value.scrollTop = textareaRef.value.scrollTop;
+  }
+  if (highlightRef.value && textareaRef.value) {
+    highlightRef.value.scrollTop = textareaRef.value.scrollTop;
+    highlightRef.value.scrollLeft = textareaRef.value.scrollLeft;
   }
 };
 
@@ -991,22 +1057,73 @@ watch(() => props.initialCode, (newVal) => {
   font-weight: 700;
 }
 
-.code-textarea {
+/* Editor Wrapper */
+.editor-wrapper {
+  position: relative;
   flex: 1;
   min-width: 0;
-  height: 100%;
+  display: flex;
+  background: #1e1e1e;
+}
+
+/* Base styles for both textarea and highlight block */
+.code-textarea, .code-highlight {
+  margin: 0;
   font-family: 'Fira Code', 'Courier New', monospace;
   font-size: 14px;
-  background: #1e1e1e;
-  color: #d4d4d4;
-  border: none;
+  line-height: 1.5;
   padding: 16px 16px 16px 8px;
+  white-space: pre;
+  tab-size: 4;
+}
+
+/* Textarea is interactive but transparent */
+.code-textarea {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  color: transparent;
+  caret-color: #d4d4d4;
+  border: none;
   resize: none;
   outline: none;
-  line-height: 1.5;
-  white-space: pre;
-  overflow-x: auto;
-  overflow-y: auto;
+  overflow: auto;
+  z-index: 2;
+}
+
+/* Highlight block is visually underlying */
+.code-highlight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  color: #d4d4d4;
+  pointer-events: none;
+  overflow: hidden; /* textarea handles scrolling, we just sync */
+  z-index: 1;
+}
+
+/* Syntax Colors (VS Code Dark+ Style) */
+:deep(.hl-keyword) { color: #569cd6; font-weight: bold; }
+:deep(.hl-type) { color: #4ec9b0; }
+:deep(.hl-string) { color: #ce9178; }
+:deep(.hl-number) { color: #b5cea8; }
+:deep(.hl-comment) { color: #6a9955; font-style: italic; }
+
+/* Force strings/comments to override nested keyword colors */
+:deep(.hl-string *) { color: #ce9178 !important; }
+:deep(.hl-comment *) { color: #6a9955 !important; font-style: italic !important; }
+
+/* Error squiggly */
+:deep(.error-squiggly) {
+  text-decoration: underline wavy #ef4444;
+  text-underline-offset: 3px;
+  background: rgba(239, 68, 68, 0.1);
 }
 
 .output-console {
