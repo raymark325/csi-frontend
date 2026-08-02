@@ -262,6 +262,7 @@ const isTerminated = ref(false);
 const terminateProgram = () => {
   if (!isRunning.value) return;
   isTerminated.value = true;
+  output.value = '';
   if (isWaitingForInput.value && rejectInputPromise) {
     rejectInputPromise(new Error("Terminated by User"));
   }
@@ -1040,7 +1041,11 @@ const runCode = (isAuto = false) => {
       await execFn(__print__, __printInline__, __readInput__);
       output.value += '\nProcess finished with exit code 0';
     } catch (err) {
-      output.value += '\nRuntime Error: ' + err.message;
+      if (err.message === "Terminated by User") {
+        output.value = '';
+      } else {
+        output.value += '\nRuntime Error: ' + err.message;
+      }
     } finally {
       isRunning.value = false;
       isWaitingForInput.value = false;
