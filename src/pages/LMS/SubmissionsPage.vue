@@ -102,10 +102,10 @@
 
         <q-card-section class="q-pt-none" v-if="activeSubmission">
           <!-- Submitted Code Content -->
-          <div class="q-mb-md">
-            <p class="text-label q-mb-xs">Submitted Code</p>
+          <div class="q-mb-md" v-if="activeSubmission.assignment?.type !== 'offline'">
+            <p class="text-label q-mb-xs">Submitted Content</p>
             <div style="background: #1e1e1e; padding: 12px; border-radius: var(--radius-md); overflow-x: auto;">
-              <pre style="margin:0; font-family:monospace; color:#d4d4d4; font-size:12px;">{{ activeSubmission.content }}</pre>
+              <pre style="margin:0; font-family:monospace; color:#d4d4d4; font-size:12px;">{{ activeSubmission.content || '(No content provided)' }}</pre>
             </div>
           </div>
 

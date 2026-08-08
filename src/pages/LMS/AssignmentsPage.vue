@@ -179,6 +179,7 @@
             <select v-model="editAssignment.type" class="input-glass">
               <option value="coding">Coding (Playground Compiler enabled)</option>
               <option value="written">Written Works (Simple editor / report submission)</option>
+              <option value="offline">Offline Activity (Hidden from students)</option>
             </select>
           </div>
           <div class="q-mb-md">
@@ -199,7 +200,7 @@
               <input v-model="editAssignment.due_date" class="input-glass" type="datetime-local"/>
             </div>
           </div>
-          <div class="q-mb-md">
+          <div class="q-mb-md" v-if="editAssignment.type !== 'offline'">
             <p class="text-label q-mb-xs">Attachment (Optional)</p>
             <input type="file" class="input-glass q-pa-sm" @change="e => editAssignment.file = e.target.files[0]" />
             <p class="text-caption text-muted q-mt-xs q-mb-none" v-if="editAssignment.file_path">
@@ -236,6 +237,7 @@
             <select v-model="newAssignment.type" class="input-glass">
               <option value="coding">Coding (Playground Compiler enabled)</option>
               <option value="written">Written Works (Simple editor / report submission)</option>
+              <option value="offline">Offline Activity (Hidden from students)</option>
             </select>
           </div>
 
@@ -264,7 +266,7 @@
             </div>
           </div>
 
-          <div class="q-mb-md">
+          <div class="q-mb-md" v-if="newAssignment.type !== 'offline'">
             <p class="text-label q-mb-xs">Attachment (Optional)</p>
             <input type="file" class="input-glass q-pa-sm" @change="e => newAssignment.file = e.target.files[0]" />
           </div>
