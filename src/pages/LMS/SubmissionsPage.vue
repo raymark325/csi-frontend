@@ -124,6 +124,7 @@
 
         <q-card-actions align="right" class="q-pb-md q-pr-md">
           <q-btn label="Cancel" flat rounded v-close-popup />
+          <q-btn label="Return to Student" color="warning" flat rounded @click="handleReturnSubmission" :loading="isReturning" />
           <q-btn label="Submit Grade" color="primary" rounded unelevated @click="handleGradeSubmission" :loading="isSubmitting" />
         </q-card-actions>
       </q-card>
@@ -146,6 +147,7 @@ const selectedAssignmentId = ref(null);
 const sections = ref([]);
 const showGradeDialog = ref(false);
 const isSubmitting = ref(false);
+const isReturning = ref(false);
 const activeSubmission = ref(null);
 
 const gradeScore = ref(0);
@@ -177,7 +179,7 @@ const loadSectionSubmissions = async () => {
 const openGradeDialog = (sub) => {
   activeSubmission.value = sub;
   gradeScore.value = sub.score || 0;
-  gradeFeedback.value = sub.feedback || '';
+  gradeFeedback.value = sub.feedback ? sub.feedback.replace(/^Returned: /, '') : '';
   showGradeDialog.value = true;
 };
 
@@ -192,6 +194,20 @@ const handleGradeSubmission = async () => {
     console.error(err);
   } finally {
     isSubmitting.value = false;
+  }
+};
+
+const handleReturnSubmission = async () => {
+  if (!activeSubmission.value) return;
+  isReturning.value = true;
+  try {
+    await lmsStore.returnSubmission(activeSubmission.value.id, gradeFeedback.value);
+    showGradeDialog.value = false;
+    loadSectionSubmissions();
+  } catch (err) {
+    console.error(err);
+  } finally {
+    isReturning.value = false;
   }
 };
 

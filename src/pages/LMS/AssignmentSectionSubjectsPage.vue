@@ -29,8 +29,11 @@
               <q-icon name="assignment" color="primary" size="24px" />
             </div>
           </div>
-          <h3 class="q-mt-none q-mb-xs" style="font-size: 20px; font-weight: 700; color: var(--text-primary);">
+          <h3 class="q-mt-none q-mb-xs row items-center" style="font-size: 20px; font-weight: 700; color: var(--text-primary);">
             {{ course.title }}
+            <q-badge v-if="course.pending > 0" color="negative" class="q-ml-sm" rounded>
+              {{ course.pending }} Pending
+            </q-badge>
           </h3>
           <p class="text-body text-secondary q-mb-md" style="font-size: 14px; line-height: 1.5;">
             {{ course.code }}
@@ -81,7 +84,8 @@ const sectionSubjects = computed(() => {
         code: sec.course_code || 'Unknown Course',
         title: sec.course || 'Unknown Course',
         room: sec.room || 'TBA',
-        sectionName: sec.section_name || sec.name || 'General'
+        sectionName: sec.section_name || sec.name || 'General',
+        pending: 0
       }));
   } else {
     const data = authStore.user?.role === 'teacher' ? dashboardStore.teacherSections : dashboardStore.sections;
@@ -92,7 +96,8 @@ const sectionSubjects = computed(() => {
         code: sec.course?.course_code || 'Unknown Course',
         title: sec.course?.title || 'Unknown Course',
         room: sec.room || 'TBA',
-        sectionName: sec.section?.name || 'General'
+        sectionName: sec.section?.name || 'General',
+        pending: sec.pending_grading || 0
       }));
   }
 });

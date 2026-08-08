@@ -125,6 +125,10 @@ export const lmsService = {
     return API.post(`/lms/submissions/${id}/grade`, { score, feedback });
   },
 
+  returnSubmission(id, feedback) {
+    return API.post(`/lms/submissions/${id}/return`, { feedback });
+  },
+
   downloadSubmissionFile(id) {
     return API.get(`/lms/submissions/${id}/download`, { responseType: 'arraybuffer' })
       .then(res => res.data);

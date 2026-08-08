@@ -26,8 +26,11 @@
               <q-icon name="groups" color="primary" size="24px" />
             </div>
           </div>
-          <h3 class="q-mt-none q-mb-xs" style="font-size: 20px; font-weight: 700; color: var(--text-primary);">
+          <h3 class="q-mt-none q-mb-xs row items-center" style="font-size: 20px; font-weight: 700; color: var(--text-primary);">
             {{ section.name }}
+            <q-badge v-if="section.pending > 0" color="negative" class="q-ml-sm" rounded>
+              {{ section.pending }} Pending
+            </q-badge>
           </h3>
           <div class="row justify-between items-center q-mt-md">
             <span class="text-caption text-secondary" style="font-weight: 500;">View Subjects</span>
@@ -55,13 +58,24 @@ const uniqueSections = computed(() => {
     const data = dashboardStore.studentData?.sections || [];
     data.forEach(sec => {
       const sectionId = sec.section_id || sec.name;
-      if (!map.has(sectionId)) map.set(sectionId, { id: sectionId, name: sec.section_name || sec.name || 'General' });
+      if (!map.has(sectionId)) map.set(sectionId, { id: sectionId, name: sec.section_name || sec.name || 'General', pending: 0 });
     });
   } else {
     const src = authStore.user?.role === 'teacher' ? dashboardStore.teacherSections : dashboardStore.sections;
     (src || []).forEach(sec => {
       const sectionId = sec.section_id || sec.section?.id;
-      if (sectionId && !map.has(sectionId)) map.set(sectionId, { id: sectionId, name: sec.section?.name || 'General' });
+      if (sectionId) {
+        if (!map.has(sectionId)) {
+          map.set(sectionId, { 
+            id: sectionId, 
+            name: sec.section?.name || 'General',
+            pending: sec.pending_grading || 0
+          });
+        } else {
+          const entry = map.get(sectionId);
+          entry.pending += (sec.pending_grading || 0);
+        }
+      }
     });
   }
   return Array.from(map.values());

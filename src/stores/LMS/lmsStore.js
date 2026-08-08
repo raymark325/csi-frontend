@@ -276,6 +276,24 @@ export const useLmsStore = defineStore('lms', () => {
     }
   };
 
+  const returnSubmission = async (id, feedback) => {
+    try {
+      const response = await lmsService.returnSubmission(id, feedback);
+      const idx = submissions.value.findIndex(s => s.id === id);
+      if (idx !== -1) {
+        submissions.value[idx].status = 'draft';
+        submissions.value[idx].score = null;
+        submissions.value[idx].feedback = feedback ? `Returned: ${feedback}` : 'Returned by teacher for revision.';
+      }
+      _submissionsFetchedAt.value = 0;
+      _sectionSubmissionsFetchedAt.value = 0;
+    } catch (err) {
+      error.value = err.message || 'Failed to return submission';
+      throw err;
+    }
+  };
+
+
   /**
    * Invalidate all LMS caches – useful when external data changes.
    */
@@ -310,6 +328,7 @@ export const useLmsStore = defineStore('lms', () => {
     saveDraft,
     submitAssignment,
     gradeSubmission,
+    returnSubmission,
     invalidateCache,
   };
 });
