@@ -202,6 +202,8 @@ onMounted(async () => {
     if (sections.value.length > 0) {
       if (route.query.section_id) {
         selectedSectionId.value = parseInt(route.query.section_id);
+      } else if (route.query.section_subject_id) {
+        selectedSectionId.value = parseInt(route.query.section_subject_id);
       } else {
         selectedSectionId.value = sections.value[0].id;
       }
