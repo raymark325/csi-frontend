@@ -321,62 +321,52 @@ export const useChatStore = defineStore('chat', () => {
 
     // Initialize FCM Push Notifications
     try {
-      const { PushNotifications } = await import('@capacitor/push-notifications');
-      let permStatus = await PushNotifications.checkPermissions();
-      
-      if (permStatus.receive === 'prompt') {
-        permStatus = await PushNotifications.requestPermissions();
-      }
-
-      PushNotifications.addListener('registration', async (token) => {
-        // Send token to backend to be saved
-        try {
-          await API.post('/user/fcm-token', { token: token.value });
-        } catch (e) {
-          console.error('Failed to save FCM token', e);
+      const { Capacitor } = await import('@capacitor/core');
+      if (Capacitor.getPlatform() !== 'web') {
+        const { PushNotifications } = await import('@capacitor/push-notifications');
+        let permStatus = await PushNotifications.checkPermissions();
+        
+        if (permStatus.receive === 'prompt') {
+          permStatus = await PushNotifications.requestPermissions();
         }
-      });
-      
-      PushNotifications.addListener('registrationError', (error) => {
-        console.error('Error on registration: ' + JSON.stringify(error));
-      });
 
-      // Listen for push notifications received in foreground
-      PushNotifications.addListener('pushNotificationReceived', (notification) => {
-        // We can show Quasar Toast if needed here, but Echo usually handles realtime in foreground.
-      });
-
-      // Handle when the user clicks the notification!
-      PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-        const data = notification.notification.data;
-        if (data) {
-          if (data.type === 'announcement') {
-            window.location.hash = '#/announcements';
-          } else if (data.section_id) {
-            triggerChatOpen(data.section_id);
+        PushNotifications.addListener('registration', async (token) => {
+          // Send token to backend to be saved
+          try {
+            await API.post('/user/fcm-token', { token: token.value });
+          } catch (e) {
+            console.error('Failed to save FCM token', e);
           }
-        }
-      });
+        });
+        
+        PushNotifications.addListener('registrationError', (error) => {
+          console.error('Error on registration: ' + JSON.stringify(error));
+        });
 
-      // Local notifications click
-      LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
-        const extra = notification.notification.extra;
-        if (extra) {
-          if (extra.type === 'announcement') {
-            window.location.hash = '#/announcements';
-          } else if (extra.section_id) {
-            triggerChatOpen(extra.section_id);
+        // Listen for push notifications received in foreground
+        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+          // We can show Quasar Toast if needed here, but Echo usually handles realtime in foreground.
+        });
+
+        // Handle when the user clicks the notification!
+        PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+          const data = notification.notification.data;
+          if (data) {
+            if (data.type === 'announcement') {
+              window.location.hash = '#/announcements';
+            } else if (data.section_id) {
+              triggerChatOpen(data.section_id);
+            }
           }
+        });
+
+        if (permStatus.receive === 'granted') {
+          // Register with Apple / Google to receive push via APNS/FCM
+          await PushNotifications.register();
         }
-      });
-
-      if (permStatus.receive === 'granted') {
-        // Register with Apple / Google to receive push via APNS/FCM
-        await PushNotifications.register();
       }
-
     } catch (e) {
-      console.log('PushNotifications not supported on this platform', e);
+      console.warn('PushNotifications initialization skipped or failed:', e.message);
     }
 
     sectionIds.forEach(roomId => {

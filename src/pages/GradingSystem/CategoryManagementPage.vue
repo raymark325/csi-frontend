@@ -152,7 +152,7 @@ const editingCategoryId = ref(null);
 const editingCategoryWeight = ref(0);
 
 const formData = ref({
-  section_id: '',
+  section_subject_id: '',
   name: '',
   weight: 10,
 });
@@ -169,7 +169,7 @@ const loadCategories = () => {
 const openAddDialog = () => {
   isEditing.value = false;
   formData.value = {
-    section_id: selectedSectionId.value,
+    section_subject_id: selectedSectionId.value,
     name: '',
     weight: Math.min(10, 100 - weightSum.value),
   };
@@ -181,7 +181,7 @@ const openEditDialog = (cat) => {
   editingCategoryId.value = cat.id;
   editingCategoryWeight.value = cat.weight;
   formData.value = {
-    section_id: selectedSectionId.value,
+    section_subject_id: selectedSectionId.value,
     name: cat.name,
     weight: cat.weight,
   };
