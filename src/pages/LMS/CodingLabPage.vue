@@ -21,8 +21,11 @@
 
       <!-- Submit Action for Assignment -->
       <div v-if="assignmentId" class="row items-center q-gutter-md">
-        <span class="badge badge-orange">Task Mode ({{ assignmentType === 'coding' ? 'Coding' : 'Written' }} - Max Score: {{ maxScore }})</span>
+        <span v-if="isTeacherMode" class="badge badge-red" style="font-size: 14px; font-weight: bold; background: #fee2e2; color: #dc2626;">Teacher View Mode - Read Only</span>
+        <span v-else class="badge badge-orange">Task Mode ({{ assignmentType === 'coding' ? 'Coding' : 'Written' }} - Max Score: {{ maxScore }})</span>
+        
         <q-btn
+          v-if="!isTeacherMode"
           color="positive"
           icon="publish"
           :label="isReadOnly ? 'Submitted' : (assignmentType === 'coding' ? 'Submit Code' : 'Submit')"
@@ -725,6 +728,8 @@ const getFallbackTab = (desiredTab) => {
 const assignmentId = ref(null);
 const maxScore = ref(0);
 const isSubmitting = ref(false);
+const isTeacherMode = ref(false);
+const teacherSubmissionId = ref(null);
 
 // Isolated initial code states to prevent tab contamination
 const javaFiles = ref([{ name: 'Main.java', code: '', pkg: 'com.myapp', type: 'class' }]);
@@ -1786,6 +1791,7 @@ const getSubmissionPayload = (content) => {
 };
 
 const saveCode = (newCode, lang) => {
+  if (isTeacherMode.value) return; // Prevent overwriting student code
   if (isReadOnly.value) return;
   if (!assignmentId.value) {
     // Free play: save to local storage and sync to cloud
@@ -2078,6 +2084,85 @@ const loadDraftsForCurrentUser = async () => {
   // Ensure activeTab is not disabled
   activeTab.value = getFallbackTab(activeTab.value);
 
+  const setCodeByLanguage = (codeVal) => {
+    const lang = getAssignmentLanguage(codeVal);
+    if (lang === 'html') {
+      const payload = parseHtmlPayload(codeVal);
+      htmlProjectName.value = payload.projectName;
+      htmlFiles.value = payload.files;
+      htmlImages.value = payload.images;
+      projectName.value = '';
+      javaFiles.value = [{ name: 'Main.java', code: '' }];
+      activeHtmlFileIndex.value = 0;
+      activeTab.value = getFallbackTab('html');
+    } else if (lang === 'sql') {
+      try {
+        const parsed = JSON.parse(codeVal);
+        if (Array.isArray(parsed)) sqlFiles.value = parsed.map(f => ({ ...f, buffer: null }));
+        else throw new Error();
+      } catch {
+        sqlFiles.value = [{ name: 'main.db', code: codeVal || '', buffer: null }];
+      }
+      projectName.value = '';
+      javaFiles.value = [{ name: 'Main.java', code: '' }];
+      htmlProjectName.value = '';
+      htmlFiles.value = [{ name: 'index.html', code: '' }];
+      htmlImages.value = [];
+      activeSqlFileIndex.value = 0;
+      activeTab.value = getFallbackTab('sql');
+    } else {
+      const payload = parseJavaPayload(codeVal);
+      projectName.value = payload.projectName;
+      javaFiles.value = payload.files;
+      htmlFiles.value = [{ name: 'index.html', code: '' }];
+      htmlImages.value = [];
+      activeJavaFileIndex.value = 0;
+      activeTab.value = getFallbackTab('java');
+    }
+  };
+
+  if (route.query.submission_id) {
+    isTeacherMode.value = true;
+    teacherSubmissionId.value = parseInt(route.query.submission_id);
+    assignmentId.value = parseInt(route.query.assignment_id);
+
+    try {
+      isLabLoading.value = true;
+      const existing = await lmsStore.fetchSubmission(teacherSubmissionId.value);
+      if (existing) {
+        submissionStatus.value = existing.status;
+        if (existing.file_path && !existing.file_path.includes('sql_dbs')) {
+          existingSubmissionFilePath.value = existing.file_path;
+        }
+        const serverCode = existing.content || '';
+        setCodeByLanguage(serverCode);
+        saveStatus.value = 'Teacher View Mode - Read Only';
+        
+        if (activeTab.value === 'sql' && existing.file_path) {
+          try {
+            const arrayBuffer = await lmsService.downloadSubmissionFile(existing.id);
+            const jsonStr = new TextDecoder('utf-8').decode(arrayBuffer);
+            const parsedDbs = JSON.parse(jsonStr);
+            if (Array.isArray(parsedDbs)) {
+              sqlFiles.value = parsedDbs.map(db => ({
+                name: db.name,
+                code: db.code,
+                buffer: db.bufferBase64 ? base64ToBuffer(db.bufferBase64) : null
+              }));
+            }
+          } catch (e) {
+            console.error("Failed to fetch sqlite db json", e);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load student submission:', err);
+    } finally {
+      isLabLoading.value = false;
+    }
+    return; // Stop here, do not load drafts
+  }
+
   if (route.query.assignment_id) {
     assignmentId.value = parseInt(route.query.assignment_id);
     maxScore.value = route.query.max_score || 100;
@@ -2088,43 +2173,6 @@ const loadDraftsForCurrentUser = async () => {
     } catch (err) {
       console.error(err);
     }
-
-    const setCodeByLanguage = (codeVal) => {
-      const lang = getAssignmentLanguage(codeVal);
-      if (lang === 'html') {
-        const payload = parseHtmlPayload(codeVal);
-        htmlProjectName.value = payload.projectName;
-        htmlFiles.value = payload.files;
-        htmlImages.value = payload.images;
-        projectName.value = '';
-        javaFiles.value = [{ name: 'Main.java', code: '' }];
-        activeHtmlFileIndex.value = 0;
-        activeTab.value = getFallbackTab('html');
-      } else if (lang === 'sql') {
-        try {
-          const parsed = JSON.parse(codeVal);
-          if (Array.isArray(parsed)) sqlFiles.value = parsed.map(f => ({ ...f, buffer: null }));
-          else throw new Error();
-        } catch {
-          sqlFiles.value = [{ name: 'main.db', code: codeVal || '', buffer: null }];
-        }
-        projectName.value = '';
-        javaFiles.value = [{ name: 'Main.java', code: '' }];
-        htmlProjectName.value = '';
-        htmlFiles.value = [{ name: 'index.html', code: '' }];
-        htmlImages.value = [];
-        activeSqlFileIndex.value = 0;
-        activeTab.value = getFallbackTab('sql');
-      } else {
-        const payload = parseJavaPayload(codeVal);
-        projectName.value = payload.projectName;
-        javaFiles.value = payload.files;
-        htmlFiles.value = [{ name: 'index.html', code: '' }];
-        htmlImages.value = [];
-        activeJavaFileIndex.value = 0;
-        activeTab.value = getFallbackTab('java');
-      }
-    };
 
     // 1. Check local cache first
     const cachedCode = localStorage.getItem(getStorageKey(`sms_assignment_cache_${assignmentId.value}`));

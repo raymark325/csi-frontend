@@ -78,16 +78,30 @@
                 <span v-else class="text-muted">—</span>
               </td>
               <td style="padding: 14px 20px;">
-                <q-btn
-                  color="primary"
-                  label="Grade"
-                  rounded
-                  dense
-                  unelevated
-                  size="sm"
-                  style="padding: 4px 12px;"
-                  @click="openGradeDialog(sub)"
-                />
+                <div class="row q-gutter-sm items-center">
+                  <q-btn
+                    v-if="sub.assignment?.type === 'coding' || sub.assignment?.type === 'online'"
+                    color="secondary"
+                    label="Test Code"
+                    icon="code"
+                    rounded
+                    dense
+                    unelevated
+                    size="sm"
+                    style="padding: 4px 12px;"
+                    @click="testCode(sub)"
+                  />
+                  <q-btn
+                    color="primary"
+                    label="Grade"
+                    rounded
+                    dense
+                    unelevated
+                    size="sm"
+                    style="padding: 4px 12px;"
+                    @click="openGradeDialog(sub)"
+                  />
+                </div>
               </td>
             </tr>
 
@@ -140,11 +154,12 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useLmsStore } from '../../stores/LMS/lmsStore';
 import { useDashboardStore } from '../../stores/dashboardStore';
 
 const route = useRoute();
+const router = useRouter();
 const lmsStore = useLmsStore();
 const dashboardStore = useDashboardStore();
 
@@ -168,6 +183,16 @@ const filteredSubmissions = computed(() => {
   }
   return subs.filter(sub => sub.assignment_id === parseInt(selectedAssignmentId.value));
 });
+
+const testCode = (sub) => {
+  router.push({
+    path: '/lms/lab',
+    query: {
+      assignment_id: sub.assignment_id,
+      submission_id: sub.id
+    }
+  });
+};
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '';

@@ -213,7 +213,7 @@ export const useLmsStore = defineStore('lms', () => {
       submissions.value.length > 0 &&
       _isCacheValid(_sectionSubmissionsFetchedAt.value)
     ) {
-      return; // Serve from cache
+      return submissions.value;
     }
     isLoading.value = true;
     error.value = null;
@@ -222,10 +222,22 @@ export const useLmsStore = defineStore('lms', () => {
       submissions.value = response.data;
       _sectionSubmissionsFetchedFor.value = sectionId;
       _sectionSubmissionsFetchedAt.value = Date.now();
+      return submissions.value;
     } catch (err) {
       error.value = err.message || 'Failed to fetch section submissions';
+      throw err;
     } finally {
       isLoading.value = false;
+    }
+  };
+
+  const fetchSubmission = async (id) => {
+    try {
+      const response = await lmsService.getSubmission(id);
+      return response.data;
+    } catch (err) {
+      error.value = err.message || 'Failed to fetch submission';
+      throw err;
     }
   };
 
@@ -325,6 +337,7 @@ export const useLmsStore = defineStore('lms', () => {
     deleteAssignment,
     fetchStudentSubmissions,
     fetchSectionSubmissions,
+    fetchSubmission,
     saveDraft,
     submitAssignment,
     gradeSubmission,

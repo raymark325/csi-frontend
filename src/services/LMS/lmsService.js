@@ -121,6 +121,10 @@ export const lmsService = {
     return API.get(`/lms/submissions/${sectionId}`);
   },
 
+  getSubmission(id) {
+    return API.get(`/lms/submissions/${id}`);
+  },
+
   gradeSubmission(id, score, feedback) {
     return API.post(`/lms/submissions/${id}/grade`, { score, feedback });
   },
