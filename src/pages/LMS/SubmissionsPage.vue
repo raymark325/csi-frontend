@@ -15,7 +15,7 @@
         <p class="text-label q-mb-xs">Select Section</p>
         <select v-model="selectedSectionId" class="input-glass" @change="loadSectionSubmissions">
           <option v-for="sec in sections" :key="sec.id" :value="sec.id">
-            {{ sec.name }} - {{ sec.course?.title }}
+            {{ sec.section?.name || 'Unknown Section' }} - {{ sec.course?.title || 'Unknown Course' }}
           </option>
         </select>
       </div>
@@ -251,11 +251,13 @@ onMounted(async () => {
     sections.value = dashboardStore.sections;
     if (sections.value.length > 0) {
       if (route.query.section_id) {
-        selectedSectionId.value = parseInt(route.query.section_id);
+        const secId = parseInt(route.query.section_id);
+        const subject = sections.value.find(s => s.section_id === secId);
+        selectedSectionId.value = subject ? subject.id : sections.value[0]?.id;
       } else if (route.query.section_subject_id) {
         selectedSectionId.value = parseInt(route.query.section_subject_id);
       } else {
-        selectedSectionId.value = sections.value[0].id;
+        selectedSectionId.value = sections.value[0]?.id;
       }
       
       if (route.query.assignment_id) {
