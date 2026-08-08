@@ -61,8 +61,14 @@
               <td style="padding: 14px 20px;" class="text-body">{{ sub.assignment?.title }}</td>
               <td style="padding: 14px 20px;" class="text-caption">{{ formatDate(sub.created_at) }}</td>
               <td style="padding: 14px 20px;">
-                <span :class="['badge', sub.status === 'graded' ? 'badge-green' : 'badge-orange']">
-                  {{ sub.status === 'graded' ? 'Graded' : 'Pending' }}
+                <span :class="[
+                  'badge', 
+                  sub.status === 'graded' ? 'badge-green' : 
+                  (sub.status === 'draft' ? (sub.feedback && sub.feedback.startsWith('Returned') ? 'badge-red' : 'badge-gray') : 'badge-orange')
+                ]">
+                  {{ sub.status === 'graded' ? 'Graded' : 
+                     (sub.status === 'draft' ? (sub.feedback && sub.feedback.startsWith('Returned') ? 'Returned' : 'Draft') : 'Submitted') 
+                  }}
                 </span>
               </td>
               <td style="padding: 14px 20px;" class="text-body">
@@ -235,3 +241,10 @@ onMounted(async () => {
   }
 });
 </script>
+
+<style scoped>
+.badge-green { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+.badge-orange { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+.badge-gray { background: rgba(100, 116, 139, 0.15); color: #64748b; }
+.badge-red { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+</style>
