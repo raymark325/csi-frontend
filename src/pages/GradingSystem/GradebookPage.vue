@@ -156,7 +156,7 @@ const activeStudentName = ref('');
 const activeCategoryName = ref('');
 
 const scoreForm = ref({
-  enrollment_id: '',
+  student_id: '',
   grading_category_id: '',
   raw_score: 0,
   max_score: 100,
@@ -172,7 +172,7 @@ const openInputScoreDialog = (row, cat) => {
   activeCategoryName.value = cat.name;
 
   scoreForm.value = {
-    enrollment_id: row.enrollment_id,
+    student_id: row.student_id,
     grading_category_id: cat.id,
     raw_score: 0,
     max_score: 100,
@@ -188,6 +188,9 @@ const handleSaveScore = async () => {
     loadGradebook();
   } catch (err) {
     console.error(err);
+    import('quasar').then(({ Notify }) => {
+      Notify.create({ type: 'negative', message: err.message || 'Failed to save score.' });
+    });
   } finally {
     isSubmitting.value = false;
   }
