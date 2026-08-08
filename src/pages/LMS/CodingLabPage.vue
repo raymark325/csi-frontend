@@ -83,6 +83,25 @@
             @cut.prevent="preventAction"
           ></textarea>
         </div>
+        <div class="q-mt-md" v-if="!isReadOnly">
+          <p class="text-label q-mb-xs">Upload File Attachment (Optional)</p>
+          <input type="file" class="input-glass q-pa-sm" @change="e => submissionFile = e.target.files[0]" />
+          <p class="text-caption text-muted q-mt-xs q-mb-none" v-if="existingSubmissionFilePath && existingSubmissionFilePath !== 'db_file'">
+            A file is already attached. Uploading a new file will replace it.
+          </p>
+        </div>
+        <div class="q-mt-md" v-if="existingSubmissionFilePath && existingSubmissionFilePath !== 'db_file' && isReadOnly">
+          <p class="text-label q-mb-xs">Attached File</p>
+          <q-btn
+            outline
+            color="info"
+            icon="download"
+            rounded
+            dense
+            label="Download Uploaded File"
+            @click="downloadSubmissionAttachment"
+          />
+        </div>
       </div>
 
       <!-- Compilers Unavailable Notice -->
@@ -754,6 +773,8 @@ const activeSqlFileIndex = ref(0);
 
 const saveStatus = ref('All changes saved');
 const writtenResponse = ref('');
+const submissionFile = ref(null);
+const existingSubmissionFilePath = ref(null);
 const isOnline = ref(navigator.onLine);
 const submissionStatus = ref(null);
 
@@ -1742,6 +1763,9 @@ const getSubmissionPayload = (content) => {
     assignment_id: assignmentId.value,
     content: content,
   };
+  if (submissionFile.value) {
+    payload.file = submissionFile.value;
+  }
   if (activeTab.value === 'sql' && sqlEditorRef.value) {
     // Export active buffer before saving
     const dbBuffer = sqlEditorRef.value.exportDatabase();
@@ -2143,6 +2167,10 @@ const loadDraftsForCurrentUser = async () => {
         const existing = lmsStore.submissions.find(s => s.assignment_id === assignmentId.value);
         if (existing) {
           submissionStatus.value = existing.status;
+          // check if it's not a sql db file path (which starts with submissions/sql_dbs)
+          if (existing.file_path && !existing.file_path.includes('sql_dbs')) {
+            existingSubmissionFilePath.value = existing.file_path;
+          }
           if (!pendingCode) {
             const serverCode = existing.content || '';
             setCodeByLanguage(serverCode);
@@ -2359,6 +2387,26 @@ onMounted(() => {
     _loadDraftsGuarded();
   }
 });
+
+const downloadSubmissionAttachment = async () => {
+  try {
+    $q.notify({ type: 'info', message: 'Downloading attachment...' });
+    const existing = lmsStore.submissions.find(s => s.assignment_id === assignmentId.value);
+    if (!existing || !existing.id) return;
+    const arrayBuffer = await lmsService.downloadSubmissionFile(existing.id);
+    const blob = new Blob([arrayBuffer]);
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = existing.file_path ? existing.file_path.split('/').pop() : `submission_attachment`; 
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    a.remove();
+  } catch (error) {
+    $q.notify({ type: 'negative', message: 'Failed to download attachment.' });
+  }
+};
 
 onUnmounted(() => {
   window.removeEventListener('online', updateOnlineStatus);

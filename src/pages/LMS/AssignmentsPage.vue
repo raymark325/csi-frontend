@@ -85,7 +85,18 @@
           </div>
 
           <!-- Submission status button for students -->
-          <div v-if="authStore.user?.role === 'student'">
+          <div v-if="authStore.user?.role === 'student'" class="row q-gutter-sm">
+            <q-btn
+              v-if="assign.file_path"
+              outline
+              color="info"
+              icon="download"
+              rounded
+              unelevated
+              @click="downloadAttachment(assign)"
+            >
+              <q-tooltip>Download Attachment</q-tooltip>
+            </q-btn>
             <q-btn
               color="primary"
               :label="assign.type === 'coding' ? 'Go to Lab' : 'Open Assignment'"
@@ -97,6 +108,17 @@
           </div>
           <!-- Edit/Delete/Submissions for teachers -->
           <div v-else class="row q-gutter-sm">
+            <q-btn
+              v-if="assign.file_path"
+              outline
+              color="info"
+              icon="download"
+              rounded
+              dense
+              @click="downloadAttachment(assign)"
+            >
+              <q-tooltip>Download Attachment</q-tooltip>
+            </q-btn>
             <q-btn
               outline
               color="primary"
@@ -167,7 +189,7 @@
             <p class="text-label q-mb-xs">Task Instructions</p>
             <textarea v-model="editAssignment.description" class="input-glass" rows="4"></textarea>
           </div>
-          <div class="row q-col-gutter-sm">
+          <div class="row q-col-gutter-sm q-mb-md">
             <div class="col">
               <p class="text-label q-mb-xs">Max Score</p>
               <input v-model.number="editAssignment.max_score" class="input-glass" type="number" min="1"/>
@@ -176,6 +198,13 @@
               <p class="text-label q-mb-xs">Due Date</p>
               <input v-model="editAssignment.due_date" class="input-glass" type="datetime-local"/>
             </div>
+          </div>
+          <div class="q-mb-md">
+            <p class="text-label q-mb-xs">Attachment (Optional)</p>
+            <input type="file" class="input-glass q-pa-sm" @change="e => editAssignment.file = e.target.files[0]" />
+            <p class="text-caption text-muted q-mt-xs q-mb-none" v-if="editAssignment.file_path">
+              An attachment already exists. Uploading a new file will replace it.
+            </p>
           </div>
         </q-card-section>
         <q-card-actions align="right" class="q-pb-md q-pr-md">
@@ -220,19 +249,24 @@
             <textarea v-model="newAssignment.description" class="input-glass" rows="4" placeholder="Detail instructions here..."></textarea>
           </div>
 
-          <div class="row q-col-gutter-sm">
+          <div class="row q-col-gutter-sm q-mb-md">
             <div class="col">
-              <div class="q-mb-md">
+              <div class="q-mb-md q-pb-none">
                 <p class="text-label q-mb-xs">Max Score</p>
                 <input v-model.number="newAssignment.max_score" class="input-glass" type="number" min="1"/>
               </div>
             </div>
             <div class="col">
-              <div class="q-mb-md">
+              <div class="q-mb-md q-pb-none">
                 <p class="text-label q-mb-xs">Due Date</p>
                 <input v-model="newAssignment.due_date" class="input-glass" type="datetime-local"/>
               </div>
             </div>
+          </div>
+
+          <div class="q-mb-md">
+            <p class="text-label q-mb-xs">Attachment (Optional)</p>
+            <input type="file" class="input-glass q-pa-sm" @change="e => newAssignment.file = e.target.files[0]" />
           </div>
         </q-card-section>
 
@@ -347,6 +381,8 @@ const editAssignment = ref({
   due_date: '',
   max_score: 100,
   type: 'coding',
+  file: null,
+  file_path: null,
 });
 
 const formatDate = (dateStr) => {
@@ -404,6 +440,8 @@ const openEditDialog = (assign) => {
     due_date: assign.due_date ? assign.due_date.substring(0, 16) : '',
     max_score: assign.max_score,
     type: assign.type,
+    file_path: assign.file_path,
+    file: null,
   };
   showEditDialog.value = true;
 };
@@ -436,6 +474,23 @@ const confirmDelete = (assign) => {
       $q.notify({ type: 'negative', message: 'Failed to delete assignment.' });
     }
   });
+};
+
+const downloadAttachment = async (assign) => {
+  try {
+    $q.notify({ type: 'info', message: 'Downloading attachment...' });
+    const blob = await lmsService.downloadAssignmentFile(assign.id);
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = assign.file_path ? assign.file_path.split('/').pop() : `assignment_${assign.id}_attachment`; 
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    a.remove();
+  } catch (error) {
+    $q.notify({ type: 'negative', message: 'Failed to download attachment.' });
+  }
 };
 
 onMounted(async () => {
