@@ -160,10 +160,13 @@ const gradeScore = ref(0);
 const gradeFeedback = ref('');
 
 const filteredSubmissions = computed(() => {
+  // Hide returned or draft submissions from the teacher's view
+  let subs = lmsStore.submissions.filter(sub => sub.status !== 'draft');
+  
   if (!selectedAssignmentId.value) {
-    return lmsStore.submissions;
+    return subs;
   }
-  return lmsStore.submissions.filter(sub => sub.assignment_id === parseInt(selectedAssignmentId.value));
+  return subs.filter(sub => sub.assignment_id === parseInt(selectedAssignmentId.value));
 });
 
 const formatDate = (dateStr) => {
