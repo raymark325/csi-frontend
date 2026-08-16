@@ -36,6 +36,18 @@
           @click="handleSubmitCode"
         />
       </div>
+      <div v-else class="row items-center q-gutter-md">
+        <span class="badge badge-gray">Free Play Mode</span>
+        <q-btn
+          v-if="!isTeacherMode"
+          color="positive"
+          icon="publish"
+          label="Submit to Assignment"
+          rounded
+          unelevated
+          @click="openSubmitToAssignmentDialog"
+        />
+      </div>
     </div>
 
     <!-- Language Selector Tabs (Coding mode only) -->
@@ -675,6 +687,45 @@
         <q-card-actions align="right" class="q-pa-md">
           <q-btn flat label="Cancel" color="grey-4" v-close-popup />
           <q-btn label="Add Image Asset" color="info" rounded unelevated @click="addHtmlImageByUrl" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Submit To Assignment Dialog -->
+    <q-dialog v-model="showSubmitToAssignmentDialog" persistent>
+      <q-card class="glass-q-card" style="width: 500px; max-width: 90vw;">
+        <q-card-section>
+          <div class="text-h6 text-primary font-weight-bold">Submit to Assignment</div>
+          <p class="text-caption text-grey-6 q-mb-none">Select an assignment to submit your current code to.</p>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <q-select
+            v-model="selectedSubmitAssignment"
+            :options="pendingAssignments"
+            option-value="id"
+            option-label="title"
+            label="Select Assignment"
+            outlined
+            color="primary"
+            class="q-mb-md"
+            emit-value
+            map-options
+            :loading="isLoadingAssignments"
+          >
+            <template v-slot:no-option>
+              <q-item>
+                <q-item-section class="text-grey">
+                  No pending coding assignments found
+                </q-item-section>
+              </q-item>
+            </template>
+          </q-select>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pb-md q-pr-md">
+          <q-btn label="Cancel" flat rounded color="grey-7" v-close-popup />
+          <q-btn label="Submit" color="positive" rounded unelevated @click="confirmSubmitToAssignment" :disable="!selectedSubmitAssignment" :loading="isSubmitting" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -1948,22 +1999,132 @@ const handleSubmitCode = async () => {
     return;
   }
 
-  isSubmitting.value = true;
+  $q.dialog({
+    title: 'Confirm Submission',
+    message: 'Are you sure you want to submit your assignment? You will not be able to edit it after submitting.',
+    cancel: true,
+    persistent: true,
+    ok: {
+      label: 'Submit',
+      color: 'positive',
+      unelevated: true,
+      rounded: true
+    },
+    cancel: {
+      label: 'Cancel',
+      flat: true,
+      color: 'grey-7',
+      rounded: true
+    }
+  }).onOk(async () => {
+    isSubmitting.value = true;
+    try {
+      await lmsStore.submitAssignment(getSubmissionPayload(content));
+      localStorage.removeItem(getStorageKey(`sms_pending_sync_${assignmentId.value}`));
+      submissionStatus.value = 'submitted';
+      $q.notify({
+        type: 'positive',
+        message: assignmentType.value === 'coding' ? 'Code submitted successfully!' : 'Assignment submitted successfully!',
+        position: 'top',
+      });
+      router.push('/assignments');
+    } catch (err) {
+      $q.notify({ type: 'negative', message: err.message || 'Failed to submit.' });
+    } finally {
+      isSubmitting.value = false;
+    }
+  });
+};
+
+const showSubmitToAssignmentDialog = ref(false);
+const selectedSubmitAssignment = ref(null);
+const pendingAssignments = ref([]);
+const isLoadingAssignments = ref(false);
+
+const openSubmitToAssignmentDialog = async () => {
+  showSubmitToAssignmentDialog.value = true;
+  selectedSubmitAssignment.value = null;
+  isLoadingAssignments.value = true;
   try {
-    await lmsStore.submitAssignment(getSubmissionPayload(content));
-    localStorage.removeItem(getStorageKey(`sms_pending_sync_${assignmentId.value}`));
-    submissionStatus.value = 'submitted';
-    $q.notify({
-      type: 'positive',
-      message: assignmentType.value === 'coding' ? 'Code submitted successfully!' : 'Assignment submitted successfully!',
-      position: 'top',
-    });
-    router.push('/assignments');
+    const studentSecId = authStore.user?.profile?.section_id || 1;
+    await lmsStore.fetchAssignments(studentSecId, true);
+    await lmsStore.fetchStudentSubmissions(true); // Ensure submissions are fresh
+    
+    // Filter pending assignments (either not submitted or draft)
+    const submittedIds = lmsStore.submissions
+      .filter(s => s.status === 'submitted' || s.status === 'graded')
+      .map(s => s.assignment_id);
+
+    // Only show coding assignments that are not submitted
+    pendingAssignments.value = lmsStore.assignments.filter(a => !submittedIds.includes(a.id) && a.type === 'coding');
   } catch (err) {
-    $q.notify({ type: 'negative', message: err.message || 'Failed to submit.' });
+    console.error(err);
+    $q.notify({ type: 'negative', message: 'Failed to load assignments.' });
   } finally {
-    isSubmitting.value = false;
+    isLoadingAssignments.value = false;
   }
+};
+
+const confirmSubmitToAssignment = () => {
+  $q.dialog({
+    title: 'Confirm Submission',
+    message: 'Are you sure you want to submit your current code to this assignment? You will not be able to edit it after submitting.',
+    cancel: true,
+    persistent: true,
+    ok: {
+      label: 'Submit',
+      color: 'positive',
+      unelevated: true,
+      rounded: true
+    },
+    cancel: {
+      label: 'Cancel',
+      flat: true,
+      color: 'grey-7',
+      rounded: true
+    }
+  }).onOk(async () => {
+    isSubmitting.value = true;
+    try {
+      const content = getActiveCode();
+      if (!content || !content.trim()) {
+        $q.notify({ type: 'warning', message: 'Please write some content before submitting.' });
+        isSubmitting.value = false;
+        return;
+      }
+      
+      const payload = {
+        assignment_id: selectedSubmitAssignment.value,
+        content: content,
+      };
+      
+      if (activeTab.value === 'sql' && sqlEditorRef.value) {
+        const dbBuffer = sqlEditorRef.value.exportDatabase();
+        if (dbBuffer) {
+          sqlFiles.value[activeSqlFileIndex.value].buffer = dbBuffer;
+        }
+        const packagedDbs = sqlFiles.value.map(f => ({
+          name: f.name,
+          code: f.code,
+          bufferBase64: f.buffer ? bufferToBase64(f.buffer) : null
+        }));
+        payload.db_file = new Blob([JSON.stringify(packagedDbs)], { type: 'application/json' });
+      }
+
+      await lmsStore.submitAssignment(payload);
+      showSubmitToAssignmentDialog.value = false;
+      $q.notify({
+        type: 'positive',
+        message: 'Code submitted successfully!',
+        position: 'top',
+      });
+      router.push('/assignments');
+    } catch (err) {
+      $q.notify({ type: 'negative', message: err.message || 'Failed to submit.' });
+    } finally {
+      isSubmitting.value = false;
+    }
+  });
 };
 
 const parseHtmlPayload = (codeVal) => {
