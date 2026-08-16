@@ -36,18 +36,6 @@
           @click="handleSubmitCode"
         />
       </div>
-      <div v-else class="row items-center q-gutter-md">
-        <span class="badge badge-gray">Free Play Mode</span>
-        <q-btn
-          v-if="!isTeacherMode"
-          color="positive"
-          icon="publish"
-          label="Submit to Assignment"
-          rounded
-          unelevated
-          @click="openSubmitToAssignmentDialog"
-        />
-      </div>
     </div>
 
     <!-- Language Selector Tabs (Coding mode only) -->
@@ -758,39 +746,6 @@
       </q-card>
     </q-dialog>
 
-    <!-- Sticky Floating Submit Button (Bottom Right) -->
-    <div v-if="!isTeacherMode" style="position: fixed; bottom: 30px; right: 30px; z-index: 9999;">
-      <q-btn
-        v-if="assignmentId"
-        color="positive"
-        icon="publish"
-        :label="isReadOnly ? 'Submitted' : 'Submit Code'"
-        rounded
-        unelevated
-        size="lg"
-        padding="12px 24px"
-        class="shadow-4"
-        :disable="isReadOnly"
-        :loading="isSubmitting"
-        @click="handleSubmitCode"
-      >
-        <q-tooltip anchor="top middle" self="bottom middle">Submit current assignment</q-tooltip>
-      </q-btn>
-      <q-btn
-        v-else
-        color="positive"
-        icon="publish"
-        label="Submit to Assignment"
-        rounded
-        unelevated
-        size="lg"
-        padding="12px 24px"
-        class="shadow-4"
-        @click="openSubmitToAssignmentDialog"
-      >
-        <q-tooltip anchor="top middle" self="bottom middle">Submit this code to a pending assignment</q-tooltip>
-      </q-btn>
-    </div>
   </div>
 </div>
 </template>
@@ -2110,7 +2065,7 @@ const openSubmitToAssignmentDialog = async () => {
   selectedSubmitAssignment.value = null;
   isLoadingAssignments.value = true;
   try {
-    if (!dashboardStore.studentData) {
+    if (!dashboardStore.studentData || Object.keys(dashboardStore.studentData).length === 0) {
       await dashboardStore.fetchStudentDashboard();
     }
     const studentSubjects = dashboardStore.studentData?.sections || [];
