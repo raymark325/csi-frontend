@@ -732,7 +732,7 @@
             v-model="selectedSubmitAssignment"
             :options="pendingAssignments"
             option-value="id"
-            option-label="title"
+            option-label="displayTitle"
             label="Select Assignment"
             outlined
             color="primary"
@@ -801,6 +801,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useLmsStore } from '../../stores/LMS/lmsStore';
 import { useAuthStore } from '../../stores/auth';
+import { useDashboardStore } from '../../stores/dashboardStore';
 import lmsService, { sqlSandboxService, javaSandboxService, htmlSandboxService } from '../../services/LMS/lmsService';
 import API from '../../services/api';
 import { bufferToBase64, base64ToBuffer } from '../../utils/base64';
@@ -813,6 +814,7 @@ const router = useRouter();
 const $q = useQuasar();
 const lmsStore = useLmsStore();
 const authStore = useAuthStore();
+const dashboardStore = useDashboardStore();
 
 const activeTab = ref('java');
 const disabledCompilers = ref([]);
@@ -2108,17 +2110,38 @@ const openSubmitToAssignmentDialog = async () => {
   selectedSubmitAssignment.value = null;
   isLoadingAssignments.value = true;
   try {
-    const studentSecId = authStore.user?.profile?.section_id || 1;
-    await lmsStore.fetchAssignments(studentSecId, true);
+    if (!dashboardStore.studentData) {
+      await dashboardStore.fetchStudentDashboard();
+    }
+    const studentSubjects = dashboardStore.studentData?.sections || [];
+    
+    let allAssignments = [];
+    for (const sub of studentSubjects) {
+      try {
+        const res = await lmsService.getAssignments(sub.id);
+        if (res.data) {
+          const labeled = res.data.map(a => ({
+            ...a,
+            displayTitle: `[${sub.course?.course_code || sub.name}] ${a.title}`
+          }));
+          allAssignments = allAssignments.concat(labeled);
+        }
+      } catch (err) {
+        console.warn('Failed to load assignments for subject', sub.id, err);
+      }
+    }
+
     await lmsStore.fetchStudentSubmissions(true); // Ensure submissions are fresh
     
-    // Filter pending assignments (either not submitted or draft)
-    const submittedIds = lmsStore.submissions
-      .filter(s => s.status === 'submitted' || s.status === 'graded')
-      .map(s => s.assignment_id);
-
-    // Only show coding assignments that are not submitted
-    pendingAssignments.value = lmsStore.assignments.filter(a => !submittedIds.includes(a.id) && a.type === 'coding');
+    pendingAssignments.value = allAssignments
+      .filter(a => a.type === 'coding')
+      .map(a => {
+        const sub = lmsStore.submissions.find(s => s.assignment_id === a.id);
+        if (sub) {
+          a.displayTitle += ` (${sub.status.toUpperCase()})`;
+        }
+        return a;
+      });
   } catch (err) {
     console.error(err);
     $q.notify({ type: 'negative', message: 'Failed to load assignments.' });
@@ -2130,7 +2153,7 @@ const openSubmitToAssignmentDialog = async () => {
 const confirmSubmitToAssignment = () => {
   $q.dialog({
     title: 'Confirm Submission',
-    message: 'Are you sure you want to submit your current code to this assignment? You will not be able to edit it after submitting.',
+    message: 'Are you sure you want to submit your current code to this assignment? WARNING: This will override any existing code you previously submitted or drafted for this assignment.',
     cancel: true,
     persistent: true,
     ok: {
