@@ -269,7 +269,7 @@ const terminateProgram = () => {
 };
 
 const submitMobileInput = (e) => {
-  if (props.disabled || !isRunning.value || !isWaitingForInput.value) return;
+  if (!isRunning.value || !isWaitingForInput.value) return;
 
   // Guard against Enter key auto-repeat: ignore if submitted less than 300ms ago
   const now = Date.now();
@@ -446,7 +446,7 @@ const analyzeJavaCode = (sourceCode, fileName = 'Main.java', filesList = []) => 
         }
       }
       resultProblems.push({
-        type: 'error',
+        type: 'warning',
         file: fileName,
         line: pubClassLine,
         message: `Class Error: Public class '${pubClassName}' must be defined in a file named '${expectedFileName}'`,
