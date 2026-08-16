@@ -2013,8 +2013,22 @@ const scheduleSilentCloudSync = () => {
 const handleSubmitCode = async () => {
   if (!assignmentId.value) return;
   const content = getActiveCode();
-  if (!content || !content.trim()) {
-    $q.notify({ type: 'warning', message: 'Please write some content before submitting.' });
+
+  let hasRealCode = false;
+  if (assignmentType.value === 'coding') {
+     if (activeTab.value === 'java') {
+         hasRealCode = javaFiles.value.some(f => f.code && f.code.trim().length > 0);
+     } else if (activeTab.value === 'html') {
+         hasRealCode = htmlFiles.value.some(f => f.code && f.code.trim().length > 0);
+     } else if (activeTab.value === 'sql') {
+         hasRealCode = sqlFiles.value.some(f => f.code && f.code.trim().length > 0);
+     }
+  } else {
+     hasRealCode = writtenContent.value && writtenContent.value.trim().length > 0;
+  }
+
+  if (!content || !content.trim() || !hasRealCode) {
+    $q.notify({ type: 'warning', message: 'Please write some code or content before submitting.' });
     return;
   }
 
@@ -2127,8 +2141,22 @@ const confirmSubmitToAssignment = () => {
     isSubmitting.value = true;
     try {
       const content = getActiveCode();
-      if (!content || !content.trim()) {
-        $q.notify({ type: 'warning', message: 'Please write some content before submitting.' });
+      
+      let hasRealCode = false;
+      if (assignmentType.value === 'coding') {
+         if (activeTab.value === 'java') {
+             hasRealCode = javaFiles.value.some(f => f.code && f.code.trim().length > 0);
+         } else if (activeTab.value === 'html') {
+             hasRealCode = htmlFiles.value.some(f => f.code && f.code.trim().length > 0);
+         } else if (activeTab.value === 'sql') {
+             hasRealCode = sqlFiles.value.some(f => f.code && f.code.trim().length > 0);
+         }
+      } else {
+         hasRealCode = writtenContent.value && writtenContent.value.trim().length > 0;
+      }
+
+      if (!content || !content.trim() || !hasRealCode) {
+        $q.notify({ type: 'warning', message: 'Please write some code or content before submitting.' });
         isSubmitting.value = false;
         return;
       }
