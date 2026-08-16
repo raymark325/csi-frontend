@@ -51,34 +51,62 @@
     </div>
 
     <!-- Language Selector Tabs (Coding mode only) -->
-    <div v-if="assignmentType === 'coding' && !allCompilersDisabled" class="row q-gutter-sm q-mb-lg">
-      <q-btn
-        v-if="!disabledCompilers.includes('java')"
-        :flat="activeTab !== 'java'"
-        :color="activeTab === 'java' ? 'primary' : 'grey-7'"
-        label="Java Compiler"
-        icon="code"
-        rounded
-        @click="activeTab = 'java'"
-      />
-      <q-btn
-        v-if="!disabledCompilers.includes('sql')"
-        :flat="activeTab !== 'sql'"
-        :color="activeTab === 'sql' ? 'warning' : 'grey-7'"
-        label="SQL Playground"
-        icon="storage"
-        rounded
-        @click="activeTab = 'sql'"
-      />
-      <q-btn
-        v-if="!disabledCompilers.includes('html')"
-        :flat="activeTab !== 'html'"
-        :color="activeTab === 'html' ? 'positive' : 'grey-7'"
-        label="HTML/CSS Live"
-        icon="web"
-        rounded
-        @click="activeTab = 'html'"
-      />
+    <div v-if="assignmentType === 'coding' && !allCompilersDisabled" class="row justify-between items-center q-mb-lg">
+      <div class="row q-gutter-sm">
+        <q-btn
+          v-if="!disabledCompilers.includes('java')"
+          :flat="activeTab !== 'java'"
+          :color="activeTab === 'java' ? 'primary' : 'grey-7'"
+          label="Java Compiler"
+          icon="code"
+          rounded
+          @click="activeTab = 'java'"
+        />
+        <q-btn
+          v-if="!disabledCompilers.includes('sql')"
+          :flat="activeTab !== 'sql'"
+          :color="activeTab === 'sql' ? 'warning' : 'grey-7'"
+          label="SQL Playground"
+          icon="storage"
+          rounded
+          @click="activeTab = 'sql'"
+        />
+        <q-btn
+          v-if="!disabledCompilers.includes('html')"
+          :flat="activeTab !== 'html'"
+          :color="activeTab === 'html' ? 'positive' : 'grey-7'"
+          label="HTML/CSS Live"
+          icon="web"
+          rounded
+          @click="activeTab = 'html'"
+        />
+      </div>
+
+      <!-- Quick Submit Button (Visible next to tabs) -->
+      <div class="row items-center q-gutter-md gt-xs">
+        <q-btn
+          v-if="!isTeacherMode && assignmentId"
+          color="positive"
+          icon="publish"
+          :label="isReadOnly ? 'Submitted' : 'Submit Code'"
+          rounded
+          unelevated
+          size="md"
+          :disable="isReadOnly"
+          :loading="isSubmitting"
+          @click="handleSubmitCode"
+        />
+        <q-btn
+          v-if="!isTeacherMode && !assignmentId"
+          color="positive"
+          icon="publish"
+          label="Submit to Assignment"
+          rounded
+          unelevated
+          size="md"
+          @click="openSubmitToAssignmentDialog"
+        />
+      </div>
     </div>
 
     <!-- Active Editor Render -->
@@ -729,6 +757,40 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <!-- Sticky Floating Submit Button (Bottom Right) -->
+    <div v-if="!isTeacherMode" style="position: fixed; bottom: 30px; right: 30px; z-index: 9999;">
+      <q-btn
+        v-if="assignmentId"
+        color="positive"
+        icon="publish"
+        :label="isReadOnly ? 'Submitted' : 'Submit Code'"
+        rounded
+        unelevated
+        size="lg"
+        padding="12px 24px"
+        class="shadow-4"
+        :disable="isReadOnly"
+        :loading="isSubmitting"
+        @click="handleSubmitCode"
+      >
+        <q-tooltip anchor="top middle" self="bottom middle">Submit current assignment</q-tooltip>
+      </q-btn>
+      <q-btn
+        v-else
+        color="positive"
+        icon="publish"
+        label="Submit to Assignment"
+        rounded
+        unelevated
+        size="lg"
+        padding="12px 24px"
+        class="shadow-4"
+        @click="openSubmitToAssignmentDialog"
+      >
+        <q-tooltip anchor="top middle" self="bottom middle">Submit this code to a pending assignment</q-tooltip>
+      </q-btn>
+    </div>
   </div>
 </div>
 </template>
