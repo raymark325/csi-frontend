@@ -126,7 +126,7 @@
             <p class="text-body2 text-grey-6">Restoring your project...</p>
           </div>
           <!-- If no project is loaded/named, show the project creation wizard -->
-          <div v-else-if="!isLabLoading && !projectName" class="glass-card q-pa-xl text-center shadow-lg rounded-borders" style="max-width: 620px; margin: 40px auto; background: #ffffff; border: 1px solid rgba(0, 122, 255, 0.15); box-shadow: 0 10px 30px rgba(0, 122, 255, 0.08);">
+          <div v-else-if="!isLabLoading && !projectName && !assignmentId" class="glass-card q-pa-xl text-center shadow-lg rounded-borders" style="max-width: 620px; margin: 40px auto; background: #ffffff; border: 1px solid rgba(0, 122, 255, 0.15); box-shadow: 0 10px 30px rgba(0, 122, 255, 0.08);">
             <div class="q-mb-md flex flex-center">
               <div class="q-pa-md rounded-circle" style="background: rgba(0, 122, 255, 0.08); border: 1px solid rgba(0, 122, 255, 0.15); display: inline-flex;">
                 <q-icon name="coffee" size="48px" color="primary" />
@@ -354,7 +354,7 @@
         </div>
         <div v-show="activeTab === 'html'">
           <!-- If no HTML project is created yet, show Project Creation Wizard -->
-          <div v-if="!htmlProjectName" class="glass-card q-pa-xl text-center shadow-lg rounded-borders" style="max-width: 650px; margin: 40px auto; background: #ffffff; border: 1px solid rgba(52, 199, 89, 0.2); box-shadow: 0 10px 30px rgba(52, 199, 89, 0.08);">
+          <div v-if="!htmlProjectName && !assignmentId" class="glass-card q-pa-xl text-center shadow-lg rounded-borders" style="max-width: 650px; margin: 40px auto; background: #ffffff; border: 1px solid rgba(52, 199, 89, 0.2); box-shadow: 0 10px 30px rgba(52, 199, 89, 0.08);">
             <div class="q-mb-md flex flex-center">
               <div class="q-pa-md rounded-circle" style="background: rgba(52, 199, 89, 0.08); border: 1px solid rgba(52, 199, 89, 0.15); display: inline-flex;">
                 <q-icon name="web" size="48px" color="positive" />
