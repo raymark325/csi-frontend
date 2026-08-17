@@ -2341,6 +2341,7 @@ const loadDraftsForCurrentUser = async () => {
       activeTab.value = getFallbackTab('sql');
     } else {
       const payload = parseJavaPayload(codeVal);
+      console.log('[TEACHER DEBUG] parseJavaPayload result:', JSON.stringify({ projectName: payload.projectName, filesCount: payload.files?.length, files: payload.files?.map(f => ({ name: f.name, codeLen: f.code?.length, codeFirst100: f.code?.substring(0, 100) })) }));
       projectName.value = payload.projectName;
       javaFiles.value = payload.files;
       htmlFiles.value = [{ name: 'index.html', code: '' }];
@@ -2358,13 +2359,18 @@ const loadDraftsForCurrentUser = async () => {
     try {
       isLabLoading.value = true;
       const existing = await lmsStore.fetchSubmission(teacherSubmissionId.value);
+      console.log('[TEACHER DEBUG] fetchSubmission result:', existing);
+      console.log('[TEACHER DEBUG] existing.content type:', typeof existing?.content, 'length:', existing?.content?.length);
+      console.log('[TEACHER DEBUG] existing.content first 200 chars:', existing?.content?.substring(0, 200));
       if (existing) {
         submissionStatus.value = existing.status;
         if (existing.file_path && !existing.file_path.includes('sql_dbs')) {
           existingSubmissionFilePath.value = existing.file_path;
         }
         const serverCode = existing.content || '';
+        console.log('[TEACHER DEBUG] serverCode length:', serverCode.length, 'first 200:', serverCode.substring(0, 200));
         setCodeByLanguage(serverCode);
+        console.log('[TEACHER DEBUG] After setCodeByLanguage, javaFiles:', JSON.stringify(javaFiles.value.map(f => ({ name: f.name, codeLen: f.code?.length, codeFirst100: f.code?.substring(0, 100) }))));
         saveStatus.value = 'Teacher View Mode - Read Only';
         
         if (activeTab.value === 'sql' && existing.file_path) {

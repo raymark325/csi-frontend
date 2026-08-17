@@ -122,7 +122,7 @@ export const lmsService = {
   },
 
   getSubmission(id) {
-    return API.get(`/lms/submissions/${id}`);
+    return API.get(`/lms/submissions/detail/${id}`);
   },
 
   gradeSubmission(id, score, feedback) {
@@ -134,7 +134,7 @@ export const lmsService = {
   },
 
   downloadSubmissionFile(id) {
-    return API.get(`/lms/submissions/${id}/download`, { responseType: 'arraybuffer' })
+    return API.get(`/lms/submissions/detail/${id}/download`, { responseType: 'arraybuffer' })
       .then(res => res.data);
   }
 };

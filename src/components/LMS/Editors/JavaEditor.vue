@@ -996,9 +996,12 @@ const runCode = (isAuto = false) => {
 
   setTimeout(async () => {
     let rawSrc = code.value;
+    console.log('[RUNCODE DEBUG] code.value length:', code.value?.length, 'first 100:', code.value?.substring(0, 100));
+    console.log('[RUNCODE DEBUG] props.allFiles:', JSON.stringify(props.allFiles?.map(f => ({ name: f.name, codeLen: f.code?.length, codeFirst100: f.code?.substring(0, 100) }))));
     if (props.allFiles && props.allFiles.length > 0) {
       rawSrc = props.allFiles.map(f => f.code).join('\n\n');
     }
+    console.log('[RUNCODE DEBUG] Final rawSrc length:', rawSrc?.length, 'first 100:', rawSrc?.substring(0, 100));
 
     const result = transpileJava(rawSrc);
     if (result.error) {
