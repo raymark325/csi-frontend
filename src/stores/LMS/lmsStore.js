@@ -251,6 +251,7 @@ export const useLmsStore = defineStore('lms', () => {
         submissions.value.push(response.data);
       }
       // Don't invalidate cache for drafts (auto-save shouldn't cause re-fetches)
+      return response.data; // Return so caller can capture updated_at
     } catch (err) {
       // Draft saves fail silently (offline fallback handled in component)
       throw err;

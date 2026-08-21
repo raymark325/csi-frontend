@@ -746,6 +746,67 @@
       </q-card>
     </q-dialog>
 
+    <!-- ── Multi-device Conflict Resolution Dialog ───────────────────────── -->
+    <q-dialog v-model="showConflictDialog" persistent>
+      <q-card class="glass-q-card" style="width: 560px; max-width: 95vw;">
+        <q-card-section class="row items-center q-pb-none">
+          <q-icon name="devices" color="warning" size="28px" class="q-mr-sm" />
+          <div class="text-h6 text-warning">Draft Conflict Detected</div>
+        </q-card-section>
+
+        <q-card-section>
+          <p class="text-body2 text-grey-4 q-mb-md">
+            Another device saved a <strong>newer version</strong> of this draft while you were working.
+            Both versions are safe — choose which one to keep.
+          </p>
+
+          <div class="row q-col-gutter-sm">
+            <!-- My version -->
+            <div class="col-6">
+              <div class="conflict-version-card conflict-mine">
+                <div class="conflict-label">
+                  <q-icon name="computer" size="16px" class="q-mr-xs" />
+                  <strong>This device</strong>
+                  <div class="text-caption text-grey-5">Your current edits</div>
+                </div>
+              </div>
+            </div>
+            <!-- Other device version -->
+            <div class="col-6">
+              <div class="conflict-version-card conflict-theirs">
+                <div class="conflict-label">
+                  <q-icon name="devices_other" size="16px" class="q-mr-xs" />
+                  <strong>Other device</strong>
+                  <div class="text-caption text-grey-5" v-if="conflictServerUpdatedAt">
+                    Saved {{ new Date(conflictServerUpdatedAt).toLocaleTimeString() }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-pb-md q-pr-md q-gutter-sm">
+          <q-btn
+            label="Keep My Version"
+            icon="computer"
+            color="primary"
+            rounded
+            unelevated
+            @click="resolveConflictKeepMine"
+          />
+          <q-btn
+            label="Use Other Device's Version"
+            icon="devices_other"
+            color="warning"
+            rounded
+            unelevated
+            @click="resolveConflictKeepTheirs"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
   </div>
 </div>
 </template>
@@ -853,6 +914,14 @@ const existingSubmissionFilePath = ref(null);
 const isOnline = ref(navigator.onLine);
 const submissionStatus = ref(null);
 
+// ── Multi-device conflict state ─────────────────────────────────────────────
+// Tracks the server's last-known updated_at so we can detect when another
+// device has saved a newer draft (optimistic concurrency control).
+const serverUpdatedAt = ref(null);  // ISO string from last successful save/load
+const showConflictDialog = ref(false);
+const conflictServerCode = ref('');  // code from the other device
+const conflictServerUpdatedAt = ref('');
+
 const isReadOnly = computed(() => {
   return submissionStatus.value === 'submitted' || submissionStatus.value === 'graded';
 });
@@ -900,6 +969,20 @@ const getActiveCode = () => {
     });
   }
   return '';
+};
+
+// ── serverUpdatedAt helpers ──────────────────────────────────────────────────
+const getServerUpdatedAtKey = () => getStorageKey(`sms_server_updated_at_${assignmentId.value}`);
+
+const loadServerUpdatedAt = () => {
+  if (!assignmentId.value) return;
+  serverUpdatedAt.value = localStorage.getItem(getServerUpdatedAtKey()) || null;
+};
+
+const saveServerUpdatedAt = (isoString) => {
+  if (!assignmentId.value || !isoString) return;
+  serverUpdatedAt.value = isoString;
+  localStorage.setItem(getServerUpdatedAtKey(), isoString);
 };
 
 // Check if content structure looks like HTML or Java
@@ -1837,6 +1920,9 @@ const getSubmissionPayload = (content) => {
   const payload = {
     assignment_id: assignmentId.value,
     content: content,
+    // Send the timestamp of the last version we know about so the server
+    // can detect if another device has saved a newer draft (409 Conflict).
+    last_known_updated_at: serverUpdatedAt.value || undefined,
   };
   if (submissionFile.value) {
     payload.file = submissionFile.value;
@@ -1896,14 +1982,24 @@ const saveCode = (newCode, lang) => {
   saveStatus.value = 'Saving draft...';
   saveTimeout = setTimeout(async () => {
     try {
-      await lmsStore.saveDraft(getSubmissionPayload(newCode));
+      const result = await lmsStore.saveDraft(getSubmissionPayload(newCode));
       localStorage.removeItem(getStorageKey(`sms_pending_sync_${assignmentId.value}`));
       localStorage.setItem(getStorageKey(`sms_assignment_cache_${assignmentId.value}`), newCode);
+      // Track the server's updated_at for conflict detection
+      if (result?.updated_at) saveServerUpdatedAt(result.updated_at);
       saveStatus.value = 'All changes saved';
+      // Broadcast the save to other tabs on this device
+      _labChannel?.postMessage({ type: 'DRAFT_SAVED', assignmentId: assignmentId.value, updatedAt: result?.updated_at });
     } catch (err) {
-      console.error(err);
-      localStorage.setItem(getStorageKey(`sms_pending_sync_${assignmentId.value}`), newCode);
-      saveStatus.value = 'Offline - saved locally';
+      // The API interceptor rejects with the parsed JSON body (not an axios error object)
+      if (err?.conflict) {
+        // Another device has saved a newer draft — prompt the user
+        handleConflict(err.server_content, err.server_updated_at, newCode);
+      } else {
+        console.error(err);
+        localStorage.setItem(getStorageKey(`sms_pending_sync_${assignmentId.value}`), newCode);
+        saveStatus.value = 'Offline - saved locally';
+      }
     }
   }, 2000);
 };
@@ -1915,8 +2011,12 @@ const syncPendingDrafts = async () => {
 
   saveStatus.value = 'Syncing offline changes...';
   try {
-    await lmsStore.saveDraft(getSubmissionPayload(pendingCode));
+    const result = await lmsStore.saveDraft(getSubmissionPayload(pendingCode));
     localStorage.removeItem(getStorageKey(`sms_pending_sync_${assignmentId.value}`));
+    // Also update the cache so subsequent loads get the synced code
+    localStorage.setItem(getStorageKey(`sms_assignment_cache_${assignmentId.value}`), pendingCode);
+    // Update our local timestamp so we're in sync with the server
+    if (result?.updated_at) saveServerUpdatedAt(result.updated_at);
     saveStatus.value = 'All changes saved';
     $q.notify({
       type: 'positive',
@@ -1926,14 +2026,71 @@ const syncPendingDrafts = async () => {
       timeout: 2000,
     });
   } catch (err) {
-    console.error('Failed to sync offline changes:', err);
-    saveStatus.value = 'Offline - saved locally (sync failed)';
+    // The API interceptor rejects with the parsed JSON body (not an axios error object)
+    if (err?.conflict) {
+      // Another device saved while we were offline — show conflict dialog
+      localStorage.removeItem(getStorageKey(`sms_pending_sync_${assignmentId.value}`));
+      handleConflict(err.server_content, err.server_updated_at, pendingCode);
+    } else {
+      console.error('Failed to sync offline changes:', err);
+      saveStatus.value = 'Offline - saved locally (sync failed)';
+    }
   }
+};
+
+// ── Conflict resolution ──────────────────────────────────────────────────────
+const handleConflict = (serverCode, serverTs, localCode) => {
+  conflictServerCode.value = serverCode;
+  conflictServerUpdatedAt.value = serverTs;
+  showConflictDialog.value = true;
+  saveStatus.value = '⚠ Conflict detected — action required';
+  $q.notify({
+    type: 'warning',
+    icon: 'devices',
+    message: 'Another device saved a newer version of your draft. Please choose which version to keep.',
+    position: 'top',
+    timeout: 6000,
+  });
+};
+
+// Keep my (local) version — force-push it to the server by clearing the timestamp
+const resolveConflictKeepMine = async () => {
+  showConflictDialog.value = false;
+  // Accept the server's timestamp so our next save is treated as up-to-date,
+  // then immediately save current in-memory code
+  saveServerUpdatedAt(conflictServerUpdatedAt.value);
+  const myCode = getActiveCode();
+  if (myCode) {
+    localStorage.setItem(getStorageKey(`sms_assignment_cache_${assignmentId.value}`), myCode);
+    saveCode(myCode, activeTab.value);
+  }
+};
+
+// Accept the other device's version — load it into the editor
+const resolveConflictKeepTheirs = () => {
+  showConflictDialog.value = false;
+  const theirCode = conflictServerCode.value;
+  saveServerUpdatedAt(conflictServerUpdatedAt.value);
+  localStorage.setItem(getStorageKey(`sms_assignment_cache_${assignmentId.value}`), theirCode);
+  setCodeByLanguage(theirCode);
+  saveStatus.value = "All changes saved";
 };
 
 const updateOnlineStatus = () => {
   isOnline.value = navigator.onLine;
   if (isOnline.value) {
+    // Flush current in-memory code to localStorage immediately before syncing.
+    // This prevents edits that were typed while offline (but whose debounce timer
+    // hasn't fired yet) from being lost when the connection is restored.
+    if (assignmentId.value && !isTeacherMode.value && !isReadOnly.value) {
+      // Cancel any pending debounced save to avoid a race
+      if (saveTimeout) clearTimeout(saveTimeout);
+      const currentCode = getActiveCode();
+      if (currentCode) {
+        localStorage.setItem(getStorageKey(`sms_pending_sync_${assignmentId.value}`), currentCode);
+        localStorage.setItem(getStorageKey(`sms_assignment_cache_${assignmentId.value}`), currentCode);
+      }
+    }
     syncPendingDrafts();
     if (!assignmentId.value) {
       scheduleSilentCloudSync();
@@ -2454,7 +2611,16 @@ const loadDraftsForCurrentUser = async () => {
           if (existing.file_path && !existing.file_path.includes('sql_dbs')) {
             existingSubmissionFilePath.value = existing.file_path;
           }
-          if (!pendingCode) {
+          // Always capture the server's updated_at for conflict detection
+          if (existing.updated_at) saveServerUpdatedAt(existing.updated_at);
+          // Only load from server if we have NO local cache at all.
+          // If a local cache exists, it represents the most up-to-date state
+          // (the student's latest edits), so we trust it over the server.
+          // This prevents a race where the student just reconnected and the
+          // server hasn't received the pending sync yet, which would cause
+          // the editor to revert to older code ("code disappearing" bug).
+          const freshCache = localStorage.getItem(getStorageKey(`sms_assignment_cache_${assignmentId.value}`));
+          if (!pendingCode && !freshCache) {
             const serverCode = existing.content || '';
             setCodeByLanguage(serverCode);
             localStorage.setItem(getStorageKey(`sms_assignment_cache_${assignmentId.value}`), serverCode);
@@ -2661,9 +2827,39 @@ watch(() => route.query.assignment_id, (newId, oldId) => {
   }
 });
 
+// ── BroadcastChannel: sync across multiple tabs on the same device ───────────────
+let _labChannel = null;
+
 onMounted(() => {
   window.addEventListener('online', updateOnlineStatus);
   window.addEventListener('offline', updateOnlineStatus);
+
+  // Set up cross-tab sync channel
+  try {
+    _labChannel = new BroadcastChannel('csi_coding_lab');
+    _labChannel.onmessage = (event) => {
+      const { type, assignmentId: msgAssId, updatedAt } = event.data || {};
+      if (type === 'DRAFT_SAVED' && msgAssId === assignmentId.value && updatedAt) {
+        // Another tab on this device saved a draft — update our timestamp
+        // and show a gentle notification (don't auto-reload to avoid disruption)
+        saveServerUpdatedAt(updatedAt);
+        $q.notify({
+          type: 'info',
+          icon: 'tab',
+          message: 'Your draft was saved in another tab.',
+          position: 'top-right',
+          timeout: 3000,
+        });
+      }
+    };
+  } catch (e) {
+    // BroadcastChannel not supported (very old browsers) — silently skip
+    _labChannel = null;
+  }
+
+  // Load the stored server timestamp for conflict detection
+  if (assignmentId.value) loadServerUpdatedAt();
+
   // Only call if the user watcher's immediate: true did NOT already run it
   // (it may not have run if authStore.user wasn't set during setup yet)
   if (authStore.user && !_draftsLoading) {
@@ -2694,6 +2890,11 @@ const downloadSubmissionAttachment = async () => {
 onUnmounted(() => {
   window.removeEventListener('online', updateOnlineStatus);
   window.removeEventListener('offline', updateOnlineStatus);
+  // Close the BroadcastChannel
+  if (_labChannel) {
+    _labChannel.close();
+    _labChannel = null;
+  }
   // Flush any pending cloud sync immediately on unmount
   if (cloudSyncTimer) {
     clearTimeout(cloudSyncTimer);
@@ -2709,6 +2910,27 @@ onUnmounted(() => {
   background: #1e1e1e;
   overflow: hidden;
 }
+
+/* Conflict resolution dialog */
+.conflict-version-card {
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: default;
+  transition: opacity 0.2s;
+}
+.conflict-version-card .conflict-label {
+  font-size: 13px;
+  color: #ccc;
+}
+.conflict-mine {
+  background: rgba(66, 133, 244, 0.12);
+  border: 1.5px solid rgba(66, 133, 244, 0.4);
+}
+.conflict-theirs {
+  background: rgba(251, 188, 4, 0.10);
+  border: 1.5px solid rgba(251, 188, 4, 0.35);
+}
+
 
 .code-textarea {
   width: 100%;
