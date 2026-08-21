@@ -88,22 +88,36 @@ const chatStore = useChatStore();
 const normalizedCourses = computed(() => {
   if (authStore.user?.role === 'student') {
     const data = dashboardStore.studentData?.sections || [];
-    return data.map(sec => ({
-      id: sec.id,
-      code: `${sec.course || 'Unknown Course'} (${sec.name || sec.section_name || 'TBA'})`, 
-      title: sec.course || 'Unknown Course',
-    }));
+    const unique = [];
+    const seen = new Set();
+    data.forEach(sec => {
+      if (sec.section_id && !seen.has(sec.section_id)) {
+        seen.add(sec.section_id);
+        const sectionName = sec.name || sec.section_name || 'Class Section';
+        unique.push({
+          id: sec.section_id,
+          code: sectionName,
+          title: 'Class Chat',
+        });
+      }
+    });
+    return unique;
   } else {
     const data = dashboardStore.sections || [];
-    return data.map(sec => {
-      const title = sec.course?.title || sec.name || 'Unknown Course';
-      const sectionName = sec.section?.name || sec.block || 'TBA';
-      return {
-        id: sec.id,
-        code: `${title} (${sectionName})`,
-        title: title,
-      };
+    const unique = [];
+    const seen = new Set();
+    data.forEach(sec => {
+      if (sec.section_id && !seen.has(sec.section_id)) {
+        seen.add(sec.section_id);
+        const sectionName = sec.section?.name || sec.block || 'Class Section';
+        unique.push({
+          id: sec.section_id,
+          code: sectionName,
+          title: 'Class Chat',
+        });
+      }
     });
+    return unique;
   }
 });
 
